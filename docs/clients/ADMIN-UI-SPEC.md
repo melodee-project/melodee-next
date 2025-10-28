@@ -52,7 +52,7 @@
 	- Global settings edit; audit search and CSV export
 
 ## 5) RBAC & guards
-- Roles: admin, librarian, user.
+- Roles: admin, editor, user.
 - UI hides/disables forbidden actions; server enforces policy via scopes/roles.
 - Per-library attribute rules respected in list/detail fetches.
 

@@ -38,7 +38,7 @@ components:
         email: { type: string, format: email }
         roles:
           type: array
-          items: { type: string, enum: [admin, librarian, user] }
+          items: { type: string, enum: [admin, editor, user] }
         createdAt: { type: string, format: date-time }
     Library:
       type: object

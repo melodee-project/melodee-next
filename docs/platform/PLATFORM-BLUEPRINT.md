@@ -41,7 +41,7 @@ Notes:
 
 ## 2) Auth and identity (simple by default)
 
-- Default: built-in auth with local users (bcrypt), roles (admin/librarian/user), and Personal Access Tokens (PATs).
+- Default: built-in auth with local users (bcrypt), roles (admin/editor/user), and Personal Access Tokens (PATs).
 - Optional: enable OIDC (Keycloak/Zitadel/Auth0) if you want SSO across multiple home services.
 - Admin UI: uses server-side session cookie (HttpOnly; SameSite=strict) via Next.js BFF.
 - Mobile/Desktop: Authorization Code + PKCE when OIDC enabled; otherwise username/password login to obtain PATs.

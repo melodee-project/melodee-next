@@ -4,7 +4,7 @@ Keep it simple and solid. Apply these and you’ll have strong security without 
 
 ## Accounts & auth
 - Use strong admin password; consider enabling TOTP 2FA for admin.
-- Create separate users for family/friends; least privilege (user/librarian vs admin).
+- Create separate users for family/friends; least privilege (user/ vs admin).
 - Prefer PATs for legacy clients; revoke unused PATs periodically.
 
 ## Network exposure

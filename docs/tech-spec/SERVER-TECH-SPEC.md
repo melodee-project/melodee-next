@@ -126,7 +126,7 @@ Beets sidecar (optional write-back)
 - Flow: detect change → enqueue tag_enrich → compute fp → call beets → propose patch → apply per policy
 - Policies
   - Passive: DB only; no file writes
-  - Assisted: stage; admin/librarian approves; then write tags and update DB
+  - Assisted: stage; admin/editor approves; then write tags and update DB
   - Active: auto-write; rollback on error (backup tags/sidecar .bak)
 - Audit log: original → proposed → applied (who/when/tool/version)
 - Write policy
@@ -186,7 +186,7 @@ Tokens & sessions
 - TLS via reverse proxy if exposed publicly
 
 Authorization model
-- Roles: admin, librarian, user; scopes: library:read/write, playback:stream, playlist:write, admin:*
+- Roles: admin, editor, user; scopes: library:read/write, playback:stream, playlist:write, admin:*
 - Policy checks at API boundary; attribute‑based (per‑library)
 
 Session security
