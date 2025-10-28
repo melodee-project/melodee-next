@@ -1,0 +1,372 @@
+openapi: 3.0.3
+info:
+  title: Melodee Platform API
+  version: 0.1.0
+  description: >-
+    OpenSubsonic-compatible API with first-party admin and extras endpoints.
+servers:
+  - url: https://api.example.com/v1
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: session
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/authorize
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            admin:full: Full admin access
+            library:read: Read library
+            library:write: Write library
+            playback:stream: Stream media
+            user:engagement:read: Read your likes/favorites/ratings
+            user:engagement:write: Manage your likes/favorites/ratings
+    pat:
+      type: apiKey
+      in: header
+      name: X-API-Token
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sub: { type: string }
+        email: { type: string, format: email }
+        roles:
+          type: array
+          items: { type: string, enum: [admin, librarian, user] }
+        createdAt: { type: string, format: date-time }
+    Library:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        path: { type: string }
+        policyNormalization: { type: string, enum: [passive, assisted, active] }
+        writeBackEnabled: { type: boolean }
+    Job:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [scan, tag_enrich, index, transcode] }
+        state: { type: string, enum: [queued, running, failed, completed] }
+        attempt: { type: integer }
+        lastError: { type: string, nullable: true }
+    Proposal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fileId: { type: string, format: uuid }
+        confidence: { type: number, format: float }
+        diff: { type: object }
+        state: { type: string, enum: [staged, approved, rejected, applied] }
+    EngagementTarget:
+      type: object
+      required: [entityType, entityId]
+      properties:
+        entityType: { type: string, enum: [track, album, artist] }
+        entityId: { type: string, format: uuid }
+    FavoriteUpsert:
+      allOf:
+        - $ref: '#/components/schemas/EngagementTarget'
+        - type: object
+          required: [favorite]
+          properties:
+            favorite: { type: boolean }
+    RatingUpsert:
+      allOf:
+        - $ref: '#/components/schemas/EngagementTarget'
+        - type: object
+          required: [rating]
+          properties:
+            rating:
+              type: integer
+              minimum: 0
+              maximum: 5
+              description: 0 clears rating
+    ReactionUpsert:
+      allOf:
+        - $ref: '#/components/schemas/EngagementTarget'
+        - type: object
+          required: [reaction]
+          properties:
+            reaction: { type: string, enum: [like, dislike, none] }
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    CsrfHeader:
+      name: X-CSRF-Token
+      in: header
+      description: CSRF token required for state-changing requests when using cookie sessions
+      required: false
+      schema: { type: string }
+security:
+  - cookieSession: []
+paths:
+  /admin/libraries:
+    get:
+      security: [ { cookieSession: [] } ]
+      summary: List libraries
+      parameters: [ { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PageSize' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Library' }
+                  total: { type: integer }
+    post:
+      security: [ { cookieSession: [] } ]
+      summary: Create library
+      parameters:
+        - { $ref: '#/components/parameters/CsrfHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Library' }
+      responses:
+        '201': { description: Created }
+  /admin/normalization/proposals:
+    get:
+      security: [ { cookieSession: [] } ]
+      summary: List proposals
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Proposal' }
+                  total: { type: integer }
+  /admin/normalization/proposals/{id}:approve:
+    post:
+      security: [ { cookieSession: [] } ]
+      summary: Approve proposal
+      parameters:
+        - { $ref: '#/components/parameters/CsrfHeader' }
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Approved }
+  /admin/jobs:
+    get:
+      security: [ { cookieSession: [] } ]
+      summary: List jobs
+      parameters: [ { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PageSize' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Job' }
+                  total: { type: integer }
+  /admin/users:
+    get:
+      security: [ { cookieSession: [] } ]
+      summary: List users
+      parameters: [ { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PageSize' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+                  total: { type: integer }
+  /admin/settings:
+    get:
+      security: [ { cookieSession: [] } ]
+      summary: Get settings
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+    put:
+      security: [ { cookieSession: [] } ]
+      summary: Update settings
+      parameters:
+        - { $ref: '#/components/parameters/CsrfHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '204': { description: Updated }
+  /stream:
+    get:
+      security: [ { pat: [] }, { oauth2: [playback:stream] } ]
+      summary: Progressive stream (OpenSubsonic-compatible)
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Audio stream }
+
+  /me/favorites:
+    get:
+      security: [ { cookieSession: [] }, { pat: [] }, { oauth2: [user:engagement:read] } ]
+      summary: List your favorites
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - name: entityType
+          in: query
+          required: false
+          schema: { type: string, enum: [track, album, artist] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/EngagementTarget'
+                        - type: object
+                          properties:
+                            createdAt: { type: string, format: date-time }
+                  total: { type: integer }
+    put:
+      security: [ { cookieSession: [] }, { pat: [] }, { oauth2: [user:engagement:write] } ]
+      summary: Set or clear a favorite
+      parameters:
+        - { $ref: '#/components/parameters/CsrfHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FavoriteUpsert' }
+      responses:
+        '204': { description: Updated }
+
+  /me/ratings:
+    get:
+      security: [ { cookieSession: [] }, { pat: [] }, { oauth2: [user:engagement:read] } ]
+      summary: List your ratings
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - name: entityType
+          in: query
+          required: false
+          schema: { type: string, enum: [track, album, artist] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/EngagementTarget'
+                        - type: object
+                          properties:
+                            rating: { type: integer, minimum: 0, maximum: 5 }
+                            updatedAt: { type: string, format: date-time }
+                  total: { type: integer }
+    put:
+      security: [ { cookieSession: [] }, { pat: [] }, { oauth2: [user:engagement:write] } ]
+      summary: Set or clear a rating
+      parameters:
+        - { $ref: '#/components/parameters/CsrfHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RatingUpsert' }
+      responses:
+        '204': { description: Updated }
+
+  /me/reactions:
+    get:
+      security: [ { cookieSession: [] }, { pat: [] }, { oauth2: [user:engagement:read] } ]
+      summary: List your like/dislike reactions
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - name: entityType
+          in: query
+          required: false
+          schema: { type: string, enum: [track, album, artist] }
+        - name: reaction
+          in: query
+          required: false
+          schema: { type: string, enum: [like, dislike] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/EngagementTarget'
+                        - type: object
+                          properties:
+                            reaction: { type: string, enum: [like, dislike] }
+                            updatedAt: { type: string, format: date-time }
+                  total: { type: integer }
+    put:
+      security: [ { cookieSession: [] }, { pat: [] }, { oauth2: [user:engagement:write] } ]
+      summary: Set like, dislike, or none
+      parameters:
+        - { $ref: '#/components/parameters/CsrfHeader' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReactionUpsert' }
+      responses:
+        '204': { description: Updated }
