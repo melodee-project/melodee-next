@@ -12,6 +12,12 @@ Use this guide to sequence work for coding agents. Check off phases as completed
 
 ---
 
+## Coding agent template
+> Implement Phase <n> from docs/IMPLEMENTATION_GUIDE.md: read the referenced specs/fixtures for that phase; build the listed deliverables; add/adjust unit tests for new logic; update docs/readmes as needed; mark the Phase <n> checkbox as checked in docs/IMPLEMENTATION_GUIDE.md when done; stop once the phase checklist would be satisfied; summarize what you completed and what’s left for later phases.
+
+
+---
+
 ## Phase 1: Bootstrapping & Contracts
 - Align on contracts and configs:
   - Read `TECHNICAL_SPEC.md`, `INTERNAL_API_ROUTES.md`, `METADATA_MAPPING.md`, `HEALTH_CHECK.md`, `CAPACITY_PROBES.md`.
