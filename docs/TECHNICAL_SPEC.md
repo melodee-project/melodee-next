@@ -292,11 +292,19 @@ The schema is designed with the following performance considerations:
 ## 3. API Specifications
 
 ### 3.1 OpenSubsonic API Implementation
+Reference upstream OpenSubsonic API (Subsonic 1.16.1) documentation; fixtures maintained under `docs/fixtures/opensubsonic/`.
 
 #### Authentication
 All API endpoints require authentication. Supported methods:
 - **Parameters**: `u` (username), `p` (password), `t` (token), `s` (salt)
 - **Header**: `Authorization: Basic <base64(username:password)>`
+
+**Contract Conventions**
+- Pagination: `size` (default 50, max 500) and `offset` with deterministic ordering by `name_normalized`, ties by `id`.
+- Errors: XML body with `status="failed"` and `error.code`/`error.message`; HTTP 200 for protocol compliance, log real HTTP status in `X-Status-Code` header.
+- Dates: ISO8601 UTC.
+- Strings: UTF-8, normalized NFC.
+- Booleans: `true`/`false` only.
 
 #### Common Response Format
 ```json
@@ -309,6 +317,12 @@ All API endpoints require authentication. Supported methods:
     "openSubsonic": true
   }
 }
+```
+Example error:
+```xml
+<subsonic-response status="failed" version="1.16.1">
+  <error code="50" message="not authorized"/>
+</subsonic-response>
 ```
 
 #### Key Endpoints to Implement
@@ -353,6 +367,15 @@ All API endpoints require authentication. Supported methods:
 - `GET /rest/ping.view` - Test API connectivity
 - `GET /rest/getLicense.view` - Get licensing information
 
+**Endpoint Coverage (contracts)**
+- Browsing/search: `getIndexes`, `getArtists`, `getArtist`, `getAlbum`, `getMusicDirectory`, `getAlbumInfo`, `search`, `search2`, `search3` — require `offset/size`, normalized sorting by `name_normalized`, error codes: `70 not found`, `40 missing param`, `50 not authorized`.
+- Playlists: `getPlaylists`, `getPlaylist`, `createPlaylist`, `updatePlaylist`, `deletePlaylist` — required params: `playlistId` or `name`, `songId` list. Errors: `40 missing`, `50 auth`, `70 not found`.
+- Media: `stream`, `download`, `getCoverArt`, `getAvatar` — params: `id`, optional `maxBitRate`, `format`. `stream` returns HTTP 200/206 with audio; XML response only for errors (`code 70/0 general`). Fixtures added for success/error states.
+- Shares: `createShare`, `getShares`, `deleteShare` — params: `id` or `ids`, `expires`, `maxDownloads`; enforce admin role for creation/deletion.
+- Users: `getUsers`, `getUser`, `createUser`, `updateUser`, `deleteUser` — admin only except `getUser` self. Password rules from auth section.
+- Errors: always return HTTP 200 with `<error code="" message=""/>`; also emit `X-Status-Code` for observability (e.g., 404/401).
+- Cover art/avatar: when not found, return XML error with `code=70`; include `ETag` and `Last-Modified` on success responses for cacheability. For avatar uploads (internal API), enforce 2MB max JPEG/PNG.
+
 ### 3.2 Internal API Endpoints
 
 #### Library Management API
@@ -378,6 +401,23 @@ All API endpoints require authentication. Supported methods:
 - `PUT /api/users/:id` - Update user
 - `DELETE /api/users/:id` - Delete user
 - `GET /api/users/:id` - Get user details
+
+**Contracts**
+- Auth: `POST /api/auth/login` returns `{access_token, refresh_token, expires_in, user}` (see fixtures). `POST /api/auth/refresh` requires refresh token in body/Authorization; rotates tokens and revokes old refresh.
+- Playlists: CRUD endpoints mirror OpenSubsonic data model but respond JSON (`id`, `name`, `song_ids`, `public`, timestamps).
+- Cover art/avatar: `GET /api/images/:id` returns binary with ETag/Last-Modified; errors as JSON.
+- Shares: `POST /api/shares` (`name`, `id(s)`, `expires_at`, `max_streaming_minutes`, `allow_download`), list, delete.
+- Settings/admin: endpoints must require `admin` role and return `{data, pagination}` envelopes.
+
+### 3.3 Auth Flows (All Services)
+- **Bootstrap**: On first run (users table empty) a `MELODEE_BOOTSTRAP_ADMIN_PASSWORD` env var must be set; `melodee bootstrap-admin` seeds `admin` user and rotates the var immediately.
+- **Password rules**: Min 12 chars, require upper/lower/number/symbol. Enforce via validation layer; return `422` with field errors for internal API.
+- **JWT**: Access 15m, refresh 14d. Store signing key from `MELODEE_JWT_SECRET`; rotate via `melodee rotate-jwt` CLI. Refresh invalidation tracked in Redis set `jwt:revoked:<jti>`.
+- **API Keys**: Per-user `api_key` UUID is returned only on creation; regeneration invalidates previous and clears active sessions.
+- **OpenSubsonic token mapping**: Salted token must match password hash; after validation the request is mapped to the underlying user identity and inherits the same RBAC rules.
+- **RBAC**: Roles `admin`, `editor`, `user`. Admin can mutate libraries/users/settings; editor can edit metadata and staging; user is read-only streaming/search. Unauthorized → HTTP 403 internal, OpenSubsonic error `code=50`.
+- **Subsonic token example**: client sends `u=user&p=enc:5f4dcc3b...&t=<md5(password+salt)>&s=<salt>`; server recomputes and validates against bcrypt hash.
+- **Account lock/reset**: 5 failed logins in 15m → lock 15m; `POST /api/auth/request-reset` issues signed token emailed; `POST /api/auth/reset` sets new password (honoring password rules) and revokes sessions.
 
 ## 4. File System Organization
 
@@ -458,12 +498,28 @@ All API endpoints require authentication. Supported methods:
 - **Monitoring**: Job status tracking and reporting
 - **Workers**: Goroutine-based workers for parallel processing
 
+**Queues & Payloads**
+- Queues: `critical` (stream-serving support tasks), `default` (library scans, metadata write-backs), `bulk` (large backfills), `maintenance` (partition/index management).
+- Job payload shape (JSON): `{ "type": "<job_type>", "id": "<entity id or batch key>", "args": {...} }`.
+- Dedup keys: `queue:type:id`. Reject duplicates while in-flight.
+- Retries: expo backoff base 2s, max 5 attempts, DLQ to Redis list `asynq:dlq`.
+- Timeouts: streaming-adjacent jobs 30s, scans 5m, backfills 30m.
+- Required instrumentation: wrap handlers with OpenTelemetry spans and log job id, queue, attempt.
+
 **Job Types**:
 - Library scanning jobs
 - Directory organization jobs
 - Metadata update propagation jobs
 - File system monitoring jobs
 - Database synchronization jobs
+
+**Job Payload Schemas**
+- `library.scan`: `{ "library_ids":[int], "force":bool }`, dedup `library.scan:<ids>`, timeout 5m.
+- `partition.create-next-month`: `{}`, dedup `partition.create-next-month`, timeout 1m.
+- `metadata.writeback`: `{ "song_ids":[int] }`, dedup `metadata.writeback:<song_ids hash>`, timeout 2m.
+- `directory.recalculate`: `{ "artist_ids":[int] }`, dedup `directory.recalculate:<artist_ids hash>`, timeout 2m.
+- `metadata.enhance`: `{ "album_id":int, "sources":["musicbrainz","lastfm"] }`, dedup `metadata.enhance:<album_id>`, timeout 3m.
+- DLQ handling: handlers emit error context; operator endpoint `POST /api/admin/jobs/requeue` accepts job id(s) and target queue; `DELETE /api/admin/jobs/dlq/:id` purges.
 
 ## 6. Security Implementation
 
@@ -572,14 +628,21 @@ volumes:
 ## 9. Monitoring and Logging
 
 ### 9.1 Application Monitoring
-- **Health Checks**: Endpoints for container orchestration
-- **Metrics Collection**: Collect performance metrics
+- **Health Checks**: `/healthz` returns `{status, db, redis}`; fail if DB ping >200ms or Redis ping >100ms.
+- **Metrics Collection**: Required Prometheus metrics:
+  - `melodee_stream_requests_total{status,format}`
+  - `melodee_stream_bytes_total`
+  - `melodee_job_duration_seconds{queue,type,status}`
+  - `melodee_metadata_drift_total`
+  - `melodee_quarantine_total{reason}`
+- **Tracing**: OpenTelemetry spans for `stream`, `metadata.writeback`, `library.scan` with baggage `user_id`, `song_id`, `job_id`.
 - **Error Tracking**: Centralized error logging and monitoring
 
 ### 9.2 Logging Strategy
 - **Structured Logging**: JSON format logs with context
 - **Log Levels**: Support for different log levels
 - **Log Rotation**: Automatic log rotation and archival
+- **Required fields**: `ts`, `level`, `msg`, `req_id`, `user_id`, `ip`, `route`, `status`, `duration_ms`, `queue`, `job_type`, `attempt`.
 
 ## 10. Migration Strategy
 
@@ -592,3 +655,9 @@ volumes:
 - **OpenSubsonic Compatibility**: Maintain 100% API compatibility
 - **Client Testing**: Test with existing Subsonic clients
 - **Gradual Migration**: Support for running both systems during transition
+
+## 11. Sorting and Normalization Rules
+- Collation: normalize to lowercase ASCII (fold diacritics) for `name_normalized` fields; ordering uses `name_normalized` then `id`.
+- Articles to ignore for sort: `the`, `a`, `an`, `le`, `la`, `les`, `el`, `los`, `las`; do not drop from display.
+- Albums/songs: sort by `album.sort_name` then `song.sort_order` then `song.name_normalized`; ensure UI/API consistency.
+- Search normalization: fold diacritics, strip punctuation, collapse whitespace; tokens matched with trigram + full-text per DB schema.

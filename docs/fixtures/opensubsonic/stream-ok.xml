@@ -1,0 +1,3 @@
+<subsonic-response status="ok" version="1.16.1" type="Melodee" serverVersion="1.0.0" openSubsonic="true">
+  <stream url="https://media.example.com/stream/12345" contentType="audio/mpeg" bitrate="320" duration="255" size="10240000" suffix="mp3" transcodedSuffix="mp3"/>
+</subsonic-response>

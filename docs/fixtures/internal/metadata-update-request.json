@@ -1,0 +1,10 @@
+{
+  "album_id": 123,
+  "fields": {
+    "name": "Led Zeppelin IV",
+    "release_date": "1971-11-08",
+    "genres": ["rock", "classic rock"],
+    "moods": ["epic"],
+    "comment": "Remastered 2014"
+  }
+}

@@ -1,0 +1,5 @@
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+ETag: "avatar-1-abcdef"
+Last-Modified: Fri, 10 Jan 2025 12:00:00 GMT
+Cache-Control: public, max-age=86400

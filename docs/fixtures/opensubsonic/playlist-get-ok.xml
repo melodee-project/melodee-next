@@ -1,0 +1,6 @@
+<subsonic-response status="ok" version="1.16.1" type="Melodee" serverVersion="1.0.0" openSubsonic="true">
+  <playlist id="10" name="Road Trip" owner="admin" public="false" songCount="2" duration="510" created="2025-01-05T12:00:00Z" changed="2025-01-05T12:00:00Z" coverArt="pl-10">
+    <entry id="1" parent="12" title="Black Dog" album="Led Zeppelin IV" artist="Led Zeppelin" track="1" year="1971" genre="rock" duration="255" isDir="false" size="5120000" suffix="flac" />
+    <entry id="2" parent="12" title="Rock and Roll" album="Led Zeppelin IV" artist="Led Zeppelin" track="2" year="1971" genre="rock" duration="255" isDir="false" size="5120000" suffix="flac" />
+  </playlist>
+</subsonic-response>

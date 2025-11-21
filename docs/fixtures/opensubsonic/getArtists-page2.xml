@@ -1,0 +1,7 @@
+<subsonic-response status="ok" version="1.16.1" type="Melodee" serverVersion="1.0.0" openSubsonic="true">
+  <artists lastModified="2025-01-10T12:00:00Z" ignoredArticles="The El Le La Los Las" offset="50" size="50" total="120">
+    <index name="M">
+      <artist id="51" name="Metallica" coverArt="ar-51" albumCount="15" />
+    </index>
+  </artists>
+</subsonic-response>

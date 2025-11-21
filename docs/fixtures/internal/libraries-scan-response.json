@@ -1,0 +1,9 @@
+{
+  "job_id": "scan-abc123",
+  "queue": "default",
+  "status": "queued",
+  "libraries": [
+    { "id": 1, "name": "Inbound" },
+    { "id": 2, "name": "Production A" }
+  ]
+}

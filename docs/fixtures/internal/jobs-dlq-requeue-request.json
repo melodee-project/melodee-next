@@ -1,0 +1,4 @@
+{
+  "job_ids": ["dlq-job-123"],
+  "target_queue": "default"
+}

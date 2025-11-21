@@ -245,6 +245,11 @@ func (m *MigrationManager) createInitialPartitions() error {
 ```
 
 ## Performance Optimizations
+### Migration Ordering and Safety
+- Order: (1) extensions (`uuid-ossp`, `pg_trgm`), (2) enum types, (3) static tables, (4) partitioned parents, (5) partitions, (6) per-partition indexes, (7) materialized/views.
+- Tooling: run `melodee migrate --dry-run` in CI to capture SQL for review; promote only after signed-off.
+- Downgrades: mark destructive migrations irreversible in production; prefer patch migrations over drops.
+- Concurrency: set `lock_timeout=5s`, `statement_timeout=10m`; retry migrations up to 3 times with jitter.
 
 ### Query Optimization Strategies
 ```go

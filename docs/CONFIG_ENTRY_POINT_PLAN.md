@@ -718,6 +718,84 @@ func (a *Application) registerRoutes() {
 }
 ```
 
+### Environment Variable Map and Precedence
+- Precedence: CLI flags > env vars > config file > defaults.
+- Required env vars: `MELODEE_DATABASE_PASSWORD`, `MELODEE_JWT_SECRET`, `MELODEE_REDIS_PASSWORD` (if applicable), `MELODEE_BOOTSTRAP_ADMIN_PASSWORD`.
+- Common service vars:
+  - `MELODEE_API_ADDR` (default `:3000`)
+  - `MELODEE_WEB_ADDR` (default `:8080`)
+  - `MELODEE_REDIS_ADDR` (default `redis:6379`)
+  - `MELODEE_DB_NAME` (default `melodee`)
+  - `MELODEE_LOG_LEVEL` (default `info`)
+  - `MELODEE_FEATURE_OPENSUBSONIC_API` (default `true`)
+  - `MELODEE_FFMPEG_PATH` (default `/usr/bin/ffmpeg`)
+  - External metadata: `MELODEE_MUSICBRAINZ_TOKEN`, `MELODEE_LASTFM_KEY`, `MELODEE_SPOTIFY_CLIENT_ID/SECRET` (optional; if set, enable fetching)
+- Example `config.yaml`:
+```yaml
+server:
+  host: 0.0.0.0
+  port: 3000
+database:
+  host: db
+  port: 5432
+  user: melodee
+  dbname: melodee
+  sslmode: disable
+redis:
+  addr: redis:6379
+logging:
+  level: info
+paths:
+  storage_dir: /melodee/storage
+  inbound_dir: /melodee/inbound
+  staging_dir: /melodee/staging
+features:
+  open_subsonic_api: true
+```
+
+### Per-service Sample Configs
+- API (`config.api.yaml`):
+```yaml
+server:
+  host: 0.0.0.0
+  port: 3000
+database:
+  host: db
+  user: melodee
+  dbname: melodee
+redis:
+  addr: redis:6379
+features:
+  open_subsonic_api: true
+processing:
+  ffmpeg_path: /usr/bin/ffmpeg
+```
+- Worker (`config.worker.yaml`):
+```yaml
+database:
+  host: db
+  user: melodee
+redis:
+  addr: redis:6379
+processing:
+  concurrency: 4
+  ffmpeg_path: /usr/bin/ffmpeg
+queues:
+  critical: 5
+  default: 10
+  bulk: 2
+```
+- Web (`config.web.yaml`):
+```yaml
+server:
+  host: 0.0.0.0
+  port: 8080
+api:
+  base_url: http://localhost:3000
+logging:
+  level: info
+```
+
 ### Application Start and Shutdown
 
 ```go

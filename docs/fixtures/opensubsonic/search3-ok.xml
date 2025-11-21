@@ -1,0 +1,6 @@
+<subsonic-response status="ok" version="1.16.1" type="Melodee" serverVersion="1.0.0" openSubsonic="true">
+  <searchResult3 offset="0" size="2" total="2">
+    <artist id="3" name="Led Zeppelin" coverArt="ar-3" albumCount="9" />
+    <album id="12" parent="3" title="Led Zeppelin IV" artist="Led Zeppelin" artistId="3" coverArt="al-12" songCount="8" duration="2550" playCount="42" created="1971-11-08T00:00:00Z" />
+  </searchResult3>
+</subsonic-response>

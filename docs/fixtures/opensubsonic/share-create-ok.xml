@@ -1,0 +1,7 @@
+<subsonic-response status="ok" version="1.16.1" type="Melodee" serverVersion="1.0.0" openSubsonic="true">
+  <shares>
+    <share id="5" url="https://media.example.com/share/abc123" description="Promo" created="2025-01-10T12:00:00Z" expires="2025-02-10T12:00:00Z" visitCount="0">
+      <entry id="1" parent="12" title="Black Dog" album="Led Zeppelin IV" artist="Led Zeppelin" track="1" duration="255" isDir="false" />
+    </share>
+  </shares>
+</subsonic-response>

@@ -319,6 +319,15 @@ Pre-calculated statistics to avoid expensive aggregation queries on large datase
 - Archive old partitions for inactive content
 - Regular ANALYZE operations on partitions
 
+**Partition Playbook**
+- Creation cadence: job `partition:create-next-month` runs weekly; creates `albums_YYYY_MM` and `songs_YYYY_MM` with covering/partial indexes applied per partition.
+- Index template per new partition:
+  - `albums`: `idx_albums_artist_id`, `idx_albums_name_normalized_gin`, `idx_albums_artist_status_covering` (partial), `idx_albums_active` (partial).
+  - `songs`: `idx_songs_album_id_hash`, `idx_songs_artist_id_hash`, `idx_songs_album_order_covering` (partial), `idx_songs_search_covering` (partial), `idx_songs_fulltext`, `idx_songs_active` (partial).
+- Retention: partitions older than 36 months move to `archive` schema; keep indexes but set `autovacuum_freeze_max_age` tuned for cold data.
+- Verification: after creation run `EXPLAIN (ANALYZE,BUFFERS)` for `getAlbum` and `stream` sample queries to ensure index usage; record results in release notes.
+- Idempotency: partition create scripts use `IF NOT EXISTS` and transactional execution; safe to rerun.
+
 ### 2. Statistics Updates
 - Frequent statistics updates for large tables
 - Custom statistics for complex queries

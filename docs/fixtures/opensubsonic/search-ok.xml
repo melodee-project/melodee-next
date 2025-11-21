@@ -1,0 +1,5 @@
+<subsonic-response status="ok" version="1.16.1" type="Melodee" serverVersion="1.0.0" openSubsonic="true">
+  <searchResult offset="0" size="1" total="1">
+    <song id="1" parent="12" title="Black Dog" album="Led Zeppelin IV" artist="Led Zeppelin" duration="255" track="1" year="1971" genre="rock" isDir="false" coverArt="al-12"/>
+  </searchResult>
+</subsonic-response>

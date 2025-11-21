@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "file_too_large",
+    "message": "Avatar size exceeds limit of 2MB"
+  }
+}

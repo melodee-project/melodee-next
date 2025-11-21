@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "id": 51,
+      "name": "Metallica",
+      "type": "artist",
+      "cover_art": "ar-51"
+    }
+  ],
+  "pagination": {
+    "offset": 50,
+    "limit": 50,
+    "total": 120
+  }
+}

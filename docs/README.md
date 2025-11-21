@@ -5,6 +5,7 @@ This directory contains planning documents for Melodee. Key documents to start w
 ## Essential Documents
 - **`TECHNICAL_SPEC.md`** - Architecture and service specifications
 - **`DATABASE_SCHEMA.md`** - Optimized database schema with partitioning
+- **`METADATA_MAPPING.md`** - Tag ↔ DB mapping and conflict rules
 
 ## Technical Stack
 - Backend: Go + Fiber
@@ -17,3 +18,8 @@ This directory contains planning documents for Melodee. Key documents to start w
 - Directory codes for 300k+ artist performance
 - Horizontal partitioning for massive scale
 - Media processing pipeline (inbound → staging → production)
+
+## Test & Fixture Expectations
+- Contract fixtures for OpenSubsonic/internal APIs belong in `docs/fixtures/`; include request, response, and notes on auth context.
+- Golden responses should mirror the conventions in `TECHNICAL_SPEC.md` (pagination, errors, date formats).
+- See `docs/fixtures/README.md` for structure and naming.

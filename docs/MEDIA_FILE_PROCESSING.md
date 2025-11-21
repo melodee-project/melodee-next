@@ -24,6 +24,20 @@ This document outlines the media file processing pipeline for the Go-based Melod
 - **Directory Structure**: Optimized with directory codes to prevent deep hierarchies
 - **Status**: Actively served to clients via OpenSubsonic API
 
+## Operational Parameters
+- FFmpeg profiles:
+  - `transcode_high`: `-c:a libmp3lame -b:a 320k -ar 44100 -ac 2`
+  - `transcode_mid`: `-c:a libmp3lame -b:a 192k -ar 44100 -ac 2`
+  - `transcode_opus_mobile`: `-c:a libopus -b:a 96k -application audio`
+- Concurrency caps: inbound validation 4 workers, staging promotion 2, transcoding 2; configurable via `PROCESSING_CONCURRENCY_*`.
+- Retries: max 3 attempts/file with exponential backoff (2s, 4s, 8s); on final failure mark `quarantined` with reason code.
+- Checksums: compute SHA256 on inbound, store in `crc_hash`, re-validate pre-promotion; mismatch → quarantine.
+- Quarantine handling: move to `/quarantine/<reason>/<date>/`, persist audit log; UI should surface and allow retry.
+- Idempotency: inbound skips previously processed checksum+mtime unless `force=true`; staging promotion wraps DB + file move as one logical transaction and restores file on failure.
+- Capacity detection: production libraries refreshed every 10 minutes via `df` or platform equivalent; warn at 80%, stop allocations at 90% and quarantine with reason `disk_full`.
+- Multi-disc handling: staging expects `CD<number>`/`Disc <number>` directories; disc number must be set in DB and tags before promotion; missing disc info → quarantine `metadata_conflict`.
+- Cue sheets: if `.cue` present, store link and require referenced audio exists; otherwise quarantine `cue_missing_audio`.
+
 ## Processing Workflow Diagram
 
 ```mermaid
@@ -492,6 +506,13 @@ func (mv *MediaFileValidator) validateQuality(metadata *MediaMetadata) error {
 }
 ```
 
+### Metadata Write-back Rules
+- MP3: ID3v2.4 UTF-8; also write ID3v1 null-terminated fallback for legacy clients; embed front cover as 600x600 JPEG (quality 85).
+- FLAC/OGG: Vorbis comments; embed cover as FLAC PICTURE block if size < 1MB, otherwise store alongside as `cover.jpg`.
+- MP4/M4A: atoms `\xa9nam`, `\xa9alb`, `\xa9ART`, `trkn`, `disk`; cover in `covr` (jpeg preferred).
+- Sidecars: preserve existing `.nfo` and `.cue`; regenerate `melodee.json` per album on promotion with checksum + directory code.
+- Conflict resolution: DB is source of truth; when ingest sees on-disk tags diverge from DB after user edit, rewrite tags; log drift count metric `metadata.drift`.
+
 ## Configuration Examples
 
 ### Production Library Distribution Configuration
@@ -500,9 +521,14 @@ func (mv *MediaFileValidator) validateQuality(metadata *MediaMetadata) error {
 processing:
   library_selection:
     strategy: "directory_code"  # Options: "hash", "round_robin", "directory_code", "size_based"
+    # Rules are matched most-specific-first (exact code) then range, then fallback strategy.
     load_balancing:
       enabled: true
       threshold_percentage: 80  # Move to next library when current is 80% full
+    capacity_probe:
+      command: "df --output=pcent /melodee/storage"
+      interval: "10m"
+      stop_threshold_percentage: 90
     directory_rules:
       "A-C": "production_nas01"    # Artists with directory codes starting with A-C
       "D-G": "production_nas02"    # Artists with directory codes starting with D-G
@@ -512,6 +538,9 @@ processing:
       "LZ": "production_nas01"     # Specific directory code to specific library
     size_thresholds:
       max_size_per_library: 1073741824000  # 1TB in bytes
+    hash_strategy:
+      salt: "melodee"
+      modulus: 3  # number of production libs
 
 # Directory template configuration
 directory:

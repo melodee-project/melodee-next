@@ -27,6 +27,24 @@ type directoryCodeGenerator struct {
 // Examples: "Led Zeppelin" -> "LZ", "The Beatles" -> "TB", "AC/DC" -> "AC"
 ```
 
+#### Normalization Rules (Authoritative)
+- Fold to ASCII where possible; remove diacritics; emoji removed.
+- Lower-case for normalization but store displayed `Name` unchanged; directory codes upper-case.
+- Articles to drop when generating code and sort names: `the`, `a`, `an`, `le`, `la`, `les`, `el`, `los`, `las`.
+- Sort name generation: strip leading article, normalize whitespace/punctuation, then title-case for display; keep original name intact for UI.
+- Directory path segments should use the article-stripped, sanitized form for `{artist}` and `{album}` placeholders to avoid deep “The ...” clusters.
+- Replace `&` with `and`, `/` with `-`, `.` removed, whitespace collapsed to single space before code.
+- Max length default 8 after suffix; trim from right.
+- Examples:  
+  - "The Beatles" → `TB`  
+  - "AC/DC" → `AC`  
+  - "Beyoncé" → `BE` (accent folded)  
+  - "Los Fabulosos Cadillacs" → `FC`  
+  - "!!!" → `!!!` (non-letter preserved up to max length)
+- Rename policy: directory code is stable unless explicitly recalculated via admin API; name changes do not auto-change code to avoid path churn.
+- Manual override: admins can set `directory_code_override`; generator must respect override, suffix collisions still apply.
+- Collision handling across workers: use DB unique index on `directory_code`; retry with suffix `-%d` until available; lock row via `SELECT ... FOR UPDATE SKIP LOCKED` to avoid contention.
+
 #### 2. Path Template Resolver
 Handles configurable directory templates with placeholders for flexible organization.
 
