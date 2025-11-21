@@ -1,0 +1,588 @@
+openapi: 3.0.3
+info:
+  title: Melodee Internal API
+  description: Internal API for Melodee music server
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+paths:
+  /api/auth/login:
+    post:
+      summary: User login
+      description: Authenticate user and return JWT tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "user@example.com"
+                password:
+                  type: string
+                  example: "password"
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  expires_in:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                      email:
+                        type: string
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh JWT token
+      description: Refresh access token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refresh successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  expires_in:
+                    type: integer
+
+  /api/auth/request-reset:
+    post:
+      summary: Request password reset
+      description: Request password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        '202':
+          description: Reset request accepted (even if user doesn't exist)
+
+  /api/auth/reset:
+    post:
+      summary: Reset user password
+      description: Reset password using token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+        '400':
+          description: Invalid token or password policy violation
+
+  /api/users:
+    get:
+      summary: Get all users (admin only)
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        username:
+                          type: string
+                        email:
+                          type: string
+                        is_admin:
+                          type: boolean
+                  pagination:
+                    type: object
+    post:
+      summary: Create a new user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Validation error
+        '403':
+          description: Not authorized
+
+  /api/users/{id}:
+    get:
+      summary: Get user by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  username:
+                    type: string
+                  email:
+                    type: string
+    put:
+      summary: Update user (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: User updated
+        '400':
+          description: Validation error
+        '403':
+          description: Not authorized
+        '404':
+          description: User not found
+    delete:
+      summary: Delete user (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "deleted"
+        '403':
+          description: Not authorized
+        '404':
+          description: User not found
+
+  /api/playlists:
+    get:
+      summary: Get all playlists
+      responses:
+        '200':
+          description: List of playlists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        user_id:
+                          type: integer
+                        public:
+                          type: boolean
+                  pagination:
+                    type: object
+    post:
+      summary: Create a new playlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                comment:
+                  type: string
+                public:
+                  type: boolean
+                song_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '201':
+          description: Playlist created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+
+  /api/playlists/{id}:
+    get:
+      summary: Get playlist by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Playlist details with song IDs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  song_ids:
+                    type: array
+                    items:
+                      type: integer
+    put:
+      summary: Update playlist
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                comment:
+                  type: string
+                public:
+                  type: boolean
+                song_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Playlist updated
+        '400':
+          description: Validation error
+        '404':
+          description: Playlist not found
+    delete:
+      summary: Delete playlist
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Playlist deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "deleted"
+
+  /api/libraries/scan:
+    post:
+      summary: Trigger library scan
+      description: Enqueue scan job for libraries
+      requestBody:
+        required: false
+      responses:
+        '200':
+          description: Scan job enqueued successfully
+
+  /api/libraries/process:
+    post:
+      summary: Move inbound to staging
+      description: Move files from inbound directory to staging
+      requestBody:
+        required: false
+      responses:
+        '200':
+          description: Process job enqueued successfully
+
+  /api/libraries/move-ok:
+    post:
+      summary: Promote OK albums to production
+      description: Move albums with OK status from staging to production
+      requestBody:
+        required: false
+      responses:
+        '200':
+          description: Promotion job enqueued successfully
+
+  /api/libraries/stats:
+    get:
+      summary: Get library statistics
+      responses:
+        '200':
+          description: Library statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_songs:
+                    type: integer
+                  total_artists:
+                    type: integer
+                  total_albums:
+                    type: integer
+                  total_duration:
+                    type: integer
+
+  /api/images/{id}:
+    get:
+      summary: Get image by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Image binary data with ETag and Last-Modified headers
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Image not found
+
+  /api/images/avatar:
+    post:
+      summary: Upload user avatar
+      description: Upload user avatar image (max 2MB JPEG/PNG)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  etag:
+                    type: string
+        '413':
+          description: File too large (>2MB)
+        '415':
+          description: Invalid MIME type (not JPEG/PNG)
+
+  /api/search:
+    get:
+      summary: Search for entities
+      parameters:
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [artist, album, song]
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: offset
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  pagination:
+                    type: object
+                      properties:
+                        offset:
+                          type: integer
+                        limit:
+                          type: integer
+                        total:
+                          type: integer
+
+  /healthz:
+    get:
+      summary: Health check endpoint
+      description: Returns health status of all dependencies
+      responses:
+        '200':
+          description: All dependencies healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: One or more dependencies are down or degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        db:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [ok, degraded, down]
+            latency_ms:
+              type: integer
+        redis:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [ok, degraded, down]
+            latency_ms:
+              type: integer
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

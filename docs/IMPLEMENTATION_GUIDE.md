@@ -3,8 +3,8 @@
 Use this guide to sequence work for coding agents. Check off phases as completed.
 
 ## Phase Map
-- [ ] Phase 1: Bootstrapping & Contracts
-- [ ] Phase 2: Core Services (API/Web/Worker) Foundations
+- [x] Phase 1: Bootstrapping & Contracts
+- [x] Phase 2: Core Services (API/Web/Worker) Foundations
 - [ ] Phase 3: Media Pipeline & Directory Code Integration
 - [ ] Phase 4: OpenSubsonic Compatibility & Clients
 - [ ] Phase 5: Admin, Jobs, and Observability
