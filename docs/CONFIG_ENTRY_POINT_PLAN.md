@@ -796,6 +796,15 @@ logging:
   level: info
 ```
 
+### Environment Matrix (required vars)
+| Env | Required Vars | Notes |
+| --- | --- | --- |
+| development | `MELODEE_DATABASE_PASSWORD`, `MELODEE_JWT_SECRET`, `MELODEE_BOOTSTRAP_ADMIN_PASSWORD`, `MELODEE_FFMPEG_PATH` | external API keys optional |
+| staging | dev vars + `MELODEE_REDIS_PASSWORD` (if auth), `MELODEE_MUSICBRAINZ_TOKEN` | feature flags match prod |
+| production | staging vars + `MELODEE_LASTFM_KEY`, `MELODEE_SPOTIFY_CLIENT_ID/SECRET` (if enabled) | secrets from vault/secret manager; no defaults |
+
+Secret guidance: prefer env vars injected by secret manager; avoid committing secrets to config files. Mount service-specific YAML with non-secret defaults only.
+
 ### Application Start and Shutdown
 
 ```go

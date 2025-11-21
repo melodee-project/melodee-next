@@ -44,6 +44,8 @@ Authoritative sample requests/responses for OpenSubsonic and internal REST APIs.
 - `opensubsonic/search-ok.xml`
 - `opensubsonic/playlist-create-ok.xml`
 - `opensubsonic/playlist-update-ok.xml`
+- `opensubsonic/avatar-upload-ok.xml`
+- `opensubsonic/avatar-upload-invalid-mime.xml`
 - `internal/auth-login-ok.json`
 - `internal/libraries-scan-request.json`
 - `internal/libraries-scan-response.json`
@@ -71,10 +73,11 @@ Authoritative sample requests/responses for OpenSubsonic and internal REST APIs.
 - `internal/jobs-dlq-purge-response.json`
 - `internal/cover-art-upload-too-large.json`
 - `internal/admin-forbidden-response.json`
+- `internal/cover-art-upload-ok.json`
+- `internal/cover-art-upload-invalid-mime.json`
 
 ## Fixtures to Add Next
-- OpenSubsonic: avatar upload (if supported).
-- Internal: cover art upload success example (binary), error cases for invalid MIME.
+None pending.
 
 ## Reference
 - Align with OpenSubsonic 1.16.1 (see upstream docs) and the conventions in `../TECHNICAL_SPEC.md`.

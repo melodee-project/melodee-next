@@ -1,0 +1,3 @@
+<subsonic-response status="failed" version="1.16.1" type="Melodee" serverVersion="1.0.0" openSubsonic="true">
+  <error code="40" message="invalid content type" />
+</subsonic-response>

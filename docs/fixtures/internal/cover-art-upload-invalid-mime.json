@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_mime",
+    "message": "Only image/jpeg and image/png are allowed"
+  }
+}

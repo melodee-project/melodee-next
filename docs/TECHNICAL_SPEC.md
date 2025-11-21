@@ -375,6 +375,7 @@ Example error:
 - Users: `getUsers`, `getUser`, `createUser`, `updateUser`, `deleteUser` — admin only except `getUser` self. Password rules from auth section.
 - Errors: always return HTTP 200 with `<error code="" message=""/>`; also emit `X-Status-Code` for observability (e.g., 404/401).
 - Cover art/avatar: when not found, return XML error with `code=70`; include `ETag` and `Last-Modified` on success responses for cacheability. For avatar uploads (internal API), enforce 2MB max JPEG/PNG.
+- Avatars/Cover upload (if exposed via OpenSubsonic extensions): accept `multipart/form-data` with field `file`, `Content-Type` `image/jpeg|png`, max 2MB; success returns XML `<status>ok</status>` with `coverArt` id.
 
 ### 3.2 Internal API Endpoints
 
