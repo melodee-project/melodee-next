@@ -1,10 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import apiService from './services/apiService';
+import LoginPage from './pages/LoginPage';
+import AdminDashboard from './components/AdminDashboard';
+import DLQManagement from './components/DLQManagement';
+import UserManagement from './components/UserManagement';
+import SettingsManagement from './components/SettingsManagement';
 
-// Set the base API URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+// Check if user is authenticated
+function isAuthenticated() {
+  return localStorage.getItem('accessToken') !== null;
+}
+
+// ProtectedRoute component to restrict access to authenticated users
+function ProtectedRoute({ children }) {
+  return isAuthenticated() ? children : <Navigate to="/login" />;
+}
+
+// AdminRoute component to restrict access to admin users
+function AdminRoute({ children }) {
+  const userIsAdmin = localStorage.getItem('userIsAdmin') === 'true';
+  return isAuthenticated() && userIsAdmin ? children : <Navigate to="/login" />;
+}
+
+function App() {
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-100">
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/dlq" element={
+            <ProtectedRoute>
+              <DLQManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/users" element={
+            <ProtectedRoute>
+              <UserManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/settings" element={
+            <ProtectedRoute>
+              <SettingsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/" element={
+            isAuthenticated() ? <Navigate to="/admin" /> : <Navigate to="/login" />
+          } />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL;
