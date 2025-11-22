@@ -1,0 +1,430 @@
+openapi: 3.0.3
+info:
+  title: Subsonic REST API (minimal, unofficial)
+  version: "1.16.1"
+  description: |
+    Unofficial, minimal OpenAPI 3.0 description for the Subsonic REST API.
+    This file is intended as a starting point for client/server generation
+    and experimentation. It does NOT attempt to model every endpoint or
+    response field from the official documentation at
+    https://www.subsonic.org/pages/api.jsp.
+
+    Authentication parameters follow the legacy Subsonic style (query
+    parameters u / p OR u / t / s, plus v, c and f).
+
+servers:
+  - url: https://example.com/rest
+    description: Subsonic REST base URL (endpoints use *.view paths)
+
+tags:
+  - name: system
+    description: System and server-level operations
+  - name: library
+    description: Browsing the music library
+  - name: media
+    description: Media retrieval (streaming, cover art)
+  - name: search
+    description: Searching the library
+
+components:
+  parameters:
+    User:
+      name: u
+      in: query
+      required: true
+      description: Subsonic username.
+      schema:
+        type: string
+    Password:
+      name: p
+      in: query
+      required: false
+      description: |
+        Password, either in clear text or the form enc:HEX-ENCODED.
+        You must provide either (p) OR (t and s).
+      schema:
+        type: string
+    AuthToken:
+      name: t
+      in: query
+      required: false
+      description: |
+        Authentication token, generated from the user's password and a salt.
+        You must provide either (p) OR (t and s).
+      schema:
+        type: string
+    Salt:
+      name: s
+      in: query
+      required: false
+      description: Salt used when computing the authentication token (t).
+      schema:
+        type: string
+    ApiVersion:
+      name: v
+      in: query
+      required: true
+      description: Subsonic REST API version to use, e.g. 1.16.1.
+      schema:
+        type: string
+        example: "1.16.1"
+    ClientId:
+      name: c
+      in: query
+      required: true
+      description: |
+        A short string identifying the client application, used in server logs
+        and statistics. Example: "my-awesome-client".
+      schema:
+        type: string
+    ResponseFormat:
+      name: f
+      in: query
+      required: false
+      description: |
+        Response format. When omitted, XML is used by most servers.
+        Many modern servers support JSON and JSONP as well.
+      schema:
+        type: string
+        enum: [xml, json, jsonp]
+        default: xml
+    JsonCallback:
+      name: callback
+      in: query
+      required: false
+      description: JSONP callback function name (used when f=jsonp).
+      schema:
+        type: string
+
+    MusicFolderId:
+      name: id
+      in: query
+      required: true
+      description: ID of a music folder or directory, depending on endpoint.
+      schema:
+        type: string
+
+    SearchQuery:
+      name: query
+      in: query
+      required: true
+      description: Free-text search query.
+      schema:
+        type: string
+
+    SearchSongCount:
+      name: songCount
+      in: query
+      required: false
+      description: Maximum number of songs to return.
+      schema:
+        type: integer
+        minimum: 0
+        default: 20
+
+  schemas:
+    Error:
+      type: object
+      description: Error object returned when subsonic-response.status is "failed".
+      properties:
+        code:
+          type: integer
+          description: Numeric error code.
+        message:
+          type: string
+          description: Human-readable error message.
+      required:
+        - code
+        - message
+
+    SubsonicEnvelope:
+      type: object
+      description: Top-level envelope used by most Subsonic JSON responses.
+      properties:
+        subsonic-response:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [ok, failed]
+            version:
+              type: string
+              description: REST API version implemented by the server.
+            type:
+              type: string
+              description: Optional server implementation name.
+            serverVersion:
+              type: string
+              description: Optional server version string.
+            error:
+              $ref: "#/components/schemas/Error"
+          required:
+            - status
+            - version
+
+    PingResponse:
+      allOf:
+        - $ref: "#/components/schemas/SubsonicEnvelope"
+
+    GenericListResponse:
+      allOf:
+        - $ref: "#/components/schemas/SubsonicEnvelope"
+      description: |
+        Generic list-style response. Concrete servers typically add properties
+        such as musicFolders, indexes, artists, albums, songs, etc.
+
+paths:
+  /ping.view:
+    get:
+      tags: [system]
+      summary: Ping the Subsonic server.
+      description: |
+        Lightweight endpoint to test authentication and connectivity.
+        Returns a subsonic-response with status "ok" on success.
+      operationId: ping
+      parameters:
+        - $ref: "#/components/parameters/User"
+        - $ref: "#/components/parameters/Password"
+        - $ref: "#/components/parameters/AuthToken"
+        - $ref: "#/components/parameters/Salt"
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/ClientId"
+        - $ref: "#/components/parameters/ResponseFormat"
+        - $ref: "#/components/parameters/JsonCallback"
+      responses:
+        "200":
+          description: Successful ping response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PingResponse"
+
+  /getLicense.view:
+    get:
+      tags: [system]
+      summary: Get license information.
+      operationId: getLicense
+      parameters:
+        - $ref: "#/components/parameters/User"
+        - $ref: "#/components/parameters/Password"
+        - $ref: "#/components/parameters/AuthToken"
+        - $ref: "#/components/parameters/Salt"
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/ClientId"
+        - $ref: "#/components/parameters/ResponseFormat"
+        - $ref: "#/components/parameters/JsonCallback"
+      responses:
+        "200":
+          description: License info (free or trial/paid), wrapped in subsonic-response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericListResponse"
+
+  /getMusicFolders.view:
+    get:
+      tags: [library]
+      summary: List top-level music folders.
+      operationId: getMusicFolders
+      parameters:
+        - $ref: "#/components/parameters/User"
+        - $ref: "#/components/parameters/Password"
+        - $ref: "#/components/parameters/AuthToken"
+        - $ref: "#/components/parameters/Salt"
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/ClientId"
+        - $ref: "#/components/parameters/ResponseFormat"
+        - $ref: "#/components/parameters/JsonCallback"
+      responses:
+        "200":
+          description: |
+            List of top-level music folders. The exact fields depend on
+            server implementation and Subsonic API version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericListResponse"
+
+  /getIndexes.view:
+    get:
+      tags: [library]
+      summary: List artists and albums grouped by initial letter.
+      operationId: getIndexes
+      parameters:
+        - $ref: "#/components/parameters/User"
+        - $ref: "#/components/parameters/Password"
+        - $ref: "#/components/parameters/AuthToken"
+        - $ref: "#/components/parameters/Salt"
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/ClientId"
+        - $ref: "#/components/parameters/ResponseFormat"
+        - $ref: "#/components/parameters/JsonCallback"
+        - name: musicFolderId
+          in: query
+          required: false
+          description: Restrict the index to a specific music folder.
+          schema:
+            type: string
+        - name: ifModifiedSince
+          in: query
+          required: false
+          description: |
+            Only return a result if the index has changed since the given
+            Unix timestamp (in milliseconds).
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: |
+            Index listing of artists/albums. Envelope is Subsonic, content
+            varies by server.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericListResponse"
+
+  /getMusicDirectory.view:
+    get:
+      tags: [library]
+      summary: Get contents of a music directory.
+      operationId: getMusicDirectory
+      parameters:
+        - $ref: "#/components/parameters/User"
+        - $ref: "#/components/parameters/Password"
+        - $ref: "#/components/parameters/AuthToken"
+        - $ref: "#/components/parameters/Salt"
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/ClientId"
+        - $ref: "#/components/parameters/ResponseFormat"
+        - $ref: "#/components/parameters/JsonCallback"
+        - $ref: "#/components/parameters/MusicFolderId"
+      responses:
+        "200":
+          description: |
+            Directory contents (child directories and songs), wrapped in
+            a Subsonic envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericListResponse"
+
+  /search3.view:
+    get:
+      tags: [search]
+      summary: Search for albums, artists and songs.
+      operationId: search3
+      parameters:
+        - $ref: "#/components/parameters/User"
+        - $ref: "#/components/parameters/Password"
+        - $ref: "#/components/parameters/AuthToken"
+        - $ref: "#/components/parameters/Salt"
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/ClientId"
+        - $ref: "#/components/parameters/ResponseFormat"
+        - $ref: "#/components/parameters/JsonCallback"
+        - $ref: "#/components/parameters/SearchQuery"
+        - $ref: "#/components/parameters/SearchSongCount"
+        - name: albumCount
+          in: query
+          required: false
+          description: Maximum number of albums to return.
+          schema:
+            type: integer
+            minimum: 0
+            default: 20
+        - name: artistCount
+          in: query
+          required: false
+          description: Maximum number of artists to return.
+          schema:
+            type: integer
+            minimum: 0
+            default: 20
+      responses:
+        "200":
+          description: Search results, wrapped in a Subsonic envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericListResponse"
+
+  /stream.view:
+    get:
+      tags: [media]
+      summary: Stream a song.
+      operationId: stream
+      parameters:
+        - $ref: "#/components/parameters/User"
+        - $ref: "#/components/parameters/Password"
+        - $ref: "#/components/parameters/AuthToken"
+        - $ref: "#/components/parameters/Salt"
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/ClientId"
+        - name: id
+          in: query
+          required: true
+          description: ID of the song to stream.
+          schema:
+            type: string
+        - name: maxBitRate
+          in: query
+          required: false
+          description: Maximum bitrate for transcoding (in Kbps).
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Explicit audio container/codec to use, if supported.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audio stream.
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /getCoverArt.view:
+    get:
+      tags: [media]
+      summary: Retrieve album or song cover art.
+      operationId: getCoverArt
+      parameters:
+        - $ref: "#/components/parameters/User"
+        - $ref: "#/components/parameters/Password"
+        - $ref: "#/components/parameters/AuthToken"
+        - $ref: "#/components/parameters/Salt"
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/ClientId"
+        - name: id
+          in: query
+          required: true
+          description: ID of the album, artist or song whose cover art to fetch.
+          schema:
+            type: string
+        - name: size
+          in: query
+          required: false
+          description: Desired image size (server may approximate).
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cover art image.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary

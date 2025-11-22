@@ -38,6 +38,21 @@ func NewHealthMetricsHandler(
 	}
 }
 
+// NewHealthMetricsHandler creates a new health and metrics handler
+func NewHealthMetricsHandler(
+	db *gorm.DB,
+	config *config.AppConfig,
+	capacityProbe *capacity.CapacityProbe,
+	asynqInspector *asynq.Inspector,
+) *HealthMetricsHandler {
+	return &HealthMetricsHandler{
+		db:              db,
+		config:          config,
+		capacityProbe:   capacityProbe,
+		asynqInspector:  asynqInspector,
+	}
+}
+
 // HealthCheck handles the health check endpoint
 func (h *HealthMetricsHandler) HealthCheck(c *fiber.Ctx) error {
 	// Check database health

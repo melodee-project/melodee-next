@@ -87,8 +87,17 @@ func NewServer() (*Server, error) {
 	})
 
 	// Initialize capacity probe
+	capacityConfig := &capacity.CapacityConfig{
+		Interval:          10 * time.Minute, // Default 10 minutes
+		WarningThreshold:  80.0,            // 80% warning
+		AlertThreshold:    90.0,            // 90% alert
+		GraceIntervals:    1,               // 1 interval grace period
+		FailureMaxIntervals: 2,             // 2 max failure intervals
+		ProbeCommand:      "df --output=pcent /storage",
+	}
+
 	capacityProbe := capacity.NewCapacityProbe(
-		nil, // Use default config
+		capacityConfig,
 		dbManager.GetGormDB(),
 		asynqClient,
 		asynqScheduler,
