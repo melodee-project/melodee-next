@@ -104,7 +104,7 @@ services:
 
   # Database Service
   db:
-    image: postgres:15
+    image: postgres:17
     container_name: melodee-db
     restart: unless-stopped
     environment:

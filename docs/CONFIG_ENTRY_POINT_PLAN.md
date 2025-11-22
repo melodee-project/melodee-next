@@ -928,7 +928,7 @@ paths:
 
 ### Production Configuration Template
 ```yaml
-# config/production.yaml
+# docs/config.template.yaml (copy and adapt for your environment)
 server:
   host: "0.0.0.0"
   port: 8080

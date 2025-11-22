@@ -22,10 +22,8 @@ import (
 	"melodee/internal/config"
 	"melodee/internal/database"
 	"melodee/internal/handlers"
-	"melodee/internal/metrics"
 	"melodee/internal/middleware"
 	"melodee/internal/services"
-	"melodee/open_subsonic"
 	"melodee/open_subsonic/handlers"
 	"melodee/open_subsonic/middleware"
 )
@@ -40,7 +38,6 @@ type Server struct {
 	asynqClient    *asynq.Client
 	asynqScheduler *asynq.Scheduler
 	asynqInspector *asynq.Inspector
-	metrics        *metrics.Metrics
 }
 
 // NewServer creates a new combined server instance
@@ -88,9 +85,6 @@ func NewServer() (*Server, error) {
 		Addr: cfg.Redis.Address,
 	})
 
-	// Initialize metrics
-	metrics := metrics.InitializeMetrics()
-
 	// Create the server instance
 	server := &Server{
 		cfg:            cfg,
@@ -100,7 +94,6 @@ func NewServer() (*Server, error) {
 		asynqClient:    asynqClient,
 		asynqScheduler: asynqScheduler,
 		asynqInspector: asynqInspector,
-		metrics:        metrics,
 	}
 
 	// Initialize Fiber app
@@ -125,22 +118,24 @@ func (s *Server) setupMiddleware() {
 	s.app.Use(helmet.New())
 
 	// CORS middleware with configuration
-	s.app.Use(cors.New(cors.Config{
+	corsConfig := cors.Config{
 		AllowOrigins: strings.Join(s.cfg.Server.CORS.AllowOrigins, ","),
 		AllowMethods: strings.Join(s.cfg.Server.CORS.AllowMethods, ","),
 		AllowHeaders: strings.Join(s.cfg.Server.CORS.AllowHeaders, ","),
 		AllowCredentials: s.cfg.Server.CORS.AllowCredentials,
-	}))
+	}
+	s.app.Use(cors.New(corsConfig))
 }
 
 // setupRoutes configures all API routes (both internal and OpenSubsonic)
 func (s *Server) setupRoutes() {
 	// Health check endpoint (for kubernetes readiness/liveness probes)
-	s.app.Get("/healthz", handlers.NewHealthHandler(s.dbManager).HealthCheck)
+	healthHandler := handlers.NewHealthHandler(s.dbManager)
+	s.app.Get("/healthz", healthHandler.HealthCheck)
 
 	// Metrics endpoint for Prometheus
 	s.app.Get("/metrics", func(c *fiber.Ctx) error {
-		promhttp.Handler().ServeHTTP(c.Response().Acquire())
+		promhttp.Handler().ServeHTTP(c.Response().Acquire(), c.Request().Acquire())
 		return nil
 	})
 
@@ -168,7 +163,7 @@ func (s *Server) setupInternalRoutes() {
 	auth.Post("/reset", authHandler.ResetPassword)
 
 	// Protected routes (require authentication)
-	protected := internalAPI.Use(authMiddleware.Protected())
+	protected := internalAPI.Use(authMiddleware.JWTProtected())
 
 	// User management (admin only for some operations)
 	userHandler := handlers.NewUserHandler(s.repo, s.authService)
@@ -194,9 +189,9 @@ func (s *Server) setupInternalRoutes() {
 
 	// DLQ management
 	dlqHandler := handlers.NewDLQHandler(s.asynqInspector)
-	admin.Get("/jobs/dlq", dlqHandler.ListDLQItems)
-	admin.Post("/jobs/dlq/requeue", dlqHandler.RequeueItems)
-	admin.Post("/jobs/dlq/purge", dlqHandler.PurgeItems)
+	admin.Get("/jobs/dlq", dlqHandler.GetDLQItems)
+	admin.Post("/jobs/dlq/requeue", dlqHandler.RequeueDLQItems)
+	admin.Post("/jobs/dlq/purge", dlqHandler.PurgeDLQItems)
 
 	// Settings management
 	settingsHandler := handlers.NewSettingsHandler(s.repo)
@@ -217,14 +212,14 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	rest := s.app.Group("/rest")
 
 	// OpenSubsonic authentication middleware 
-	openSubsonicAuth := open_subsonic_middleware.NewAuthMiddleware(s.authService)
+	openSubsonicAuth := open_subsonic_middleware.NewOpenSubsonicAuthMiddleware(s.dbManager.GetGormDB(), s.cfg.JWT.Secret)
 
 	// Create handlers for OpenSubsonic endpoints
 	browsingHandler := open_subsonic_handlers.NewBrowsingHandler(s.repo)
 	mediaHandler := open_subsonic_handlers.NewMediaHandler(s.repo, s.cfg.Processing.Conversion)
 	searchHandler := open_subsonic_handlers.NewSearchHandler(s.repo)
-	osPlaylistHandler := open_subsonic_handlers.NewPlaylistHandler(s.repo)
-	osUserHandler := open_subsonic_handlers.NewUserHandler(s.repo)
+	playlistHandler := open_subsonic_handlers.NewPlaylistHandler(s.repo)
+	userHandler := open_subsonic_handlers.NewUserHandler(s.repo)
 	systemHandler := open_subsonic_handlers.NewSystemHandler(s.repo)
 
 	// Browsing endpoints
@@ -250,18 +245,18 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	rest.Get("/search3.view", openSubsonicAuth.Authenticate, searchHandler.Search3)
 
 	// Playlist endpoints
-	rest.Get("/getPlaylists.view", openSubsonicAuth.Authenticate, osPlaylistHandler.GetPlaylists)
-	rest.Get("/getPlaylist.view", openSubsonicAuth.Authenticate, osPlaylistHandler.GetPlaylist)
-	rest.Get("/createPlaylist.view", openSubsonicAuth.Authenticate, osPlaylistHandler.CreatePlaylist)
-	rest.Get("/updatePlaylist.view", openSubsonicAuth.Authenticate, osPlaylistHandler.UpdatePlaylist)
-	rest.Get("/deletePlaylist.view", openSubsonicAuth.Authenticate, osPlaylistHandler.DeletePlaylist)
+	rest.Get("/getPlaylists.view", openSubsonicAuth.Authenticate, playlistHandler.GetPlaylists)
+	rest.Get("/getPlaylist.view", openSubsonicAuth.Authenticate, playlistHandler.GetPlaylist)
+	rest.Get("/createPlaylist.view", openSubsonicAuth.Authenticate, playlistHandler.CreatePlaylist)
+	rest.Get("/updatePlaylist.view", openSubsonicAuth.Authenticate, playlistHandler.UpdatePlaylist)
+	rest.Get("/deletePlaylist.view", openSubsonicAuth.Authenticate, playlistHandler.DeletePlaylist)
 
 	// User management endpoints
-	rest.Get("/getUser.view", openSubsonicAuth.Authenticate, osUserHandler.GetUser)
-	rest.Get("/getUsers.view", openSubsonicAuth.Authenticate, osUserHandler.GetUsers)
-	rest.Get("/createUser.view", openSubsonicAuth.Authenticate, osUserHandler.CreateUser)
-	rest.Get("/updateUser.view", openSubsonicAuth.Authenticate, osUserHandler.UpdateUser)
-	rest.Get("/deleteUser.view", openSubsonicAuth.Authenticate, osUserHandler.DeleteUser)
+	rest.Get("/getUser.view", openSubsonicAuth.Authenticate, userHandler.GetUser)
+	rest.Get("/getUsers.view", openSubsonicAuth.Authenticate, userHandler.GetUsers)
+	rest.Get("/createUser.view", openSubsonicAuth.Authenticate, userHandler.CreateUser)
+	rest.Get("/updateUser.view", openSubsonicAuth.Authenticate, userHandler.UpdateUser)
+	rest.Get("/deleteUser.view", openSubsonicAuth.Authenticate, userHandler.DeleteUser)
 
 	// System endpoints
 	rest.Get("/ping.view", systemHandler.Ping)
@@ -288,7 +283,7 @@ func (s *Server) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := s.app.ShutdownWithTimeout(30 * time.Second); err != nil {
+	if err := s.app.ShutdownWithContext(ctx); err != nil {
 		log.Printf("Error during server shutdown: %v", err)
 		return err
 	}

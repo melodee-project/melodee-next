@@ -10,6 +10,7 @@ require (
 replace (
 	melodee/api => ./api
 	melodee/internal => ./internal
+	melodee/open_subsonic => ./open_subsonic
 	melodee/web => ./web
 	melodee/worker => ./worker
 )

@@ -17,9 +17,9 @@ Under the hood you’ll find a Go backend, background workers, and a React/TypeS
 
 - **OpenSubsonic compatible API** – works with clients that speak Subsonic/OpenSubsonic.
 - **Modern Go backend** – Fiber + PostgreSQL + GORM + Redis + Asynq.
-- **Built for big libraries** – directory codes, partitioning, and an optimized schema aimed at hundreds of thousands of tracks and beyond.
+- **Built for big libraries** – directory codes, partitioning, and an optimized schema aimed at millions of tracks and beyond.
 - **Background media pipeline** – scans, ingests, normalizes, and writes back metadata without blocking playback.
-- **Web UI** – React + TypeScript + Vite + Tailwind for a modern browser experience.
+- **Web UI** – React + TypeScript + Vite + Tailwind admin portal.
 - **Health checks & metrics** – ready for containers, homelabs, and light-touch monitoring.
 
 If you like digging into internals, see `docs/PRD.md` and `docs/TECHNICAL_SPEC.md` for the full product and architecture spec.
@@ -91,7 +91,7 @@ If your distro isn’t detected correctly, the script will print what tools are 
 
 - Go `1.25.x` (see `src/go.mod`).
 - Node.js LTS (`>=18`) and PNPM/Yarn/NPM for the frontend.
-- PostgreSQL 14+.
+- PostgreSQL 17+ (15+ should work, but 17 is the recommended baseline and used in the default Docker setup).
 - Redis (for Asynq job queue).
 - FFmpeg installed and accessible on `$PATH`.
 
@@ -350,6 +350,26 @@ A production deployment typically consists of:
 Health checks and metrics endpoints (`/healthz`, `/metrics`) are designed to integrate with orchestrators like Kubernetes. See `docs/HEALTH_CHECK.md` and `docs/CAPACITY_PROBES.md` for details.
 
 More detailed deployment notes live in `docs/IMPLEMENTATION_GUIDE.md` and `docs/TECHNICAL_SPEC.md`.
+
+### Docker / Podman / Docker Compose
+
+There is a `docker-compose.yml` in the repo that describes a multi-service stack (API, Web, Worker, Postgres, Redis, etc.). The name is historical – you can use it as a starting point for both local and production-like deployments.
+
+From the repo root, a typical flow with Docker looks like:
+
+```bash
+docker compose -f docker-compose.yml up -d
+```
+
+If you prefer **Podman**, you can either use the Docker-compatible CLI shim (`podman-docker`) or run Compose via `podman compose`:
+
+```bash
+podman compose -f docker-compose.yml up -d
+```
+
+Both approaches should spin up the database, Redis, and Melodee services with sensible defaults. Check the compose file for the exact ports and environment variables that are exposed; you can override them with your own `.env` or `docker-compose.override.yml` if you want to customize for your homelab.
+
+Once the stack is up, you can hit the web UI and API on the mapped host ports (for example `http://localhost:8080` / `8081`, depending on the compose config) and `/healthz` should report healthy when everything is ready.
 
 ---
 

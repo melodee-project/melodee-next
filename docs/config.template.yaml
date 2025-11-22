@@ -1,0 +1,36 @@
+# Example production-ish configuration for Melodee
+#
+# This file is a template only. The application does NOT load it
+# automatically. Copy it somewhere appropriate for your environment
+# (e.g. mounted into the container) and point the config loader at it
+# via environment variables or flags as described in docs/CONFIG_ENTRY_POINT_PLAN.md.
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout: "30s"
+  write_timeout: "60s"
+  idle_timeout: "120s"
+
+database:
+  host: "melodee-db"
+  port: 5432
+  user: "melodee_user"
+  # Password loaded from environment variable MELODEE_DB_PASSWORD
+  dbname: "melodee"
+  sslmode: "require"
+  max_open_conns: 50
+  max_idle_conns: 25
+  conn_max_lifetime: "30m"
+  conn_max_idle_time: "15m"
+
+redis:
+  addr: "melodee-redis:6379"
+  db: 0
+  pool_size: 20
+  timeout: "5s"
+
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
