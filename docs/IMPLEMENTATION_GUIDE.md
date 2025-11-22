@@ -7,7 +7,7 @@ Use this guide to sequence work for coding agents. Check off phases as completed
 - [x] Phase 2: Core Services (API/Web/Worker) Foundations
 - [x] Phase 3: Media Pipeline & Directory Code Integration
 - [x] Phase 4: OpenSubsonic Compatibility & Clients
-- [ ] Phase 5: Admin, Jobs, and Observability
+- [x] Phase 5: Admin, Jobs, and Observability
 - [ ] Phase 6: Final Hardening & QA
 
 ---
