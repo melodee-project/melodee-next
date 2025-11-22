@@ -18,7 +18,7 @@ Coding agents should treat the checklists below as **actionable work items**. Fo
 - [x] Phase 1: Core Backend Services & Infrastructure
 - [x] Phase 2: Media Processing Pipeline
 - [x] Phase 3: Frontend Integration & UI
-- [ ] Phase 4: Service Integration & Orchestration
+- [x] Phase 4: Service Integration & Orchestration
 - [ ] Phase 5: Deployment & Environment Configuration
 - [ ] Phase 6: Final Testing & Documentation
 
@@ -164,8 +164,8 @@ Connect all backend services together, implement message queuing with Asynq, and
 
 **Remaining Gaps (Integration)**
 
-- [ ] Add job monitoring endpoints (`/api/admin/jobs/*`) with DLQ detail that matches fixtures and is consumable by `DLQManagement`.
-- [ ] Implement capacity probes and health/metrics endpoints per `CAPACITY_PROBES.md` and `HEALTH_CHECK.md`, and surface them to the admin dashboard.
+- [x] Add job monitoring endpoints (`/api/admin/jobs/*`) with DLQ detail that matches fixtures and is consumable by `DLQManagement`.
+- [x] Implement capacity probes and health/metrics endpoints per `CAPACITY_PROBES.md` and `HEALTH_CHECK.md`, and surface them to the admin dashboard.
 
 ## Phase 5: Deployment & Environment Configuration
 

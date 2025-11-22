@@ -420,3 +420,19 @@ type Contributor struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// CapacityStatus represents the capacity status of a library
+type CapacityStatus struct {
+	ID           int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	LibraryID    int32     `gorm:"not null;index" json:"library_id"`
+	Path         string    `gorm:"not null" json:"path"`
+	UsedPercent  float64   `json:"used_percent"`
+	Status       string    `json:"status"` // "ok", "warning", "alert", "unknown"
+	LatestReadAt time.Time `json:"latest_read_at"`
+	ErrorCount   int       `json:"error_count"`
+	LastError    string    `json:"last_error"`
+	NextCheckAt  time.Time `json:"next_check_at"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

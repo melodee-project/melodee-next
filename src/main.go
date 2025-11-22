@@ -38,6 +38,7 @@ type Server struct {
 	asynqClient    *asynq.Client
 	asynqScheduler *asynq.Scheduler
 	asynqInspector *asynq.Inspector
+	capacityProbe  *capacity.CapacityProbe
 }
 
 // NewServer creates a new combined server instance
@@ -76,14 +77,23 @@ func NewServer() (*Server, error) {
 	asynqClient := asynq.NewClient(asynq.RedisClientOpt{
 		Addr: cfg.Redis.Address,
 	})
-	
+
 	asynqScheduler := asynq.NewScheduler(asynq.RedisClientOpt{
 		Addr: cfg.Redis.Address,
 	})
-	
+
 	asynqInspector := asynq.NewInspector(asynq.RedisClientOpt{
 		Addr: cfg.Redis.Address,
 	})
+
+	// Initialize capacity probe
+	capacityProbe := capacity.NewCapacityProbe(
+		nil, // Use default config
+		dbManager.GetGormDB(),
+		asynqClient,
+		asynqScheduler,
+		nil, // logger placeholder
+	)
 
 	// Create the server instance
 	server := &Server{
@@ -94,6 +104,7 @@ func NewServer() (*Server, error) {
 		asynqClient:    asynqClient,
 		asynqScheduler: asynqScheduler,
 		asynqInspector: asynqInspector,
+		capacityProbe:  capacityProbe,
 	}
 
 	// Initialize Fiber app
@@ -142,6 +153,11 @@ func (s *Server) setupRoutes() {
 		promhttp.Handler().ServeHTTP(c.Response().Acquire(), c.Request().Acquire())
 		return nil
 	})
+
+	// Start capacity monitoring
+	if err := s.capacityProbe.Start(); err != nil {
+		log.Printf("Warning: Failed to start capacity probe: %v", err)
+	}
 
 	// Setup internal API routes
 	s.setupInternalRoutes()
@@ -197,6 +213,12 @@ func (s *Server) setupInternalRoutes() {
 	admin.Get("/jobs/dlq", dlqHandler.GetDLQItems)
 	admin.Post("/jobs/dlq/requeue", dlqHandler.RequeueDLQItems)
 	admin.Post("/jobs/dlq/purge", dlqHandler.PurgeDLQItems)
+
+	// Capacity monitoring and health
+	healthMetricsHandler := handlers.NewHealthMetricsHandler(s.dbManager.GetGormDB(), s.cfg, s.capacityProbe, s.asynqInspector)
+	admin.Get("/capacity", healthMetricsHandler.CapacityStatus)
+	admin.Get("/capacity/:id", healthMetricsHandler.CapacityStatusForLibrary)
+	admin.Post("/capacity/probe-now", healthMetricsHandler.ProbeCapacityNow)
 
 	// Settings management
 	settingsHandler := handlers.NewSettingsHandler(s.repo)
