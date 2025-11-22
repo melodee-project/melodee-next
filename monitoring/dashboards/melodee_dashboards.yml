@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'melodee dashboards'
+    orgId: 1
+    folder: 'Melodee'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

@@ -1,0 +1,110 @@
+# Prometheus Alerting Rules for Melodee
+# Define alerting rules for monitoring the Melodee music streaming service
+
+groups:
+- name: melodee_alerts
+  rules:
+  # Database related alerts
+  - alert: DatabaseDown
+    expr: melodee_health_status{dependency="db"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Database is down"
+      description: "The database connection has been down for more than 1 minute. Please investigate immediately."
+
+  - alert: DatabaseDegraded
+    expr: melodee_health_status{dependency="db"} == 2
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Database is performing poorly"
+      description: "The database latency has been above the threshold for more than 5 minutes."
+
+  # Redis related alerts
+  - alert: RedisDown
+    expr: melodee_health_status{dependency="redis"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Redis is down"
+      description: "The Redis connection has been down for more than 1 minute. Please investigate immediately."
+
+  # Capacity alerts
+  - alert: CapacityWarning
+    expr: melodee_capacity_percent > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Storage capacity warning for {{ $labels.path }}"
+      description: "The storage path {{ $labels.path }} has exceeded 80% capacity."
+
+  - alert: CapacityCritical
+    expr: melodee_capacity_percent > 90
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Storage capacity critical for {{ $labels.path }}"
+      description: "The storage path {{ $labels.path }} has exceeded 90% capacity and requires immediate attention."
+
+  # Job queue alerts
+  - alert: DLQItemsHigh
+    expr: melodee_dlq_size > 10
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High number of items in DLQ"
+      description: "There are {{ $value }} items in the dead letter queue. Please investigate."
+
+  - alert: JobQueueTooLarge
+    expr: melodee_queue_size > 1000
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Job queue {{ $labels.queue }} is growing too large"
+      description: "The job queue {{ $labels.queue }} has {{ $value }} items, which may indicate processing issues."
+
+  # API performance alerts
+  - alert: HighAPIErrorRate
+    expr: 100 * sum(rate(http_requests_total{status=~"5..", handler=~"/api/.*"}[5m])) / sum(rate(http_requests_total{handler=~"/api/.*"}[5m])) > 10
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High API error rate"
+      description: "More than 10% of API requests are returning 5xx errors over the last 5 minutes."
+
+  - alert: SlowAPIResponse
+    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{handler=~"/api/.*"}[5m])) > 5
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Slow API response times"
+      description: "The 95th percentile of API requests is taking more than 5 seconds to respond."
+
+  # System resource alerts
+  - alert: HighMemoryUsage
+    expr: (mem_used_bytes / mem_total_bytes) * 100 > 90
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High memory usage"
+      description: "Memory usage is above 90% for more than 5 minutes."
+
+  - alert: HighCPUUsage
+    expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage"
+      description: "CPU usage is above 80% for more than 5 minutes."
