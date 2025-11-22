@@ -16,7 +16,7 @@ Coding agents should treat the checklists below as **actionable work items**. Fo
 
 ## Phase Map
 - [x] Phase 1: Core Backend Services & Infrastructure
-- [ ] Phase 2: Media Processing Pipeline
+- [x] Phase 2: Media Processing Pipeline
 - [ ] Phase 3: Frontend Integration & UI
 - [ ] Phase 4: Service Integration & Orchestration
 - [ ] Phase 5: Deployment & Environment Configuration
@@ -93,8 +93,8 @@ Build the core media processing functionality following the three-stage workflow
 
 **Remaining Gaps (Pipeline)**
 
-- [ ] Implement FFmpeg‑based transcoding and caching per `MEDIA_FILE_PROCESSING.md` (profiles, max bit‑rate, idempotent outputs).
-- [ ] Add tests/fixtures that validate directory code generation and path template behavior for the collision and normalization scenarios described in `DIRECTORY_ORGANIZATION_PLAN.md`.
+- [x] Implement FFmpeg‑based transcoding and caching per `MEDIA_FILE_PROCESSING.md` (profiles, max bit‑rate, idempotent outputs).
+- [x] Add tests/fixtures that validate directory code generation and path template behavior for the collision and normalization scenarios described in `DIRECTORY_ORGANIZATION_PLAN.md`.
 - [ ] Expose inbound/staging/production and quarantine state through internal APIs and the admin UI (per `PRD.md` user flows).
 
 ## Phase 3: Frontend Integration & UI

@@ -14,21 +14,24 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
+	"melodee/internal/media"
 	"melodee/internal/models"
 	"melodee/open_subsonic/utils"
 )
 
 // MediaHandler handles OpenSubsonic media retrieval endpoints
 type MediaHandler struct {
-	db  *gorm.DB
-	cfg interface{} // Placeholder for config
+	db               *gorm.DB
+	cfg              interface{} // Placeholder for config
+	transcodeService *media.TranscodeService
 }
 
 // NewMediaHandler creates a new media handler
-func NewMediaHandler(db *gorm.DB, cfg interface{}) *MediaHandler {
+func NewMediaHandler(db *gorm.DB, cfg interface{}, transcodeService *media.TranscodeService) *MediaHandler {
 	return &MediaHandler{
-		db:  db,
-		cfg: cfg,
+		db:               db,
+		cfg:              cfg,
+		transcodeService: transcodeService,
 	}
 }
 
@@ -305,24 +308,52 @@ func (h *MediaHandler) GetAvatar(c *fiber.Ctx) error {
 	return c.SendFile(avatarPath)
 }
 
-// transcodeFile handles transcoding using FFmpeg (placeholder implementation)
+// transcodeFile handles transcoding using FFmpeg with caching
 func (h *MediaHandler) transcodeFile(filePath string, maxBitRate int, format string) (string, error) {
-	// This is a placeholder for transcoding functionality
-	// In a real implementation, this would use FFmpeg to transcode the file
-	// based on the maxBitRate and format parameters
-	
-	// For now, return the original file path (no transcoding)
-	// In a real implementation, this would:
-	// 1. Check if a transcoded version already exists and is valid
-	// 2. If not, use FFmpeg to transcode the file with the specified parameters
-	// 3. Return the path to the transcoded file
-	
-	// Example FFmpeg command:
-	// ffmpeg -i input.mp3 -ab {maxBitRate}k -f {format} output.ext
-	fmt.Printf("Transcoding requested: %s, maxBitRate: %d, format: %s\n", filePath, maxBitRate, format)
-	
-	// For now, we'll just return the original file
-	return filePath, nil
+	// Use the transcode service if available
+	if h.transcodeService == nil {
+		// Fallback to original behavior if no transcode service is configured
+		fmt.Printf("No transcode service configured, returning original file: %s\n", filePath)
+		return filePath, nil
+	}
+
+	// Determine the best profile based on maxBitRate
+	profileName := "transcode_mid" // Default profile
+	if maxBitRate > 0 {
+		if maxBitRate > 256 {
+			profileName = "transcode_high"
+		} else if maxBitRate < 128 {
+			profileName = "transcode_opus_mobile"
+		}
+	} else {
+		// If maxBitRate is 0 or negative, use default
+		maxBitRate = 192 // Default bitrate
+	}
+
+	// If format is empty, try to determine from file extension
+	if format == "" {
+		ext := strings.ToLower(filepath.Ext(filePath))
+		switch ext {
+		case ".mp3":
+			format = "mp3"
+		case ".flac":
+			format = "flac"
+		case ".ogg", ".opus":
+			format = "opus"
+		case ".m4a":
+			format = "m4a"
+		default:
+			format = "mp3" // Default format
+		}
+	}
+
+	// Use cached transcoding
+	outputPath, err := h.transcodeService.TranscodeWithCache(filePath, profileName, maxBitRate, format)
+	if err != nil {
+		return "", fmt.Errorf("transcoding failed: %w", err)
+	}
+
+	return outputPath, nil
 }
 
 // handleRangeRequest handles HTTP range requests for partial content

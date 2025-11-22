@@ -1,0 +1,1517 @@
+openapi: 3.0.3
+info:
+  title: Melodee API
+  version: 1.0.0
+  description: |
+    OpenAPI definition for the Melodee Blazor API namespace (`Melodee.Blazor.Controllers.Melodee`).
+    All endpoints are rooted at `/api/v1` and secured with a bearer token unless noted.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://{host}
+    description: Production server
+    variables:
+      host:
+        default: api.melodee.app
+  - url: http://dev.melodee.local
+    description: Local development
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error description.
+      required:
+        - error
+    PaginationMetadata:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        currentPage:
+          type: integer
+          format: int32
+        totalPages:
+          type: integer
+          format: int32
+        hasPrevious:
+          type: boolean
+        hasNext:
+          type: boolean
+      required:
+        - totalCount
+        - pageSize
+        - currentPage
+        - totalPages
+        - hasPrevious
+        - hasNext
+    Artist:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        thumbnailUrl:
+          type: string
+          format: uri
+        imageUrl:
+          type: string
+          format: uri
+        name:
+          type: string
+        userStarred:
+          type: boolean
+        userRating:
+          type: integer
+        albumCount:
+          type: integer
+        songCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        biography:
+          type: string
+          nullable: true
+        genres:
+          type: array
+          nullable: true
+          items:
+            type: string
+      required:
+        - id
+        - thumbnailUrl
+        - imageUrl
+        - name
+        - userStarred
+        - userRating
+        - albumCount
+        - songCount
+        - createdAt
+        - updatedAt
+    Album:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        artist:
+          $ref: '#/components/schemas/Artist'
+        thumbnailUrl:
+          type: string
+          format: uri
+        imageUrl:
+          type: string
+          format: uri
+        name:
+          type: string
+        releaseYear:
+          type: integer
+        userStarred:
+          type: boolean
+        userRating:
+          type: integer
+        songCount:
+          type: integer
+        durationMs:
+          type: number
+        durationFormatted:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        description:
+          type: string
+          nullable: true
+        genre:
+          type: string
+          nullable: true
+      required:
+        - id
+        - artist
+        - thumbnailUrl
+        - imageUrl
+        - name
+        - releaseYear
+        - userStarred
+        - userRating
+        - songCount
+        - durationMs
+        - durationFormatted
+        - createdAt
+        - updatedAt
+    Song:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        artist:
+          $ref: '#/components/schemas/Artist'
+        album:
+          $ref: '#/components/schemas/Album'
+        streamUrl:
+          type: string
+        thumbnailUrl:
+          type: string
+          format: uri
+        imageUrl:
+          type: string
+          format: uri
+        title:
+          type: string
+        durationMs:
+          type: number
+        durationFormatted:
+          type: string
+        userStarred:
+          type: boolean
+        userRating:
+          type: integer
+        songNumber:
+          type: integer
+        bitrate:
+          type: integer
+        playCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        genre:
+          type: string
+          nullable: true
+      required:
+        - id
+        - artist
+        - album
+        - streamUrl
+        - thumbnailUrl
+        - imageUrl
+        - title
+        - durationMs
+        - durationFormatted
+        - userStarred
+        - userRating
+        - songNumber
+        - bitrate
+        - playCount
+        - createdAt
+        - updatedAt
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        thumbnailUrl:
+          type: string
+          format: uri
+        imageUrl:
+          type: string
+          format: uri
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        isAdmin:
+          type: boolean
+        isEditor:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        songsPlayed:
+          type: integer
+        artistsLiked:
+          type: integer
+        artistsDisliked:
+          type: integer
+        albumsLiked:
+          type: integer
+        albumsDisliked:
+          type: integer
+        songsLiked:
+          type: integer
+        songsDisliked:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - thumbnailUrl
+        - imageUrl
+        - username
+        - email
+        - isAdmin
+        - isEditor
+        - roles
+        - songsPlayed
+        - artistsLiked
+        - artistsDisliked
+        - albumsLiked
+        - albumsDisliked
+        - songsLiked
+        - songsDisliked
+        - createdAt
+        - updatedAt
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        thumbnailUrl:
+          type: string
+          format: uri
+        imageUrl:
+          type: string
+          format: uri
+        name:
+          type: string
+        description:
+          type: string
+        durationMs:
+          type: number
+        durationFormatted:
+          type: string
+        songCount:
+          type: integer
+        isPublic:
+          type: boolean
+        owner:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - thumbnailUrl
+        - imageUrl
+        - name
+        - description
+        - durationMs
+        - durationFormatted
+        - songCount
+        - isPublic
+        - owner
+        - createdAt
+        - updatedAt
+    Statistic:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Statistic type identifier.
+        title:
+          type: string
+        data:
+          type: string
+        description:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          nullable: true
+      required:
+        - type
+        - title
+        - data
+    ServerInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        majorVersion:
+          type: integer
+        minorVersion:
+          type: integer
+        patchVersion:
+          type: integer
+        version:
+          type: string
+      required:
+        - name
+        - description
+        - majorVersion
+        - minorVersion
+        - patchVersion
+        - version
+    SearchResult:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        artists:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artist'
+        totalArtists:
+          type: integer
+        albums:
+          type: array
+          items:
+            $ref: '#/components/schemas/Album'
+        totalAlbums:
+          type: integer
+        songs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Song'
+        totalSongs:
+          type: integer
+        playlists:
+          type: array
+          items:
+            $ref: '#/components/schemas/Playlist'
+        totalPlaylists:
+          type: integer
+      required:
+        - totalCount
+        - artists
+        - totalArtists
+        - albums
+        - totalAlbums
+        - songs
+        - totalSongs
+        - playlists
+        - totalPlaylists
+    LoginRequest:
+      type: object
+      properties:
+        userName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        password:
+          type: string
+      required:
+        - password
+    ScrobbleRequest:
+      type: object
+      properties:
+        songId:
+          type: string
+          format: uuid
+        playerName:
+          type: string
+        scrobbleType:
+          type: string
+          enum:
+            - NotSet
+            - NowPlaying
+            - Played
+        timestamp:
+          type: number
+          format: double
+          nullable: true
+        playedDuration:
+          type: number
+          format: double
+          nullable: true
+      required:
+        - songId
+        - playerName
+        - scrobbleType
+    SearchRequest:
+      type: object
+      properties:
+        query:
+          type: string
+        type:
+          type: string
+          nullable: true
+          description: Comma-separated `SearchInclude` flags (Artists,Albums,Songs,Playlists,Data).
+        albumPage:
+          type: integer
+          format: int32
+          nullable: true
+        artistPage:
+          type: integer
+          format: int32
+          nullable: true
+        songPage:
+          type: integer
+          format: int32
+          nullable: true
+        pageSize:
+          type: integer
+          format: int32
+          nullable: true
+        sortBy:
+          type: string
+          nullable: true
+        sortOrder:
+          type: string
+          nullable: true
+        filterByArtistId:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+        - query
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        serverVersion:
+          type: string
+        token:
+          type: string
+      required:
+        - user
+        - serverVersion
+        - token
+    PaginatedAlbums:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PaginationMetadata'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Album'
+      required:
+        - meta
+        - data
+    PaginatedArtists:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PaginationMetadata'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artist'
+      required:
+        - meta
+        - data
+    PaginatedSongs:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PaginationMetadata'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Song'
+      required:
+        - meta
+        - data
+    PaginatedPlaylists:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PaginationMetadata'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Playlist'
+      required:
+        - meta
+        - data
+    SearchResponse:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/PaginationMetadata'
+        data:
+          $ref: '#/components/schemas/SearchResult'
+      required:
+        - meta
+        - data
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/Albums:
+    get:
+      operationId: listAlbums
+      tags:
+        - Albums
+      summary: List albums
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          required: true
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 200
+          required: true
+        - in: query
+          name: orderBy
+          schema:
+            type: string
+          description: Field to sort by. Defaults to CreatedAt.
+        - in: query
+          name: orderDirection
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: Sort direction. Defaults to desc.
+      responses:
+        '200':
+          description: Albums returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAlbums'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User locked or blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Albums/{id}:
+    get:
+      operationId: getAlbum
+      tags:
+        - Albums
+      summary: Get an album by API key
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Album detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Album'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Albums/recent:
+    get:
+      operationId: listRecentAlbums
+      tags:
+        - Albums
+      summary: Recently added albums
+      parameters:
+        - in: query
+          name: limit
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Recent albums
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAlbums'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Albums/{id}/songs:
+    get:
+      operationId: listAlbumSongs
+      tags:
+        - Albums
+      summary: List songs within an album
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Album songs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSongs'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Artists:
+    get:
+      operationId: listArtists
+      tags:
+        - Artists
+      summary: List artists
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Filter by artist name.
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 200
+        - in: query
+          name: orderBy
+          schema:
+            type: string
+        - in: query
+          name: orderDirection
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        '200':
+          description: Artists returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedArtists'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Artists/{id}:
+    get:
+      operationId: getArtist
+      tags:
+        - Artists
+      summary: Get an artist by API key
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Artist detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artist'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Artist not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Artists/recent:
+    get:
+      operationId: listRecentArtists
+      tags:
+        - Artists
+      summary: Recently added artists
+      parameters:
+        - in: query
+          name: limit
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Recent artists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedArtists'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Artists/{id}/albums:
+    get:
+      operationId: listArtistAlbums
+      tags:
+        - Artists
+      summary: List albums for an artist
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Artist albums
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAlbums'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Artist not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Artists/{id}/songs:
+    get:
+      operationId: listArtistSongs
+      tags:
+        - Artists
+      summary: List songs for an artist
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Optional title filter.
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Artist songs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSongs'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Artist not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Playlists:
+    get:
+      operationId: listPlaylists
+      tags:
+        - Playlists
+      summary: List playlists for current user
+      parameters:
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Playlists returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlaylists'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Playlists/{id}:
+    get:
+      operationId: getPlaylist
+      tags:
+        - Playlists
+      summary: Get a playlist by API key
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Playlist detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Playlist not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Playlists/{id}/songs:
+    get:
+      operationId: listPlaylistSongs
+      tags:
+        - Playlists
+      summary: List songs in a playlist
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Playlist songs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSongs'
+        '400':
+          description: Playlist not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Songs:
+    get:
+      operationId: listSongs
+      tags:
+        - Songs
+      summary: List songs
+      parameters:
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - in: query
+          name: orderBy
+          schema:
+            type: string
+        - in: query
+          name: orderDirection
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        '200':
+          description: Songs returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSongs'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Songs/{id}:
+    get:
+      operationId: getSong
+      tags:
+        - Songs
+      summary: Get a song by API key
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Song detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Song'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Song not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Songs/recent:
+    get:
+      operationId: listRecentSongs
+      tags:
+        - Songs
+      summary: Recently added songs
+      parameters:
+        - in: query
+          name: limit
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Recent songs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSongs'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Songs/starred/{id}/{isStarred}:
+    post:
+      operationId: toggleSongStarred
+      tags:
+        - Songs
+      summary: Toggle the starred flag for a song
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: isStarred
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Starred flag updated
+        '400':
+          description: Update failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Songs/setrating/{id}/{rating}:
+    post:
+      operationId: setSongRating
+      tags:
+        - Songs
+      summary: Set the user rating for a song
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: rating
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 5
+      responses:
+        '200':
+          description: Rating updated
+        '400':
+          description: Update failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Search:
+    post:
+      operationId: searchEntities
+      tags:
+        - Search
+      summary: Execute a cross-entity search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Search/songs:
+    get:
+      operationId: searchSongs
+      tags:
+        - Search
+      summary: Search songs
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - in: query
+          name: filterByArtistApiKey
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Song search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSongs'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/System/info:
+    get:
+      operationId: getSystemInfo
+      tags:
+        - System
+      summary: Get API server information
+      security: []
+      responses:
+        '200':
+          description: Server info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerInfo'
+        '400':
+          description: Invalid version format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/System/stats:
+    get:
+      operationId: getSystemStats
+      tags:
+        - System
+      summary: Fetch public statistics
+      responses:
+        '200':
+          description: Statistics payload
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Statistic'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Users/authenticate:
+    post:
+      operationId: authenticateUser
+      tags:
+        - Users
+      summary: Authenticate and retrieve a JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Missing credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+  /api/v1/Users/auth:
+    post:
+      operationId: authenticateUserAlias
+      tags:
+        - Users
+      summary: Authenticate (alias)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Missing credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+  /api/v1/Users/me:
+    get:
+      operationId: getCurrentUser
+      tags:
+        - Users
+      summary: Get current user profile
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Users/lastPlayed:
+    get:
+      operationId: listLastPlayed
+      tags:
+        - Users
+      summary: Get last played songs for the user
+      parameters:
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Recently played songs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSongs'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User locked or blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Users/playlists:
+    get:
+      operationId: listUserPlaylists
+      tags:
+        - Users
+      summary: List playlists owned by the current user
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: User playlists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlaylists'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User locked or blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/Scrobble:
+    post:
+      operationId: createScrobble
+      tags:
+        - Scrobble
+      summary: Submit a scrobble event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScrobbleRequest'
+      responses:
+        '200':
+          description: Scrobble accepted
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

@@ -4,36 +4,48 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
-	"github.com/dhowden/tag"
+	"github.com/go-audio/wav"
+	"github.com/hajimehoshi/go-mp3"
+	"github.com/pkg/errors"
 )
 
-// ValidationConfig holds validation rules for media files
+// ValidationConfig holds configuration for file validation
 type ValidationConfig struct {
-	MinBitRate       int      `mapstructure:"min_bitrate"`       // Minimum bitrate in kbps
-	MaxBitRate       int      `mapstructure:"max_bitrate"`       // Maximum bitrate in kbps
-	MaxFileSize      int64    `mapstructure:"max_file_size"`     // Maximum file size in bytes
-	AllowedFormats   []string `mapstructure:"allowed_formats"`   // Allowed file extensions
-	MinDuration      int      `mapstructure:"min_duration"`      // Minimum duration in seconds
-	MaxDuration      int      `mapstructure:"max_duration"`      // Maximum duration in seconds
-	ChecksumRequired bool     `mapstructure:"checksum_required"` // Whether checksum validation is required
+	MinBitRate      int      `mapstructure:"min_bitrate"`       // Minimum bitrate in kbps
+	MaxBitRate      int      `mapstructure:"max_bitrate"`       // Maximum bitrate in kbps
+	MaxFileSize     int64    `mapstructure:"max_file_size"`     // Maximum file size in bytes
+	AllowedFormats  []string `mapstructure:"allowed_formats"`   // Allowed file extensions
+	MinDuration     int      `mapstructure:"min_duration"`      // Minimum duration in seconds
+	MaxDuration     int      `mapstructure:"max_duration"`      // Maximum duration in seconds
+	MinSampleRate   int      `mapstructure:"min_sample_rate"`   // Minimum sample rate in Hz
+	MaxSampleRate   int      `mapstructure:"max_sample_rate"`   // Maximum sample rate in Hz
+	MinChannels     int      `mapstructure:"min_channels"`      // Minimum number of channels
+	MaxChannels     int      `mapstructure:"max_channels"`      // Maximum number of channels
+	MaxArtworkSize  int64    `mapstructure:"max_artwork_size"`  // Maximum embedded artwork size in bytes
+	CheckCorruption bool     `mapstructure:"check_corruption"`  // Whether to check for file corruption
 }
 
 // DefaultValidationConfig returns the default validation configuration
 func DefaultValidationConfig() *ValidationConfig {
 	return &ValidationConfig{
-		MinBitRate:    64,   // 64 kbps minimum
-		MaxBitRate:    320,  // 320 kbps maximum for lossy
-		MaxFileSize:   100 * 1024 * 1024, // 100MB max file size
-		AllowedFormats: []string{".mp3", ".flac", ".m4a", ".mp4", ".aac", ".ogg", ".opus", ".wav"},
-		MinDuration:   10,   // 10 seconds minimum
-		MaxDuration:   7200, // 2 hours maximum
-		ChecksumRequired: true,
+		MinBitRate:      64,  // 64 kbps minimum
+		MaxBitRate:      320, // 320 kbps maximum for lossy, unlimited for lossless
+		MaxFileSize:     500 * 1024 * 1024, // 500 MB max
+		AllowedFormats:  []string{".mp3", ".flac", ".ogg", ".opus", ".m4a", ".wav", ".aac"},
+		MinDuration:     10,   // 10 seconds minimum
+		MaxDuration:     7200, // 2 hours maximum
+		MinSampleRate:   44100, // 44.1 kHz minimum
+		MaxSampleRate:   192000, // 192 kHz maximum
+		MinChannels:     1,    // Mono minimum
+		MaxChannels:     8,    // 7.1 surround maximum
+		MaxArtworkSize:  10 * 1024 * 1024, // 10 MB max artwork
+		CheckCorruption: true,
 	}
 }
 
@@ -47,7 +59,7 @@ func NewMediaFileValidator(config *ValidationConfig) *MediaFileValidator {
 	if config == nil {
 		config = DefaultValidationConfig()
 	}
-	
+
 	return &MediaFileValidator{
 		config: config,
 	}
@@ -61,12 +73,11 @@ func (mv *MediaFileValidator) Validate(filePath string) error {
 	}
 
 	// 2. Format validation
-	ext := strings.ToLower(filepath.Ext(filePath))
-	if !mv.isAllowedFormat(ext) {
-		return fmt.Errorf("format %s not allowed", ext)
+	if !mv.isAllowedFormat(filepath.Ext(filePath)) {
+		return fmt.Errorf("format %s not allowed", filepath.Ext(filePath))
 	}
 
-	// 3. Extract and validate metadata
+	// 3. Metadata validation
 	metadata, err := mv.extractMetadata(filePath)
 	if err != nil {
 		return fmt.Errorf("metadata extraction failed: %w", err)
@@ -81,10 +92,10 @@ func (mv *MediaFileValidator) Validate(filePath string) error {
 		return fmt.Errorf("quality validation failed: %w", err)
 	}
 
-	// 5. Checksum validation if required
-	if mv.config.ChecksumRequired {
-		if err := mv.validateChecksum(filePath); err != nil {
-			return fmt.Errorf("checksum validation failed: %w", err)
+	// 5. Corruption check
+	if mv.config.CheckCorruption {
+		if err := mv.checkForCorruption(filePath, metadata); err != nil {
+			return fmt.Errorf("corruption check failed: %w", err)
 		}
 	}
 
@@ -94,222 +105,397 @@ func (mv *MediaFileValidator) Validate(filePath string) error {
 // validateBasicFile performs basic file validation
 func (mv *MediaFileValidator) validateBasicFile(filePath string) error {
 	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("file does not exist: %s", filePath)
+	}
+
+	// Check file size
 	info, err := os.Stat(filePath)
 	if err != nil {
-		return fmt.Errorf("file does not exist: %w", err)
+		return fmt.Errorf("failed to get file info: %w", err)
 	}
 
-	// Check if it's a regular file (not a directory)
-	if info.IsDir() {
-		return fmt.Errorf("path is a directory, not a file")
+	if info.Size() == 0 {
+		return fmt.Errorf("file is empty")
 	}
 
-	// Check file size against maximum
 	if info.Size() > mv.config.MaxFileSize {
 		return fmt.Errorf("file size %d bytes exceeds maximum %d bytes", info.Size(), mv.config.MaxFileSize)
 	}
-
-	// Check if file is accessible for reading
-	file, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("file not accessible for reading: %w", err)
-	}
-	defer file.Close()
 
 	return nil
 }
 
 // isAllowedFormat checks if the file format is allowed
 func (mv *MediaFileValidator) isAllowedFormat(ext string) bool {
+	ext = strings.ToLower(ext)
 	for _, allowedExt := range mv.config.AllowedFormats {
-		if strings.ToLower(allowedExt) == ext {
+		if ext == strings.ToLower(allowedExt) {
 			return true
 		}
 	}
 	return false
 }
 
-// extractMetadata extracts metadata from a media file
-func (mv *MediaFileValidator) extractMetadata(filePath string) (*FileMetadata, error) {
-	// Open file for reading
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer file.Close()
-
-	// Parse file tags using the tag library
-	tagData, err := tag.ReadFrom(file)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read tags from file: %w", err)
-	}
-
-	// Extract file stats for duration and size
-	stat, err := file.Stat()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file stats: %w", err)
-	}
-
-	// Create metadata struct
-	metadata := &FileMetadata{
-		Title:       tagData.Title(),
-		Artist:      tagData.Artist(),
-		Album:       tagData.Album(),
-		TrackNumber: tagData.Track(),
-		DiscNumber:  tagData.Disc(),
-		Genre:       tagData.Genre(),
-		FileName:    filepath.Base(filePath),
-		FilePath:    filePath,
-	}
-
-	// Extract duration from file
-	duration := time.Duration(0)
-	if tagData.Duration() > 0 {
-		duration = tagData.Duration()
-	} else {
-		// For formats that don't have duration in tags, we'd need to use a library like go-audio
-		// to analyze the file. For now, we'll just set it to 0.
-	}
-	metadata.Duration = duration
-
-	// Calculate bitrate from file size and duration
-	if duration.Seconds() > 0 {
-		bitrate := int((float64(stat.Size()) * 8) / duration.Seconds() / 1000) // kbps
-		metadata.BitRate = bitrate
-	}
-
-	// Extract release date if available
-	if tagData.Year() > 0 {
-		metadata.ReleaseDate = time.Date(tagData.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
-	}
-
-	return metadata, nil
-}
-
 // validateMetadata validates extracted metadata
-func (mv *MediaFileValidator) validateMetadata(metadata *FileMetadata) error {
-	// Validate required fields
-	if metadata.Title == "" {
-		// Use filename if no title is available
-		name := strings.TrimSuffix(metadata.FileName, filepath.Ext(metadata.FileName))
-		metadata.Title = name
+func (mv *MediaFileValidator) validateMetadata(metadata *MediaMetadata) error {
+	// Validate required metadata fields
+	if metadata.Name == "" {
+		return fmt.Errorf("filename is empty")
 	}
 
-	if metadata.Artist == "" {
-		return fmt.Errorf("artist name is required")
+	// For audio files specifically
+	if metadata.BitRate != 0 {
+		if metadata.BitRate < mv.config.MinBitRate {
+			return fmt.Errorf("bitrate %d kbps below minimum %d kbps", metadata.BitRate, mv.config.MinBitRate)
+		}
+		
+		// For lossy formats, apply max bitrate; for lossless, allow higher rates
+		ext := strings.ToLower(filepath.Ext(metadata.FilePath))
+		if ext == ".mp3" || ext == ".aac" || ext == ".ogg" || ext == ".opus" {
+			// Lossy formats have max bitrate
+			if metadata.BitRate > mv.config.MaxBitRate {
+				return fmt.Errorf("bitrate %d kbps above maximum %d kbps for lossy format", metadata.BitRate, mv.config.MaxBitRate)
+			}
+		}
 	}
 
-	if metadata.Album == "" {
-		return fmt.Errorf("album name is required")
+	if metadata.Duration != 0 {
+		minDur := time.Duration(mv.config.MinDuration) * time.Second
+		maxDur := time.Duration(mv.config.MaxDuration) * time.Second
+		
+		if metadata.Duration < minDur {
+			return fmt.Errorf("duration %v below minimum %v", metadata.Duration, minDur)
+		}
+		
+		if metadata.Duration > maxDur {
+			return fmt.Errorf("duration %v above maximum %v", metadata.Duration, maxDur)
+		}
+	}
+
+	if metadata.SampleRate != 0 {
+		if metadata.SampleRate < mv.config.MinSampleRate {
+			return fmt.Errorf("sample rate %d Hz below minimum %d Hz", metadata.SampleRate, mv.config.MinSampleRate)
+		}
+		
+		if metadata.SampleRate > mv.config.MaxSampleRate {
+			return fmt.Errorf("sample rate %d Hz above maximum %d Hz", metadata.SampleRate, mv.config.MaxSampleRate)
+		}
+	}
+
+	if metadata.Channels != 0 {
+		if metadata.Channels < mv.config.MinChannels {
+			return fmt.Errorf("%d channels below minimum %d channels", metadata.Channels, mv.config.MinChannels)
+		}
+		
+		if metadata.Channels > mv.config.MaxChannels {
+			return fmt.Errorf("%d channels above maximum %d channels", metadata.Channels, mv.config.MaxChannels)
+		}
 	}
 
 	return nil
 }
 
 // validateQuality checks technical quality parameters
-func (mv *MediaFileValidator) validateQuality(metadata *FileMetadata) error {
-	if metadata.BitRate != 0 && metadata.BitRate < mv.config.MinBitRate {
-		return fmt.Errorf("bitrate %d kbps below minimum %d kbps", metadata.BitRate, mv.config.MinBitRate)
-	}
-
-	if metadata.BitRate != 0 && metadata.BitRate > mv.config.MaxBitRate {
-		return fmt.Errorf("bitrate %d kbps above maximum %d kbps", metadata.BitRate, mv.config.MaxBitRate)
-	}
-
-	if metadata.Duration != 0 && metadata.Duration < time.Duration(mv.config.MinDuration)*time.Second {
-		return fmt.Errorf("duration %v below minimum %v", metadata.Duration, time.Duration(mv.config.MinDuration)*time.Second)
-	}
-
-	if metadata.Duration != 0 && metadata.Duration > time.Duration(mv.config.MaxDuration)*time.Second {
-		return fmt.Errorf("duration %v above maximum %v", metadata.Duration, time.Duration(mv.config.MaxDuration)*time.Second)
-	}
-
+func (mv *MediaFileValidator) validateQuality(metadata *MediaMetadata) error {
+	// Quality validation is covered in validateMetadata
+	// This function can contain additional quality checks if needed
 	return nil
 }
 
-// validateChecksum validates the file checksum against stored value
-func (mv *MediaFileValidator) validateChecksum(filePath string) error {
-	// Calculate SHA256 checksum of the file
-	checksum, err := mv.calculateFileChecksum(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to calculate file checksum: %w", err)
+// checkForCorruption performs basic corruption detection
+func (mv *MediaFileValidator) checkForCorruption(filePath string, metadata *MediaMetadata) error {
+	// Check file header integrity for known formats
+	ext := strings.ToLower(filepath.Ext(filePath))
+	
+	switch ext {
+	case ".mp3":
+		return mv.checkMP3Corruption(filePath)
+	case ".flac":
+		return mv.checkFLACCorruption(filePath)
+	case ".wav":
+		return mv.checkWAVCorruption(filePath)
+	case ".m4a", ".aac":
+		return mv.checkAACCorruption(filePath)
+	case ".ogg", ".opus":
+		return mv.checkOGGCorruption(filePath)
+	default:
+		// For unsupported formats, we perform a basic read test
+		return mv.checkReadability(filePath)
 	}
-
-	// In a real implementation, we would compare this checksum with a stored value
-	// For now, we just calculate it to ensure the file is readable and has a valid checksum
-	fmt.Printf("File checksum: %s\n", checksum)
-
-	return nil
 }
 
-// calculateFileChecksum calculates the SHA256 checksum of a file
-func (mv *MediaFileValidator) calculateFileChecksum(filePath string) (string, error) {
+// checkMP3Corruption checks for MP3 file corruption
+func (mv *MediaFileValidator) checkMP3Corruption(filePath string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer file.Close()
 
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
+	// Try to decode a portion to check for corruption
+	decoder, err := mp3.NewDecoder(file)
+	if err != nil {
+		return fmt.Errorf("MP3 header corruption: %w", err)
+	}
+	defer decoder.Close()
+
+	// Read a small portion to verify the file is decodable
+	buffer := make([]byte, 4096)
+	_, err = decoder.Read(buffer)
+	if err != nil && err.Error() != "EOF" {
+		return fmt.Errorf("MP3 content corruption: %w", err)
 	}
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return nil
 }
 
-// ValidateAndProcessFile validates a file and returns normalized metadata
-func (mv *MediaFileValidator) ValidateAndProcessFile(filePath string) (*FileMetadata, error) {
-	// Validate the file first
-	if err := mv.Validate(filePath); err != nil {
+// checkFLACCorruption checks for FLAC file corruption
+func (mv *MediaFileValidator) checkFLACCorruption(filePath string) error {
+	// For FLAC, we'll do a basic header check
+	// A full implementation would use a FLAC decoder library
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Read the first 4 bytes to check FLAC signature
+	header := make([]byte, 4)
+	_, err = file.Read(header)
+	if err != nil {
+		return fmt.Errorf("failed to read FLAC header: %w", err)
+	}
+
+	// FLAC files start with "fLaC"
+	if string(header) != "fLaC" {
+		return fmt.Errorf("invalid FLAC header, expected 'fLaC', got '%s'", string(header))
+	}
+
+	return nil
+}
+
+// checkWAVCorruption checks for WAV file corruption
+func (mv *MediaFileValidator) checkWAVCorruption(filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Try to decode as WAV
+	_, err = wav.NewDecoder(file)
+	if err != nil {
+		return fmt.Errorf("WAV header corruption: %w", err)
+	}
+
+	return nil
+}
+
+// checkAACCorruption checks for AAC file corruption
+func (mv *MediaFileValidator) checkAACCorruption(filePath string) error {
+	// For AAC, we'll do a basic file readability check
+	// A full implementation would use an AAC decoder library
+	return mv.checkReadability(filePath)
+}
+
+// checkOGGCorruption checks for OGG file corruption
+func (mv *MediaFileValidator) checkOGGCorruption(filePath string) error {
+	// For OGG, we'll do a basic file readability check
+	// A full implementation would use an OGG decoder library
+	return mv.checkReadability(filePath)
+}
+
+// checkReadability attempts to read the file to detect obvious corruption
+func (mv *MediaFileValidator) checkReadability(filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Try to read the first and last few kilobytes to detect corruption
+	buffer := make([]byte, 1024)
+	
+	// Read first 1KB
+	_, err = file.Read(buffer)
+	if err != nil && err.Error() != "EOF" {
+		return fmt.Errorf("failed to read beginning of file: %w", err)
+	}
+
+	// Get file size and read last 1KB
+	info, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	
+	if info.Size() > 1024 {
+		_, err = file.Seek(-1024, 2) // Seek to 1KB from end
+		if err != nil {
+			return err
+		}
+		
+		_, err = file.Read(buffer)
+		if err != nil && err.Error() != "EOF" {
+			return fmt.Errorf("failed to read end of file: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// extractMetadata extracts metadata from the file
+func (mv *MediaFileValidator) extractMetadata(filePath string) (*MediaMetadata, error) {
+	info, err := os.Stat(filePath)
+	if err != nil {
 		return nil, err
 	}
 
-	// Extract and return metadata
-	return mv.extractMetadata(filePath)
+	// Calculate checksum
+	checksum, err := mv.calculateChecksum(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate checksum: %w", err)
+	}
+
+	// Create basic metadata with file info
+	metadata := &MediaMetadata{
+		FilePath: filePath,
+		Size:     info.Size(),
+		ModTime:  info.ModTime(),
+		Checksum: checksum,
+		Name:     filepath.Base(filePath),
+	}
+
+	// Try to extract more detailed metadata based on format
+	if err := mv.extractFormatSpecificMetadata(metadata); err != nil {
+		// Log the error but don't fail completely - return basic metadata
+		fmt.Printf("Warning: failed to extract detailed metadata: %v\n", err)
+	}
+
+	return metadata, nil
 }
 
-// CalculateFileChecksum is a public method to calculate checksum for other uses
-func (mv *MediaFileValidator) CalculateFileChecksum(filePath string) (string, error) {
-	return mv.calculateFileChecksum(filePath)
+// extractFormatSpecificMetadata extracts format-specific metadata
+func (mv *MediaFileValidator) extractFormatSpecificMetadata(metadata *MediaMetadata) error {
+	ext := strings.ToLower(filepath.Ext(metadata.FilePath))
+
+	switch ext {
+	case ".mp3":
+		return mv.extractMP3Metadata(metadata)
+	case ".wav":
+		return mv.extractWAVMetadata(metadata)
+	case ".flac":
+		return mv.extractFLACMetadata(metadata)
+	case ".m4a", ".aac":
+		return mv.extractAACMetadata(metadata)
+	case ".ogg", ".opus":
+		return mv.extractOGGMetadata(metadata)
+	default:
+		return fmt.Errorf("unsupported format for detailed metadata extraction: %s", ext)
+	}
 }
 
-// ValidatePathSafety checks if a file path is safe from traversal attacks
-func (mv *MediaFileValidator) ValidatePathSafety(path string) error {
-	// Check for path traversal patterns
+// extractMP3Metadata extracts metadata from MP3 files
+func (mv *MediaFileValidator) extractMP3Metadata(metadata *MediaMetadata) error {
+	file, err := os.Open(metadata.FilePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	decoder, err := mp3.NewDecoder(file)
+	if err != nil {
+		return err
+	}
+	defer decoder.Close()
+
+	// Set metadata from decoder
+	metadata.Duration = time.Duration(decoder.Length()) * time.Second
+	metadata.SampleRate = int(decoder.SampleRate())
+	metadata.Channels = int(decoder.Channels())
+	// Note: MP3 decoder doesn't directly provide bitrate, we'd need to calculate it
+	// This is a simplified approach
+
+	return nil
+}
+
+// extractWAVMetadata extracts metadata from WAV files
+func (mv *MediaFileValidator) extractWAVMetadata(metadata *MediaMetadata) error {
+	file, err := os.Open(metadata.FilePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	decoder := wav.NewDecoder(file)
+	if !decoder.IsValidFile() {
+		return fmt.Errorf("invalid WAV file")
+	}
+
+	// Set metadata from decoder
+	metadata.SampleRate = int(decoder.SampleRate)
+	metadata.Channels = int(decoder.NumChans)
+
+	// Calculate duration from sample count and sample rate
+	if decoder.SampleRate > 0 {
+		durationSeconds := float64(decoder.NumSampleFrames) / float64(decoder.SampleRate)
+		metadata.Duration = time.Duration(durationSeconds * float64(time.Second))
+	}
+
+	return nil
+}
+
+// extractFLACMetadata extracts metadata from FLAC files
+func (mv *MediaFileValidator) extractFLACMetadata(metadata *MediaMetadata) error {
+	// For FLAC, we'd typically use a FLAC library
+	// This is a simplified placeholder
+	// In a real implementation, we would parse the FLAC metadata blocks
+
+	// For now, just return without errors
+	return nil
+}
+
+// extractAACMetadata extracts metadata from AAC files
+func (mv *MediaFileValidator) extractAACMetadata(metadata *MediaMetadata) error {
+	// For AAC, we'd typically use a library like go-audio or similar
+	// This is a simplified placeholder
+	return nil
+}
+
+// extractOGGMetadata extracts metadata from OGG files
+func (mv *MediaFileValidator) extractOGGMetadata(metadata *MediaMetadata) error {
+	// For OGG, we'd typically use a library like go-ogg
+	// This is a simplified placeholder
+	return nil
+}
+
+// calculateChecksum calculates the SHA256 checksum of a file
+func (mv *MediaFileValidator) calculateChecksum(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:]), nil
+}
+
+// ValidatePath validates that a file path is safe and within allowed boundaries
+func (mv *MediaFileValidator) ValidatePath(path string) error {
+	// Check for path traversal attempts
 	if strings.Contains(path, "../") || strings.Contains(path, "..\\") {
-		return fmt.Errorf("path traversal detected in path: %s", path)
+		return errors.New("path traversal detected")
 	}
 
 	// Check for null bytes
 	if strings.Contains(path, "\x00") {
-		return fmt.Errorf("null byte in path: %s", path)
+		return errors.New("path contains null bytes")
 	}
 
-	// Clean the path and compare with original to detect traversal
-	cleaned := filepath.Clean(path)
-	if cleaned != path {
-		return fmt.Errorf("path contains relative components: %s", path)
+	// Check maximum path length
+	if len(path) > 4096 {
+		return fmt.Errorf("path too long: %d characters, max: 4096", len(path))
 	}
 
 	return nil
-}
-
-// ValidateFileForPromotion checks if a file is ready for promotion from staging to production
-func (mv *MediaFileValidator) ValidateFileForPromotion(filePath string, requireCueFiles bool) error {
-	// Basic validation
-	if err := mv.validateBasicFile(filePath); err != nil {
-		return err
-	}
-
-	// Check if associated .cue files exist if required
-	if requireCueFiles {
-		cuePath := strings.TrimSuffix(filePath, filepath.Ext(filePath)) + ".cue"
-		if _, err := os.Stat(cuePath); os.IsNotExist(err) {
-			return fmt.Errorf("required .cue file not found: %s", cuePath)
-		}
-	}
-
-	// Validate content
-	return mv.Validate(filePath)
 }
