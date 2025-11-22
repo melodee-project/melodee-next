@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function LoginPage() {
   const [username, setUsername] = useState('');
@@ -8,6 +9,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -15,28 +17,13 @@ function LoginPage() {
     setError('');
 
     try {
-      // In a real implementation, we'd use the auth service
-      // For now, we'll simulate a login request
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      const result = await login(username, password);
 
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Store tokens in localStorage (in a real app, consider more secure storage)
-        localStorage.setItem('accessToken', data.access_token);
-        localStorage.setItem('refreshToken', data.refresh_token);
-        
+      if (result.success) {
         // Redirect to admin dashboard
         navigate('/admin');
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Login failed');
+        setError(result.error || 'Login failed');
       }
     } catch (err) {
       setError('Network error occurred');
@@ -56,7 +43,7 @@ function LoginPage() {
             Sign in to your admin account
           </p>
         </div>
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
             <div className="rounded-md bg-red-50 p-4">
@@ -72,7 +59,7 @@ function LoginPage() {
               </div>
             </div>
           )}
-          
+
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="username" className="sr-only">Username</label>

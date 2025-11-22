@@ -76,7 +76,7 @@ export const authService = {
 
 // User-related API endpoints
 export const userService = {
-  getUsers: (page = 1, size = 50) => apiService.get(`/users?page=${page}&size=${size}`),
+  getUsers: (page = 1, size = 50) => apiService.get('/users'), // Pagination handled by backend
   getUserById: (id) => apiService.get(`/users/${id}`),
   createUser: (userData) => apiService.post('/users', userData),
   updateUser: (id, userData) => apiService.put(`/users/${id}`, userData),
@@ -85,7 +85,7 @@ export const userService = {
 
 // Playlist-related API endpoints
 export const playlistService = {
-  getPlaylists: (page = 1, size = 50) => apiService.get(`/playlists?page=${page}&size=${size}`),
+  getPlaylists: () => apiService.get('/playlists'), // Pagination handled by backend
   getPlaylistById: (id) => apiService.get(`/playlists/${id}`),
   createPlaylist: (data) => apiService.post('/playlists', data),
   updatePlaylist: (id, data) => apiService.put(`/playlists/${id}`, data),
@@ -95,20 +95,23 @@ export const playlistService = {
 // Admin-related API endpoints
 export const adminService = {
   getDLQItems: () => apiService.get('/admin/jobs/dlq'),
-  requeueDLQItems: (jobIds) => apiService.post('/admin/jobs/dlq/requeue', { job_ids: jobIds }),
-  purgeDLQItems: (jobIds) => apiService.post('/admin/jobs/dlq/purge', { job_ids: jobIds }),
-  getSettings: () => apiService.get('/admin/settings'),
-  updateSetting: (key, value) => apiService.put(`/admin/settings/${key}`, { value }),
-  getShares: () => apiService.get('/admin/shares'),
-  createShare: (data) => apiService.post('/admin/shares', data),
-  updateShare: (id, data) => apiService.put(`/admin/shares/${id}`, data),
-  deleteShare: (id) => apiService.delete(`/admin/shares/${id}`),
+  requeueDLQItems: (jobIds) => apiService.post('/admin/jobs/requeue', { job_ids: jobIds }),
+  purgeDLQItems: (jobIds) => apiService.post('/admin/jobs/purge', { job_ids: jobIds }),
+  getJobById: (id) => apiService.get(`/admin/jobs/${id}`),
+  getSettings: () => apiService.get('/settings'), // Note: Per INTERNAL_API_ROUTES.md, it's /settings not /admin/settings
+  updateSetting: (key, value) => apiService.put('/settings', { key, value }), // Per spec, it updates single key
+  getShares: () => apiService.get('/shares'),
+  createShare: (data) => apiService.post('/shares', data),
+  updateShare: (id, data) => apiService.put(`/shares/${id}`, data),
+  deleteShare: (id) => apiService.delete(`/shares/${id}`),
 };
 
 // Library-related API endpoints
 export const libraryService = {
-  getStats: () => apiService.get('/stats'),
-  scanLibrary: (libraryId) => apiService.post('/libraries/scan', { library_id: libraryId }),
+  getStats: () => apiService.get('/libraries/stats'),
+  scanLibrary: () => apiService.post('/libraries/scan'),
+  processInbound: () => apiService.post('/libraries/process'),
+  moveOkAlbums: () => apiService.post('/libraries/move-ok'),
   getLibraries: () => apiService.get('/libraries'),
 };
 

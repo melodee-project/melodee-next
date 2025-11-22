@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
+import { authService } from '../services/apiService';
 
 const AuthContext = createContext();
 
@@ -16,11 +16,10 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Set up axios interceptor to include auth token
+  // Set up axios interceptor to include auth token (this is handled in apiService)
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setIsAuthenticated(true);
       // Try to get user info
       fetchUserInfo(token);
@@ -47,10 +46,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await axios.post('/api/auth/login', {
-        username,
-        password,
-      });
+      const response = await authService.login(username, password);
 
       const { access_token, refresh_token, user: userData } = response.data;
 
@@ -59,17 +55,14 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('refreshToken', refresh_token);
       localStorage.setItem('userInfo', JSON.stringify(userData));
 
-      // Set axios default header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-
       setUser(userData);
       setIsAuthenticated(true);
 
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Login failed' 
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Login failed'
       };
     }
   };
@@ -79,12 +72,34 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userInfo');
-    
-    // Remove authorization header
-    delete axios.defaults.headers.common['Authorization'];
-    
+
+    // The axios interceptors handle removing the auth header automatically
     setUser(null);
     setIsAuthenticated(false);
+  };
+
+  const requestPasswordReset = async (email) => {
+    try {
+      await authService.requestPasswordReset(email);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Password reset request failed'
+      };
+    }
+  };
+
+  const resetPassword = async (resetToken, newPassword) => {
+    try {
+      await authService.resetPassword(resetToken, newPassword);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Password reset failed'
+      };
+    }
   };
 
   const value = {
@@ -93,6 +108,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
+    requestPasswordReset,
+    resetPassword,
   };
 
   return (

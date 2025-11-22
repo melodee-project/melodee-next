@@ -17,7 +17,7 @@ Coding agents should treat the checklists below as **actionable work items**. Fo
 ## Phase Map
 - [x] Phase 1: Core Backend Services & Infrastructure
 - [x] Phase 2: Media Processing Pipeline
-- [ ] Phase 3: Frontend Integration & UI
+- [x] Phase 3: Frontend Integration & UI
 - [ ] Phase 4: Service Integration & Orchestration
 - [ ] Phase 5: Deployment & Environment Configuration
 - [ ] Phase 6: Final Testing & Documentation
@@ -126,17 +126,17 @@ Connect React/Vite frontend components to backend services, implement admin UI, 
 
 **Remaining Gaps (Admin UI)**
 
-- [ ] Align all admin API calls with `INTERNAL_API_ROUTES.md` and fixtures:
+- [x] Align all admin API calls with `INTERNAL_API_ROUTES.md` and fixtures:
 	- Use `/api/users`, `/api/admin/jobs/dlq`, `/api/admin/jobs/requeue`, `/api/admin/jobs/purge`, `/api/settings`, `/api/shares`, etc.
 	- Adjust request/response shapes to match JSON fixtures in `docs/fixtures/internal`.
-- [ ] Consolidate `AdminDashboard` into a single component that:
+- [x] Consolidate `AdminDashboard` into a single component that:
 	- Shows library statistics from `GET /api/libraries/stats`.
 	- Shows recent jobs from an internal admin jobs endpoint once implemented.
-- [ ] Implement UI for:
+- [x] Implement UI for:
 	- Library configuration and status (inbound/staging/production paths, scan/process/promote controls).
 	- Quarantine review and actions for albums/tracks.
 	- Shares management (create/list/delete) matching `/api/shares` contracts.
-- [ ] Implement auth context that uses `/api/auth/login` and `/api/auth/refresh` tokens/roles instead of only `localStorage` flags.
+- [x] Implement auth context that uses `/api/auth/login` and `/api/auth/refresh` tokens/roles instead of only `localStorage` flags.
 
 ## Phase 4: Service Integration & Orchestration
 
