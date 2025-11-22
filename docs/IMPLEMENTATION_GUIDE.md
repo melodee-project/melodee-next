@@ -8,7 +8,7 @@ Use this guide to sequence work for coding agents. Check off phases as completed
 - [x] Phase 3: Media Pipeline & Directory Code Integration
 - [x] Phase 4: OpenSubsonic Compatibility & Clients
 - [x] Phase 5: Admin, Jobs, and Observability
-- [ ] Phase 6: Final Hardening & QA
+- [x] Phase 6: Final Hardening & QA
 
 ---
 

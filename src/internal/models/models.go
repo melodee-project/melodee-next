@@ -9,14 +9,16 @@ import (
 
 // User represents the users table
 type User struct {
-	ID          int64      `gorm:"primaryKey;autoIncrement" json:"id"`
-	APIKey      uuid.UUID  `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
-	Username    string     `gorm:"size:255;uniqueIndex;not null" json:"username"`
-	Email       string     `gorm:"size:255" json:"email"`
-	PasswordHash string    `gorm:"size:255;not null" json:"password_hash"`
-	IsAdmin     bool       `gorm:"default:false" json:"is_admin"`
-	CreatedAt   time.Time  `json:"created_at"`
-	LastLoginAt *time.Time `json:"last_login_at"`
+	ID                   int64      `gorm:"primaryKey;autoIncrement" json:"id"`
+	APIKey               uuid.UUID  `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	Username             string     `gorm:"size:255;uniqueIndex;not null" json:"username"`
+	Email                string     `gorm:"size:255" json:"email"`
+	PasswordHash         string     `gorm:"size:255;not null" json:"-"` // Don't expose password hash in JSON
+	IsAdmin              bool       `gorm:"default:false" json:"is_admin"`
+	FailedLoginAttempts  int        `gorm:"default:0" json:"-"` // Number of consecutive failed login attempts
+	LockedUntil          *time.Time `json:"locked_until,omitempty"` // Time until which the account is locked
+	CreatedAt            time.Time  `json:"created_at"`
+	LastLoginAt          *time.Time `json:"last_login_at"`
 }
 
 // BeforeCreate sets the API key before creating a user

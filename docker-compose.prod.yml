@@ -1,0 +1,216 @@
+version: '3.8'
+
+services:
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    image: melodee/api:latest
+    container_name: melodee-api
+    restart: unless-stopped
+    environment:
+      - MELODEE_DATABASE_HOST=db
+      - MELODEE_DATABASE_PORT=5432
+      - MELODEE_DATABASE_USER=melodee_user
+      - MELODEE_DATABASE_PASSWORD=${MELODEE_DB_PASSWORD}
+      - MELODEE_DATABASE_DBNAME=melodee
+      - MELODEE_DATABASE_SSLMODE=disable
+      - MELODEE_REDIS_ADDRESS=redis:6379
+      - MELODEE_JWT_SECRET=${MELODEE_JWT_SECRET}
+      - MELODEE_STORAGE_PATH=/storage
+      - MELODEE_INBOUND_PATH=/inbound
+      - MELODEE_STAGING_PATH=/staging
+      - MELODEE_QUARANTINE_PATH=/quarantine
+      - MELODEE_USER_IMAGES_PATH=/user_images
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+      - LOG_LEVEL=info
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${STORAGE_MOUNT}:/storage:ro
+      - ${INBOUND_MOUNT}:/inbound:rw
+      - ${STAGING_MOUNT}:/staging:rw
+      - ${QUARANTINE_MOUNT}:/quarantine:rw
+      - ${USER_IMAGES_MOUNT}:/user_images:rw
+    depends_on:
+      - db
+      - redis
+      - worker
+    networks:
+      - melodee-network
+
+  # Web Interface Service
+  web:
+    build:
+      context: .
+      dockerfile: ./web/Dockerfile
+    image: melodee/web:latest
+    container_name: melodee-web
+    restart: unless-stopped
+    environment:
+      - MELODEE_DATABASE_HOST=db
+      - MELODEE_DATABASE_PORT=5432
+      - MELODEE_DATABASE_USER=melodee_user
+      - MELODEE_DATABASE_PASSWORD=${MELODEE_DB_PASSWORD}
+      - MELODEE_DATABASE_DBNAME=melodee
+      - MELODEE_REDIS_ADDRESS=redis:6379
+      - MELODEE_JWT_SECRET=${MELODEE_JWT_SECRET}
+      - VITE_API_URL=http://api:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+      - api
+    networks:
+      - melodee-network
+
+  # Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: ./worker/Dockerfile
+    image: melodee/worker:latest
+    container_name: melodee-worker
+    restart: unless-stopped
+    environment:
+      - MELODEE_DATABASE_HOST=db
+      - MELODEE_DATABASE_PORT=5432
+      - MELODEE_DATABASE_USER=melodee_user
+      - MELODEE_DATABASE_PASSWORD=${MELODEE_DB_PASSWORD}
+      - MELODEE_DATABASE_DBNAME=melodee
+      - MELODEE_REDIS_ADDRESS=redis:6379
+      - MELODEE_JWT_SECRET=${MELODEE_JWT_SECRET}
+      - MELODEE_STORAGE_PATH=/storage
+      - MELODEE_INBOUND_PATH=/inbound
+      - MELODEE_STAGING_PATH=/staging
+      - MELODEE_QUARANTINE_PATH=/quarantine
+      - MELODEE_USER_IMAGES_PATH=/user_images
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+      - LOG_LEVEL=info
+      - WORKER_CONCURRENCY=4
+    volumes:
+      - ${STORAGE_MOUNT}:/storage:rw
+      - ${INBOUND_MOUNT}:/inbound:rw
+      - ${STAGING_MOUNT}:/staging:rw
+      - ${QUARANTINE_MOUNT}:/quarantine:rw
+      - ${USER_IMAGES_MOUNT}:/user_images:rw
+    depends_on:
+      - db
+      - redis
+    networks:
+      - melodee-network
+
+  # Database Service
+  db:
+    image: postgres:15
+    container_name: melodee-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=melodee
+      - POSTGRES_USER=melodee_user
+      - POSTGRES_PASSWORD=${MELODEE_DB_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=512MB
+      -c effective_cache_size=2GB
+      -c maintenance_work_mem=256MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=8MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_worker_processes=2
+      -c max_parallel_workers_per_gather=1
+      -c max_parallel_workers=2
+    networks:
+      - melodee-network
+
+  # Redis Service
+  redis:
+    image: redis:7-alpine
+    container_name: melodee-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - melodee-network
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: melodee-prometheus
+    restart: unless-stopped
+    user: root
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - melodee-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: melodee-grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_storage:/var/lib/grafana
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3001:3000"
+    networks:
+      - melodee-network
+    depends_on:
+      - prometheus
+
+  # Jaeger (for tracing - optional)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: melodee-jaeger
+    restart: unless-stopped
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Jaeger collector HTTP
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    networks:
+      - melodee-network
+
+volumes:
+  pgdata:
+  redisdata:
+  prometheus_data:
+  grafana_storage:
+
+networks:
+  melodee-network:
+    driver: bridge

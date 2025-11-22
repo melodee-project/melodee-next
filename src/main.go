@@ -1,89 +1,348 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/hibiken/asynq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gorm.io/gorm"
 
 	"melodee/internal/config"
-	"melodee/internal/health"
-	"melodee/internal/utils"
+	"melodee/internal/database"
+	"melodee/internal/handlers"
+	"melodee/internal/metrics"
+	"melodee/internal/middleware"
+	"melodee/internal/services"
+	"melodee/open_subsonic"
+	"melodee/open_subsonic/handlers"
+	"melodee/open_subsonic/middleware"
 )
 
-// Version of the application
-var Version = "1.0.0"
-
-func joinSlice(slice []string, separator string) string {
-	if len(slice) == 0 {
-		return ""
-	}
-	result := slice[0]
-	for i := 1; i < len(slice); i++ {
-		result += separator + slice[i]
-	}
-	return result
+// Server represents the main application server that handles both internal and OpenSubsonic APIs
+type Server struct {
+	app            *fiber.App
+	cfg            *config.AppConfig
+	dbManager      *database.DatabaseManager
+	repo           *services.Repository
+	authService    *services.AuthService
+	asynqClient    *asynq.Client
+	asynqScheduler *asynq.Scheduler
+	asynqInspector *asynq.Inspector
+	metrics        *metrics.Metrics
 }
 
-func main() {
-	// Create configuration loader and load configuration
-	configLoader := config.NewConfigLoader()
-	appConfig, err := configLoader.Load()
+// NewServer creates a new combined server instance
+func NewServer() (*Server, error) {
+	// Load configuration
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load configuration: ", err)
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Verify FFmpeg and external tokens before starting the server
-	if err := utils.ValidateFFmpegAndTokens(appConfig.Processing.Conversion.FFmpegPath); err != nil {
-		log.Printf("Failed to validate prerequisites: %v", err)
-		// For now we'll log the error but continue startup to allow configuration
-		// In production, you might want to fail fast depending on requirements
-	} else {
-		log.Println("FFmpeg and external tokens validation passed")
+	// Initialize database manager
+	dbManager, err := database.NewDatabaseManager(
+		&config.DatabaseConfig{
+			Host:            cfg.Database.Host,
+			Port:            cfg.Database.Port,
+			User:            cfg.Database.User,
+			Password:        cfg.Database.Password,
+			DBName:          cfg.Database.DBName,
+			SSLMode:         cfg.Database.SSLMode,
+			MaxOpenConns:    cfg.Database.MaxOpenConns,
+			MaxIdleConns:    cfg.Database.MaxIdleConns,
+			ConnMaxLifetime: cfg.Database.ConnMaxLifetime,
+			ConnMaxIdleTime: cfg.Database.ConnMaxIdleTime,
+		},
+		nil, // logger
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Create the Fiber app
-	app := fiber.New(fiber.Config{
+	// Initialize repository and services
+	repo := services.NewRepository(dbManager.GetGormDB())
+	authService := services.NewAuthService(dbManager.GetGormDB(), cfg.JWT.Secret)
+
+	// Initialize Asynq client and scheduler
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{
+		Addr: cfg.Redis.Address,
+	})
+	
+	asynqScheduler := asynq.NewScheduler(asynq.RedisClientOpt{
+		Addr: cfg.Redis.Address,
+	})
+	
+	asynqInspector := asynq.NewInspector(asynq.RedisClientOpt{
+		Addr: cfg.Redis.Address,
+	})
+
+	// Initialize metrics
+	metrics := metrics.InitializeMetrics()
+
+	// Create the server instance
+	server := &Server{
+		cfg:            cfg,
+		dbManager:      dbManager,
+		repo:           repo,
+		authService:    authService,
+		asynqClient:    asynqClient,
+		asynqScheduler: asynqScheduler,
+		asynqInspector: asynqInspector,
+		metrics:        metrics,
+	}
+
+	// Initialize Fiber app
+	server.app = fiber.New(fiber.Config{
+		AppName:      fmt.Sprintf("Melodee v%s", cfg.Version),
 		ServerHeader: "Melodee",
-		AppName:      "Melodee v" + Version,
 	})
 
 	// Setup middleware
-	app.Use(logger.New())
-	app.Use(recover.New())
-	app.Use(helmet.New())
-	corsConfig := cors.Config{
-		AllowOrigins:     joinSlice(appConfig.Server.CORS.AllowOrigins, ","),
-		AllowMethods:     joinSlice(appConfig.Server.CORS.AllowMethods, ","),
-		AllowHeaders:     joinSlice(appConfig.Server.CORS.AllowHeaders, ","),
-		AllowCredentials: appConfig.Server.CORS.AllowCredentials,
+	server.setupMiddleware()
+
+	// Setup routes
+	server.setupRoutes()
+
+	return server, nil
+}
+
+// setupMiddleware configures the application middleware
+func (s *Server) setupMiddleware() {
+	s.app.Use(recover.New())
+	s.app.Use(logger.New())
+	s.app.Use(helmet.New())
+
+	// CORS middleware with configuration
+	s.app.Use(cors.New(cors.Config{
+		AllowOrigins: strings.Join(s.cfg.Server.CORS.AllowOrigins, ","),
+		AllowMethods: strings.Join(s.cfg.Server.CORS.AllowMethods, ","),
+		AllowHeaders: strings.Join(s.cfg.Server.CORS.AllowHeaders, ","),
+		AllowCredentials: s.cfg.Server.CORS.AllowCredentials,
+	}))
+}
+
+// setupRoutes configures all API routes (both internal and OpenSubsonic)
+func (s *Server) setupRoutes() {
+	// Health check endpoint (for kubernetes readiness/liveness probes)
+	s.app.Get("/healthz", handlers.NewHealthHandler(s.dbManager).HealthCheck)
+
+	// Metrics endpoint for Prometheus
+	s.app.Get("/metrics", func(c *fiber.Ctx) error {
+		promhttp.Handler().ServeHTTP(c.Response().Acquire())
+		return nil
+	})
+
+	// Setup internal API routes
+	s.setupInternalRoutes()
+
+	// Setup OpenSubsonic API routes
+	s.setupOpenSubsonicRoutes()
+}
+
+// setupInternalRoutes configures internal API routes
+func (s *Server) setupInternalRoutes() {
+	// Create internal API group
+	internalAPI := s.app.Group("/api")
+
+	// Authentication middleware for internal API
+	authMiddleware := middleware.NewAuthMiddleware(s.authService)
+
+	// Auth routes
+	authHandler := handlers.NewAuthHandler(s.authService)
+	auth := internalAPI.Group("/auth")
+	auth.Post("/login", authHandler.Login)
+	auth.Post("/refresh", authHandler.Refresh)
+	auth.Post("/request-reset", authHandler.RequestReset)
+	auth.Post("/reset", authHandler.ResetPassword)
+
+	// Protected routes (require authentication)
+	protected := internalAPI.Use(authMiddleware.Protected())
+
+	// User management (admin only for some operations)
+	userHandler := handlers.NewUserHandler(s.repo, s.authService)
+	users := protected.Group("/users")
+	users.Get("/", authMiddleware.AdminOnly(), userHandler.GetUsers)
+	users.Post("/", authMiddleware.AdminOnly(), userHandler.CreateUser)
+	users.Get("/:id", userHandler.GetUser)
+	users.Put("/:id", userHandler.UpdateUser)
+	users.Delete("/:id", authMiddleware.AdminOnly(), userHandler.DeleteUser)
+
+	// Playlist management
+	playlistHandler := handlers.NewPlaylistHandler(s.repo)
+	playlists := protected.Group("/playlists")
+	playlists.Get("/", playlistHandler.GetPlaylists)
+	playlists.Post("/", playlistHandler.CreatePlaylist)
+	playlists.Get("/:id", playlistHandler.GetPlaylist)
+	playlists.Put("/:id", playlistHandler.UpdatePlaylist)
+	playlists.Delete("/:id", playlistHandler.DeletePlaylist)
+
+	// Admin endpoints
+	admin := protected.Group("/admin")
+	admin.Use(authMiddleware.AdminOnly())
+
+	// DLQ management
+	dlqHandler := handlers.NewDLQHandler(s.asynqInspector)
+	admin.Get("/jobs/dlq", dlqHandler.ListDLQItems)
+	admin.Post("/jobs/dlq/requeue", dlqHandler.RequeueItems)
+	admin.Post("/jobs/dlq/purge", dlqHandler.PurgeItems)
+
+	// Settings management
+	settingsHandler := handlers.NewSettingsHandler(s.repo)
+	admin.Get("/settings", settingsHandler.GetSettings)
+	admin.Put("/settings/:key", settingsHandler.UpdateSetting)
+
+	// Shares management
+	sharesHandler := handlers.NewSharesHandler(s.repo)
+	admin.Get("/shares", sharesHandler.GetShares)
+	admin.Post("/shares", sharesHandler.CreateShare)
+	admin.Put("/shares/:id", sharesHandler.UpdateShare)
+	admin.Delete("/shares/:id", sharesHandler.DeleteShare)
+}
+
+// setupOpenSubsonicRoutes configures OpenSubsonic API routes
+func (s *Server) setupOpenSubsonicRoutes() {
+	// Create OpenSubsonic API group with /rest prefix (standard for OpenSubsonic)
+	rest := s.app.Group("/rest")
+
+	// OpenSubsonic authentication middleware 
+	openSubsonicAuth := open_subsonic_middleware.NewAuthMiddleware(s.authService)
+
+	// Create handlers for OpenSubsonic endpoints
+	browsingHandler := open_subsonic_handlers.NewBrowsingHandler(s.repo)
+	mediaHandler := open_subsonic_handlers.NewMediaHandler(s.repo, s.cfg.Processing.Conversion)
+	searchHandler := open_subsonic_handlers.NewSearchHandler(s.repo)
+	osPlaylistHandler := open_subsonic_handlers.NewPlaylistHandler(s.repo)
+	osUserHandler := open_subsonic_handlers.NewUserHandler(s.repo)
+	systemHandler := open_subsonic_handlers.NewSystemHandler(s.repo)
+
+	// Browsing endpoints
+	rest.Get("/getMusicFolders.view", openSubsonicAuth.Authenticate, browsingHandler.GetMusicFolders)
+	rest.Get("/getIndexes.view", openSubsonicAuth.Authenticate, browsingHandler.GetIndexes)
+	rest.Get("/getArtists.view", openSubsonicAuth.Authenticate, browsingHandler.GetArtists)
+	rest.Get("/getArtist.view", openSubsonicAuth.Authenticate, browsingHandler.GetArtist)
+	rest.Get("/getAlbumInfo.view", openSubsonicAuth.Authenticate, browsingHandler.GetAlbumInfo)
+	rest.Get("/getMusicDirectory.view", openSubsonicAuth.Authenticate, browsingHandler.GetMusicDirectory)
+	rest.Get("/getAlbum.view", openSubsonicAuth.Authenticate, browsingHandler.GetAlbum)
+	rest.Get("/getSong.view", openSubsonicAuth.Authenticate, browsingHandler.GetSong)
+	rest.Get("/getGenres.view", openSubsonicAuth.Authenticate, browsingHandler.GetGenres)
+
+	// Media retrieval endpoints
+	rest.Get("/stream.view", openSubsonicAuth.Authenticate, mediaHandler.Stream)
+	rest.Get("/download.view", openSubsonicAuth.Authenticate, mediaHandler.Download)
+	rest.Get("/getCoverArt.view", openSubsonicAuth.Authenticate, mediaHandler.GetCoverArt)
+	rest.Get("/getAvatar.view", openSubsonicAuth.Authenticate, mediaHandler.GetAvatar)
+
+	// Searching endpoints
+	rest.Get("/search.view", openSubsonicAuth.Authenticate, searchHandler.Search)
+	rest.Get("/search2.view", openSubsonicAuth.Authenticate, searchHandler.Search2)
+	rest.Get("/search3.view", openSubsonicAuth.Authenticate, searchHandler.Search3)
+
+	// Playlist endpoints
+	rest.Get("/getPlaylists.view", openSubsonicAuth.Authenticate, osPlaylistHandler.GetPlaylists)
+	rest.Get("/getPlaylist.view", openSubsonicAuth.Authenticate, osPlaylistHandler.GetPlaylist)
+	rest.Get("/createPlaylist.view", openSubsonicAuth.Authenticate, osPlaylistHandler.CreatePlaylist)
+	rest.Get("/updatePlaylist.view", openSubsonicAuth.Authenticate, osPlaylistHandler.UpdatePlaylist)
+	rest.Get("/deletePlaylist.view", openSubsonicAuth.Authenticate, osPlaylistHandler.DeletePlaylist)
+
+	// User management endpoints
+	rest.Get("/getUser.view", openSubsonicAuth.Authenticate, osUserHandler.GetUser)
+	rest.Get("/getUsers.view", openSubsonicAuth.Authenticate, osUserHandler.GetUsers)
+	rest.Get("/createUser.view", openSubsonicAuth.Authenticate, osUserHandler.CreateUser)
+	rest.Get("/updateUser.view", openSubsonicAuth.Authenticate, osUserHandler.UpdateUser)
+	rest.Get("/deleteUser.view", openSubsonicAuth.Authenticate, osUserHandler.DeleteUser)
+
+	// System endpoints
+	rest.Get("/ping.view", systemHandler.Ping)
+	rest.Get("/getLicense.view", systemHandler.GetLicense)
+}
+
+// Start starts the server
+func (s *Server) Start() error {
+	addr := fmt.Sprintf("%s:%d", s.cfg.Server.Host, s.cfg.Server.Port)
+	log.Printf("Starting Melodee server on %s", addr)
+	
+	// Run migrations before starting
+	migrationManager := database.NewMigrationManager(s.dbManager.GetGormDB(), nil)
+	if err := migrationManager.Migrate(); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
 	}
-	app.Use(cors.New(corsConfig))
 
-	// Register health check endpoint
-	health.RegisterHealthRoutes(app, appConfig)
+	return s.app.Listen(addr)
+}
 
-	// Graceful shutdown
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+// Shutdown gracefully shuts down the server
+func (s *Server) Shutdown() error {
+	// Give some time for in-flight requests to complete
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := s.app.ShutdownWithTimeout(30 * time.Second); err != nil {
+		log.Printf("Error during server shutdown: %v", err)
+		return err
+	}
+
+	// Close database connection
+	if s.dbManager != nil {
+		if sqlDB, err := s.dbManager.GetGormDB().DB(); err != nil {
+			log.Printf("Error getting SQL DB for closing: %v", err)
+		} else {
+			if err := sqlDB.Close(); err != nil {
+				log.Printf("Error closing database: %v", err)
+			}
+		}
+	}
+
+	// Close Asynq connections
+	if s.asynqClient != nil {
+		s.asynqClient.Close()
+	}
+
+	if s.asynqScheduler != nil {
+		s.asynqScheduler.Close()
+	}
+
+	return nil
+}
+
+// Main entry point for the entire application
+func main() {
+	// Create the server
+	server, err := NewServer()
+	if err != nil {
+		log.Fatal("Failed to create server:", err)
+	}
+
+	// Handle graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	
+	// Start the server in a goroutine
 	go func() {
-		<-c
-		log.Println("Shutting down gracefully...")
-		if err := app.Shutdown(); err != nil {
-			log.Printf("Error during shutdown: %v", err)
+		if err := server.Start(); err != nil {
+			log.Printf("Server error: %v", err)
 		}
 	}()
 
-	// Start the server
-	log.Printf("Starting server on %s:%d", appConfig.Server.Host, appConfig.Server.Port)
-	if err := app.Listen(fmt.Sprintf("%s:%d", appConfig.Server.Host, appConfig.Server.Port)); err != nil {
-		log.Printf("Error starting server: %v", err)
+	// Wait for shutdown signal
+	sig := <-sigChan
+	log.Printf("Received signal %s, shutting down...", sig)
+
+	// Shutdown gracefully
+	if err := server.Shutdown(); err != nil {
+		log.Printf("Error during shutdown: %v", err)
+	} else {
+		log.Println("Server shutdown completed successfully")
 	}
 }
