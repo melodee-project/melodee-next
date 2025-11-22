@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"github.com/google/uuid"
 	"melodee/internal/models"
 )
 
@@ -301,47 +302,6 @@ func (a *AuthService) ValidateOpenSubsonicToken(username, password, token, salt 
 	return &user, nil
 }
 
-// HashPassword hashes a password using bcrypt
-func (a *AuthService) HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", err
-	}
-	return string(hash), nil
-}
-
-// ValidatePassword validates password against security requirements
-func (a *AuthService) ValidatePassword(password string) error {
-	// Check minimum length
-	if len(password) < 12 {
-		return fmt.Errorf("password must be at least 12 characters long")
-	}
-
-	// Check for uppercase, lowercase, number, and symbol
-	var hasUpper, hasLower, hasNumber, hasSymbol bool
-	for _, r := range password {
-		switch {
-		case r >= 'A' && r <= 'Z':
-			hasUpper = true
-		case r >= 'a' && r <= 'z':
-			hasLower = true
-		case r >= '0' && r <= '9':
-			hasNumber = true
-		case r == '!' || r == '@' || r == '#' || r == '$' || r == '%' || r == '^' ||
-			r == '&' || r == '*' || r == '(' || r == ')' || r == '-' || r == '_' ||
-			r == '=' || r == '+' || r == '[' || r == ']' || r == '{' || r == '}' ||
-			r == '|' || r == ';' || r == ':' || r == '"' || r == '\'' || r == ',' ||
-			r == '.' || r == '<' || r == '>' || r == '/' || r == '?' || r == '~':
-			hasSymbol = true
-		}
-	}
-
-	if !hasUpper || !hasLower || !hasNumber || !hasSymbol {
-		return fmt.Errorf("password must contain uppercase, lowercase, number, and symbol")
-	}
-
-	return nil
-}
 
 // generateAccessToken generates a JWT access token
 func (a *AuthService) generateAccessToken(user models.User) (string, error) {
@@ -420,26 +380,89 @@ func (a *AuthService) RequestPasswordReset(email string) error {
 	if err := a.db.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Return no error to prevent email enumeration
+			// This is important for security as it prevents discovering valid email addresses
 			return nil
 		}
 		return err
 	}
 
-	// In a real implementation, we would send an email with a reset token
-	// For now, we'll just return nil to indicate success
+	// Generate a secure reset token
+	resetToken, err := utils.GenerateRandomString(32)
+	if err != nil {
+		return fmt.Errorf("failed to generate reset token: %w", err)
+	}
+
+	// Hash the token before storing (security best practice)
+	hashedToken, err := a.HashPassword(resetToken)
+	if err != nil {
+		return fmt.Errorf("failed to hash reset token: %w", err)
+	}
+
+	// Set expiry time (e.g., 1 hour from now)
+	expiryTime := time.Now().Add(1 * time.Hour)
+
+	// Update the user with the reset token and expiry
+	user.PasswordResetToken = &hashedToken
+	user.PasswordResetExpiry = &expiryTime
+
+	if err := a.db.Save(&user).Error; err != nil {
+		return fmt.Errorf("failed to save reset token: %w", err)
+	}
+
+	// In a real implementation, we would send an email with the resetToken
+	// For now, we just return to indicate success (to prevent enumeration)
+	// The actual reset token would be sent via email, not returned here
 	return nil
 }
 
 // ResetPassword resets a user's password using a reset token
 func (a *AuthService) ResetPassword(resetToken, newPassword string) error {
-	// Validate new password
+	// Validate new password against security requirements
 	if err := a.ValidatePassword(newPassword); err != nil {
 		return fmt.Errorf("password validation failed: %w", err)
 	}
 
-	// In a real implementation, we would verify the reset token and update the password
-	// For now, we'll return an error since this is a simplified implementation
-	return fmt.Errorf("password reset not fully implemented in this example")
+	// Hash the provided token to compare with stored hash
+	hashedProvidedToken, err := a.HashPassword(resetToken)
+	if err != nil {
+		return fmt.Errorf("failed to hash provided token: %w", err)
+	}
+
+	// Find user with the matching reset token
+	var user models.User
+	if err := a.db.Where("password_reset_token = ?", hashedProvidedToken).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("invalid or expired reset token")
+		}
+		return fmt.Errorf("error finding user: %w", err)
+	}
+
+	// Check if the reset token has expired
+	if user.PasswordResetExpiry == nil || user.PasswordResetExpiry.Before(time.Now()) {
+		return fmt.Errorf("reset token has expired")
+	}
+
+	// Verify the provided token matches the stored hashed token
+	if user.PasswordResetToken == nil || bcrypt.CompareHashAndPassword([]byte(*user.PasswordResetToken), []byte(resetToken)) != nil {
+		return fmt.Errorf("invalid or expired reset token")
+	}
+
+	// Hash the new password
+	hashedPassword, err := a.HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash new password: %w", err)
+	}
+
+	// Update the user's password and clear the reset token
+	user.PasswordHash = hashedPassword
+	user.PasswordResetToken = nil
+	user.PasswordResetExpiry = nil
+
+	if err := a.db.Save(&user).Error; err != nil {
+		return fmt.Errorf("failed to update user password: %w", err)
+	}
+
+	return nil
 }
 
 // LockUser temporarily locks a user account

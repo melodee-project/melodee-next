@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,24 +29,18 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	// Validate input
 	if req.Username == "" || req.Password == "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Username and password are required",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Username and password are required")
 	}
 
 	// Authenticate user
 	authToken, user, err := h.authService.Login(req.Username, req.Password)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid credentials",
-		})
+		return utils.SendUnauthorizedError(c, "Invalid credentials")
 	}
 
 	return c.JSON(fiber.Map{
@@ -67,22 +62,16 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	if req.RefreshToken == "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Refresh token is required",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Refresh token is required")
 	}
 
 	authToken, user, err := h.authService.RefreshTokens(req.RefreshToken)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid refresh token",
-		})
+		return utils.SendUnauthorizedError(c, "Invalid refresh token")
 	}
 
 	return c.JSON(fiber.Map{
@@ -110,9 +99,7 @@ func (h *AuthHandler) RequestReset(c *fiber.Ctx) error {
 	}
 
 	if req.Email == "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Email is required",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Email is required")
 	}
 
 	// This would normally send a reset email
@@ -120,6 +107,8 @@ func (h *AuthHandler) RequestReset(c *fiber.Ctx) error {
 	if err := h.authService.RequestPasswordReset(req.Email); err != nil {
 		// Log the error but don't reveal it to the user
 		// In a real implementation, we'd still return 202 to avoid enumeration
+		// Log error for debugging purposes (but not to client)
+		fmt.Printf("Error requesting password reset: %v\n", err)
 	}
 
 	return c.Status(http.StatusAccepted).JSON(fiber.Map{
@@ -135,29 +124,20 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	if req.Token == "" || req.Password == "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Token and password are required",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Token and password are required")
 	}
 
 	// Validate password
 	if err := utils.ValidatePassword(req.Password); err != nil {
-		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{
-			"error":   "Password validation failed",
-			"details": err.Error(),
-		})
+		return utils.SendValidationError(c, "password", err.Error())
 	}
 
 	if err := h.authService.ResetPassword(req.Token, req.Password); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Password reset failed",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Password reset failed: "+err.Error())
 	}
 
 	return c.JSON(fiber.Map{

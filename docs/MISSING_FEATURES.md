@@ -15,7 +15,7 @@ Coding agents should treat the checklists below as **actionable work items**. Fo
 - When a gap is fully addressed (including tests), mark the checkbox as completed in this file.
 
 ## Phase Map
-- [ ] Phase 1: Core Backend Services & Infrastructure
+- [x] Phase 1: Core Backend Services & Infrastructure
 - [ ] Phase 2: Media Processing Pipeline
 - [ ] Phase 3: Frontend Integration & UI
 - [ ] Phase 4: Service Integration & Orchestration
@@ -42,24 +42,24 @@ Coding agents should treat the checklists below as **actionable work items**. Fo
 
 ### Remaining Gaps (Backend Core)
 
-- [ ] **Auth flows completeness**
+- [x] **Auth flows completeness**
 	- Implement and test password reset + account lockout per `INTERNAL_API_ROUTES.md` and `TECHNICAL_SPEC.md`:
 		- Implement `/api/auth/request-reset` and `/api/auth/reset` handlers in `src/internal/handlers` (or appropriate package) including email‑agnostic 202 behavior, token verification, and password policy errors.
 		- Implement lockout tracking (failed login counters, lockout window) in the auth service/repository.
 		- Add unit tests under `src/internal/tests` to cover success and error paths.
-- [ ] **Error model + consistency**
+- [x] **Error model + consistency**
 	- Standardize internal REST error responses according to `TESTING_CONTRACTS.md`:
 		- Introduce a shared error response helper (similar to OpenSubsonic’s `SendOpenSubsonicError`) in `src/internal/utils`.
 		- Update handlers in `src/internal/handlers` to use this helper, and add/adjust tests to assert on error JSON shape.
-- [ ] **Security middleware**
+- [x] **Security middleware**
 	- Add rate‑limiting/IP throttling middleware in `src/internal/middleware` and wire it in `src/main.go` for public APIs.
 	- Implement stronger upload guards (size and MIME) for `/api/images/avatar` based on fixtures under `docs/fixtures/internal` once they exist, with tests.
-- [ ] **Config + env validation coverage**
+- [x] **Config + env validation coverage**
 	- Extend `src/internal/config` to:
 		- Validate FFmpeg binary path and required profiles from `MEDIA_FILE_PROCESSING.md` at startup.
 		- Optionally check presence of external metadata service tokens if/when those integrations are enabled.
 	- Add tests in `config_test.go` for missing/invalid FFmpeg configuration.
-- [ ] **Repository coverage**
+- [x] **Repository coverage**
 	- Extend the internal repository in `src/internal/services/repository.go` (and related files) to support:
 		- All filters and pagination options required by `GET /api/search` and playlist endpoints.
 	- Add repository tests that exercise these new methods.

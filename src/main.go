@@ -117,6 +117,10 @@ func (s *Server) setupMiddleware() {
 	s.app.Use(logger.New())
 	s.app.Use(helmet.New())
 
+	// Rate limiting middleware - apply to all routes
+	rateLimiter := middleware.RateLimiterForPublicAPI()
+	s.app.Use(rateLimiter)
+
 	// CORS middleware with configuration
 	corsConfig := cors.Config{
 		AllowOrigins: strings.Join(s.cfg.Server.CORS.AllowOrigins, ","),
@@ -154,13 +158,14 @@ func (s *Server) setupInternalRoutes() {
 	// Authentication middleware for internal API
 	authMiddleware := middleware.NewAuthMiddleware(s.authService)
 
-	// Auth routes
+	// Auth routes with stricter rate limiting
 	authHandler := handlers.NewAuthHandler(s.authService)
+	authRateLimiter := middleware.RateLimiterForAuth()
 	auth := internalAPI.Group("/auth")
-	auth.Post("/login", authHandler.Login)
-	auth.Post("/refresh", authHandler.Refresh)
-	auth.Post("/request-reset", authHandler.RequestReset)
-	auth.Post("/reset", authHandler.ResetPassword)
+	auth.Post("/login", authRateLimiter, authHandler.Login)
+	auth.Post("/refresh", authRateLimiter, authHandler.Refresh)
+	auth.Post("/request-reset", authRateLimiter, authHandler.RequestReset)
+	auth.Post("/reset", authRateLimiter, authHandler.ResetPassword)
 
 	// Protected routes (require authentication)
 	protected := internalAPI.Use(authMiddleware.JWTProtected())
@@ -204,6 +209,16 @@ func (s *Server) setupInternalRoutes() {
 	admin.Post("/shares", sharesHandler.CreateShare)
 	admin.Put("/shares/:id", sharesHandler.UpdateShare)
 	admin.Delete("/shares/:id", sharesHandler.DeleteShare)
+
+	// Image management
+	imageHandler := handlers.NewImageHandler(s.repo)
+	images := protected.Group("/images")
+	images.Post("/avatar", imageHandler.UploadAvatar)
+	images.Get("/:id", imageHandler.GetImage)
+
+	// Search
+	searchHandler := handlers.NewSearchHandler(s.repo)
+	protected.Get("/search", searchHandler.Search)
 }
 
 // setupOpenSubsonicRoutes configures OpenSubsonic API routes

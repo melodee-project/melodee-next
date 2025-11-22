@@ -17,6 +17,8 @@ type User struct {
 	IsAdmin              bool       `gorm:"default:false" json:"is_admin"`
 	FailedLoginAttempts  int        `gorm:"default:0" json:"-"` // Number of consecutive failed login attempts
 	LockedUntil          *time.Time `json:"locked_until,omitempty"` // Time until which the account is locked
+	PasswordResetToken   *string    `gorm:"size:255" json:"-"` // Hash of the password reset token
+	PasswordResetExpiry  *time.Time `json:"-"` // When the password reset token expires
 	CreatedAt            time.Time  `json:"created_at"`
 	LastLoginAt          *time.Time `json:"last_login_at"`
 }

@@ -7,12 +7,21 @@ import (
 	"github.com/spf13/viper"
 )
 
+// ProcessingConfig represents media processing configuration
+type ProcessingConfig struct {
+	FFmpegPath    string            `mapstructure:"ffmpeg_path"`
+	Profiles      map[string]string `mapstructure:"profiles"` // name -> command template
+	MaxBitrate    int               `mapstructure:"max_bitrate"`
+	DefaultFormat string            `mapstructure:"default_format"`
+}
+
 // AppConfig represents the main application configuration
 type AppConfig struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Redis    RedisConfig    `mapstructure:"redis"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Database   DatabaseConfig   `mapstructure:"database"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	Processing ProcessingConfig `mapstructure:"processing"`
 }
 
 // ServerConfig represents server configuration
@@ -76,6 +85,19 @@ func LoadConfig() (*AppConfig, error) {
 	viper.SetDefault("redis.pool_size", 10)
 	viper.SetDefault("redis.timeout", 5*time.Second)
 
+	// Processing configuration defaults
+	viper.SetDefault("processing.ffmpeg_path", "ffmpeg")
+	viper.SetDefault("processing.max_bitrate", 320) // in kbps
+	viper.SetDefault("processing.default_format", "mp3")
+	// Default profiles for transcoding
+	viper.SetDefault("processing.profiles", map[string]string{
+		"mp3":    "-c:a libmp3lame -b:a %vk",
+		"ogg":    "-c:a libvorbis -b:a %vk",
+		"flac":   "-c:a flac",
+		"opus":   "-c:a libopus -b:a %vk",
+		"wav":    "-c:a pcm_s16le",
+	})
+
 	// Read configuration file
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -116,6 +138,56 @@ func validateConfig(config *AppConfig) error {
 
 	if config.JWT.RefreshExpiry <= 0 {
 		return fmt.Errorf("JWT refresh expiry must be positive")
+	}
+
+	return nil
+}
+
+// validateConfig validates the configuration values
+func validateConfig(config *AppConfig) error {
+	if config.JWT.Secret == "default-secret-key-change-in-production" {
+		return fmt.Errorf("JWT secret is using default value - please change in production")
+	}
+
+	if config.JWT.Secret == "" {
+		return fmt.Errorf("JWT secret cannot be empty")
+	}
+
+	if config.JWT.AccessExpiry <= 0 {
+		return fmt.Errorf("JWT access expiry must be positive")
+	}
+
+	if config.JWT.RefreshExpiry <= 0 {
+		return fmt.Errorf("JWT refresh expiry must be positive")
+	}
+
+	// Validate processing configuration
+	if err := validateProcessingConfig(&config.Processing); err != nil {
+		return fmt.Errorf("processing config validation error: %w", err)
+	}
+
+	return nil
+}
+
+// validateProcessingConfig validates processing-specific configuration
+func validateProcessingConfig(config *ProcessingConfig) error {
+	if config.FFmpegPath == "" {
+		return fmt.Errorf("FFmpeg path cannot be empty")
+	}
+
+	// Check if FFmpeg binary exists and is executable
+	if err := utils.CheckFFmpeg(config.FFmpegPath); err != nil {
+		return fmt.Errorf("FFmpeg validation failed: %w", err)
+	}
+
+	// Validate profiles
+	if config.Profiles == nil || len(config.Profiles) == 0 {
+		return fmt.Errorf("at least one transcoding profile must be defined")
+	}
+
+	// Validate max bitrate
+	if config.MaxBitrate <= 0 {
+		return fmt.Errorf("max bitrate must be positive")
 	}
 
 	return nil
