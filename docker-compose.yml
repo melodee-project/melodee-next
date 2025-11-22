@@ -21,7 +21,6 @@ services:
       - MELODEE_STORAGE_PATH=/storage
       - MELODEE_INBOUND_PATH=/inbound
       - MELODEE_STAGING_PATH=/staging
-      - MELODEE_QUARANTINE_PATH=/quarantine
       - MELODEE_USER_IMAGES_PATH=/user_images
       - FFMPEG_PATH=/usr/bin/ffmpeg
       - LOG_LEVEL=info
@@ -31,7 +30,6 @@ services:
       - ${STORAGE_MOUNT}:/storage:ro
       - ${INBOUND_MOUNT}:/inbound:rw
       - ${STAGING_MOUNT}:/staging:rw
-      - ${QUARANTINE_MOUNT}:/quarantine:rw
       - ${USER_IMAGES_MOUNT}:/user_images:rw
     depends_on:
       db:
@@ -103,7 +101,6 @@ services:
       - MELODEE_STORAGE_PATH=/storage
       - MELODEE_INBOUND_PATH=/inbound
       - MELODEE_STAGING_PATH=/staging
-      - MELODEE_QUARANTINE_PATH=/quarantine
       - MELODEE_USER_IMAGES_PATH=/user_images
       - FFMPEG_PATH=/usr/bin/ffmpeg
       - LOG_LEVEL=info
@@ -112,7 +109,6 @@ services:
       - ${STORAGE_MOUNT}:/storage:rw
       - ${INBOUND_MOUNT}:/inbound:rw
       - ${STAGING_MOUNT}:/staging:rw
-      - ${QUARANTINE_MOUNT}:/quarantine:rw
       - ${USER_IMAGES_MOUNT}:/user_images:rw
     depends_on:
       db:
