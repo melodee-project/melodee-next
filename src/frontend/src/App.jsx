@@ -78,11 +78,11 @@ function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       // Fetch library stats
-      const statsResponse = await axios.get('/stats');
+      const statsResponse = await axios.get('/api/libraries/stats');
       setStats(statsResponse.data);
       
       // Fetch recent jobs
-      const jobsResponse = await axios.get('/admin/jobs/recent');
+      const jobsResponse = await axios.get('/api/admin/jobs/recent');
       setJobs(jobsResponse.data);
       
       setLoading(false);
@@ -160,7 +160,7 @@ function DLQManagement() {
 
   const fetchDLQItems = async () => {
     try {
-      const response = await axios.get('/admin/jobs/dlq');
+      const response = await axios.get('/api/admin/jobs/dlq');
       setDlqItems(response.data);
       setLoading(false);
     } catch (error) {
@@ -179,7 +179,7 @@ function DLQManagement() {
 
   const handleRequeueSelected = async () => {
     try {
-      await axios.post('/admin/jobs/dlq/requeue', { job_ids: selectedItems });
+      await axios.post('/api/admin/jobs/requeue', { job_ids: selectedItems });
       // Refresh the list
       fetchDLQItems();
       setSelectedItems([]);
@@ -190,7 +190,7 @@ function DLQManagement() {
 
   const handlePurgeSelected = async () => {
     try {
-      await axios.post('/admin/jobs/dlq/purge', { job_ids: selectedItems });
+      await axios.post('/api/admin/jobs/purge', { job_ids: selectedItems });
       // Refresh the list
       fetchDLQItems();
       setSelectedItems([]);
@@ -285,8 +285,8 @@ function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('/users');
-      setUsers(response.data);
+      const response = await axios.get('/api/users');
+      setUsers(response.data.data || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -298,7 +298,7 @@ function UserManagement() {
     e.preventDefault();
     
     try {
-      await axios.post('/users', newUser);
+      await axios.post('/api/users', newUser);
       setNewUser({ username: '', email: '', password: '', is_admin: false });
       setShowCreateForm(false);
       fetchUsers(); // Refresh the list
@@ -310,7 +310,7 @@ function UserManagement() {
   const handleToggleAdmin = async (userId, currentAdminStatus) => {
     try {
       const user = users.find(u => u.id === userId);
-      await axios.put(`/users/${userId}`, { 
+      await axios.put(`/api/users/${userId}`, { 
         is_admin: !currentAdminStatus,
         username: user.username,
         email: user.email
@@ -324,7 +324,7 @@ function UserManagement() {
   const handleDeleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        await axios.delete(`/users/${userId}`);
+        await axios.delete(`/api/users/${userId}`);
         fetchUsers(); // Refresh the list
       } catch (error) {
         console.error('Error deleting user:', error);
@@ -450,7 +450,7 @@ function SettingsManagement() {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get('/admin/settings');
+      const response = await axios.get('/api/settings');
       setSettings(response.data);
       setLoading(false);
     } catch (error) {
@@ -466,7 +466,7 @@ function SettingsManagement() {
 
   const handleSave = async (key) => {
     try {
-      await axios.put(`/admin/settings/${key}`, { value: newValue });
+      await axios.put('/api/settings', { key, value: newValue });
       setEditingSetting(null);
       fetchSettings(); // Refresh the list
     } catch (error) {
