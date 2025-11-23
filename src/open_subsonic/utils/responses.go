@@ -17,7 +17,7 @@ type OpenSubsonicResponse struct {
 	Type          string   `xml:"type,attr"`
 	ServerVersion string   `xml:"serverVersion,attr"`
 	OpenSubsonic  bool     `xml:"openSubsonic,attr,omitempty"`
-	Error         *ErrorResponse `xml:"error,omitempty"`
+	Error         *ErrorDetail `xml:"error,omitempty"`
 
 	// Response data fields
 	MusicFolders *MusicFolders `xml:"musicFolders,omitempty"`
@@ -31,6 +31,7 @@ type OpenSubsonicResponse struct {
 	Genres       *Genres       `xml:"genres,omitempty"`
 
 	// Search results
+	SearchResult2 *SearchResult2 `xml:"searchResult2,omitempty"`
 	SearchResult3 *SearchResult3 `xml:"searchResult3,omitempty"`
 
 	// Playlists
@@ -45,8 +46,8 @@ type OpenSubsonicResponse struct {
 	Users *Users `xml:"users,omitempty"`
 }
 
-// ErrorResponse represents an error response
-type ErrorResponse struct {
+// ErrorDetail represents an error response detail
+type ErrorDetail struct {
 	Code    int    `xml:"code,attr"`
 	Message string `xml:"message,attr"`
 }
@@ -70,7 +71,7 @@ func ErrorResponse(code int, message string) *OpenSubsonicResponse {
 		Type:          "Melodee",
 		ServerVersion: "1.0.0",
 		OpenSubsonic:  true,
-		Error: &ErrorResponse{
+		Error: &ErrorDetail{
 			Code:    code,
 			Message: message,
 		},

@@ -3,7 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/xml"
-	"fmt"
+
+	"github.com/google/uuid"
+
+	// "fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -14,7 +17,7 @@ import (
 	"gorm.io/gorm"
 
 	"melodee/internal/config"
-	"melodee/internal/database"
+	// "melodee/internal/database"
 	"melodee/internal/media"
 	"melodee/internal/models"
 	"melodee/open_subsonic/handlers"
@@ -44,7 +47,7 @@ func TestAuthSemanticsContract(t *testing.T) {
 		{
 			name:         "Missing parameters",
 			params:       "u=test", // missing password
-			expectedCode: 10, // missing parameter
+			expectedCode: 10,       // missing parameter
 		},
 		{
 			name:         "Invalid token authentication",
@@ -102,7 +105,7 @@ func TestAuthHappyPath(t *testing.T) {
 	user := &models.User{
 		Username:     "testuser",
 		PasswordHash: "$2a$10$8.bcYl7/TxZjB4Cq4pDh5u6r5q1dF0p9L7x4j6v7q8w9x0y1z2a3b", // bcrypt hash for "password123"
-		APIKey:       "test-api-key",
+		APIKey:       uuid.New(),
 	}
 	err := db.Create(user).Error
 	assert.NoError(t, err)
@@ -178,7 +181,7 @@ func TestExactXMLErrorCodes(t *testing.T) {
 			assert.NotNil(t, response.Error)
 
 			if response.Error != nil {
-				assert.Equal(t, tc.expectedCode, response.Error.Code, 
+				assert.Equal(t, tc.expectedCode, response.Error.Code,
 					"Error code should be %d for %s, got %d", tc.expectedCode, tc.desc, response.Error.Code)
 			}
 		})
@@ -216,9 +219,9 @@ func setupTestApp(db *gorm.DB, cfg *config.AppConfig, authMiddleware *opensubson
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, "/tmp", 100*1024*1024)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/xml"
 	"fmt"
 	"net/http/httptest"
@@ -9,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,7 @@ func TestAllEndpointsContract(t *testing.T) {
 		// System endpoints
 		{"Ping endpoint", "GET", "/rest/ping.view", ""},
 		{"License endpoint", "GET", "/rest/getLicense.view", "?u=test&p=enc:password"},
-		
+
 		// Browsing endpoints
 		{"Get music folders", "GET", "/rest/getMusicFolders.view", "?u=test&p=enc:password"},
 		{"Get indexes", "GET", "/rest/getIndexes.view", "?u=test&p=enc:password"},
@@ -51,22 +52,22 @@ func TestAllEndpointsContract(t *testing.T) {
 		{"Get album", "GET", "/rest/getAlbum.view", "?id=1&u=test&p=enc:password"},
 		{"Get song", "GET", "/rest/getSong.view", "?id=1&u=test&p=enc:password"},
 		{"Get genres", "GET", "/rest/getGenres.view", "?u=test&p=enc:password"},
-		
-		// Media retrieval endpoints  
+
+		// Media retrieval endpoints
 		{"Stream", "GET", "/rest/stream.view", "?id=1&u=test&p=enc:password"},
 		{"Download", "GET", "/rest/download.view", "?id=1&u=test&p=enc:password"},
 		{"Get cover art", "GET", "/rest/getCoverArt.view", "?id=al-1&u=test&p=enc:password"},
 		{"Get avatar", "GET", "/rest/getAvatar.view", "?username=test&u=test&p=enc:password"},
-		
+
 		// Searching endpoints
 		{"Search", "GET", "/rest/search.view", "?query=test&u=test&p=enc:password"},
 		{"Search2", "GET", "/rest/search2.view", "?query=test&u=test&p=enc:password"},
 		{"Search3", "GET", "/rest/search3.view", "?query=test&u=test&p=enc:password"},
-		
+
 		// Playlist endpoints
 		{"Get playlists", "GET", "/rest/getPlaylists.view", "?u=test&p=enc:password"},
 		{"Get playlist", "GET", "/rest/getPlaylist.view", "?id=1&u=test&p=enc:password"},
-		
+
 		// User endpoints (only retrieve, not create/modify as those may need different setup)
 		{"Get users", "GET", "/rest/getUsers.view", "?u=test&p=enc:password"},
 	}
@@ -95,11 +96,11 @@ func TestAllEndpointsContract(t *testing.T) {
 			if err != nil {
 				// If it's not valid XML and it's a media endpoint (stream, download, cover art)
 				// it might be returning binary content instead of XML
-				isMediaEndpoint := strings.Contains(tt.endpoint, "stream") || 
-					strings.Contains(tt.endpoint, "download") || 
-					strings.Contains(tt.endpoint, "CoverArt") || 
+				isMediaEndpoint := strings.Contains(tt.endpoint, "stream") ||
+					strings.Contains(tt.endpoint, "download") ||
+					strings.Contains(tt.endpoint, "CoverArt") ||
 					strings.Contains(tt.endpoint, "Avatar")
-				
+
 				if !isMediaEndpoint {
 					// For non-media endpoints, the response should be valid XML
 					t.Errorf("Invalid XML response for %s: %v\nResponse body: %s", tt.name, err, string(body))
@@ -109,9 +110,9 @@ func TestAllEndpointsContract(t *testing.T) {
 				assert.NotEmpty(t, response.Status, "Status should not be empty for %s", tt.name)
 				assert.Equal(t, "1.16.1", response.Version, "Version should be 1.16.1 for %s", tt.name)
 				assert.Equal(t, "Melodee", response.Type, "Type should be Melodee for %s", tt.name)
-				
+
 				// Status should be either "ok" or "failed"
-				assert.Contains(t, []string{"ok", "failed"}, response.Status, 
+				assert.Contains(t, []string{"ok", "failed"}, response.Status,
 					"Status should be 'ok' or 'failed' for %s, got: %s", tt.name, response.Status)
 			}
 		})
@@ -179,9 +180,9 @@ func TestMissingAuthResponses(t *testing.T) {
 		endpoint string
 		params   string
 	}{
-		{"Missing auth parameters", "/rest/getArtists.view", ""}, // No auth params
+		{"Missing auth parameters", "/rest/getArtists.view", ""},                           // No auth params
 		{"Invalid username/password", "/rest/getArtists.view", "?u=invalid&p=enc:invalid"}, // Invalid auth
-		{"Malformed auth", "/rest/getArtists.view", "?u=test"}, // Missing password
+		{"Malformed auth", "/rest/getArtists.view", "?u=test"},                             // Missing password
 	}
 
 	for _, tt := range authTests {
@@ -262,7 +263,7 @@ func setupComprehensiveTestDatabase(t *testing.T, tempDir string) *gorm.DB {
 	user := &models.User{
 		Username:     "test",
 		PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMye.IjdQc3Dx0C4Jux4DiQE4qY46HdNEvC", // bcrypt hash for "password"
-		APIKey:       "test-key",
+		APIKey:       uuid.New(),
 	}
 	err = db.Create(user).Error
 	assert.NoError(t, err)
@@ -277,7 +278,7 @@ func setupComprehensiveTestDatabase(t *testing.T, tempDir string) *gorm.DB {
 
 	// Create test album
 	album := models.Album{
-		Name:           "Test Album", 
+		Name:           "Test Album",
 		NameNormalized: "test album",
 		ArtistID:       artist.ID,
 	}
@@ -324,9 +325,9 @@ func setupComprehensiveTestApp(db *gorm.DB, cfg *config.AppConfig, authMiddlewar
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, "/tmp", 100*1024*1024)

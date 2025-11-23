@@ -16,14 +16,14 @@ import (
 	internal_middleware "melodee/internal/middleware"
 	"melodee/open_subsonic/handlers"
 	opensubsonic_middleware "melodee/open_subsonic/middleware"
-	"melodee/open_subsonic/services"
+	// "melodee/open_subsonic/services"
 )
 
 // OpenSubsonicServer represents the OpenSubsonic API server
 type OpenSubsonicServer struct {
-	app          *fiber.App
-	cfg          *config.AppConfig
-	db           *gorm.DB
+	app *fiber.App
+	cfg *config.AppConfig
+	db  *gorm.DB
 }
 
 // NewOpenSubsonicServer creates a new OpenSubsonic server
@@ -59,7 +59,7 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(s.db, s.cfg.JWT.Secret)
 
 	// Create media processing components
-	ffmpegProcessor := media.NewFFmpegProcessor(&media.DefaultFFmpegConfig()) // Using default config
+	ffmpegProcessor := media.NewFFmpegProcessor(media.DefaultFFmpegConfig())                                                                                    // Using default config
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, s.cfg.Processing.TranscodeCache.CacheDir, s.cfg.Processing.TranscodeCache.MaxSize*1024*1024) // Convert MB to bytes
 
 	// Create handlers

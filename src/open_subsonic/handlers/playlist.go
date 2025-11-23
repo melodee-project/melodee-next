@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/xml"
 	"strconv"
 	"strings"
 
@@ -146,7 +145,7 @@ func (h *PlaylistHandler) GetPlaylist(c *fiber.Ctx) error {
 			Title:    song.Name,
 			Album:    song.Album.Name,
 			Artist:   song.Artist.Name,
-			CoverArt: getCoverArtID(song.AlbumID), // Placeholder
+			CoverArt: getCoverArtID("album", song.AlbumID), // Placeholder
 			Created:  utils.FormatTime(song.CreatedAt),
 			Duration: int(song.Duration / 1000), // Convert to seconds
 			BitRate:  int(song.BitRate),
@@ -337,39 +336,5 @@ func parseCommaSeparatedInts(s string) ([]int64, error) {
 }
 
 // getContentType returns content type based on file extension
-func getContentType(filename string) string {
-	switch {
-	case strings.HasSuffix(strings.ToLower(filename), ".mp3"):
-		return "audio/mpeg"
-	case strings.HasSuffix(strings.ToLower(filename), ".flac"):
-		return "audio/flac"
-	case strings.HasSuffix(strings.ToLower(filename), ".m4a"):
-		return "audio/mp4"
-	case strings.HasSuffix(strings.ToLower(filename), ".mp4"):
-		return "audio/mp4"
-	case strings.HasSuffix(strings.ToLower(filename), ".aac"):
-		return "audio/aac"
-	case strings.HasSuffix(strings.ToLower(filename), ".ogg"):
-		return "audio/ogg"
-	case strings.HasSuffix(strings.ToLower(filename), ".opus"):
-		return "audio/opus"
-	case strings.HasSuffix(strings.ToLower(filename), ".wav"):
-		return "audio/wav"
-	default:
-		return "audio/mpeg" // Default
-	}
-}
 
 // getSuffix returns file extension without the dot
-func getSuffix(filename string) string {
-	parts := strings.Split(filename, ".")
-	if len(parts) > 1 {
-		return parts[len(parts)-1]
-	}
-	return "mp3" // Default
-}
-
-// getCoverArtID returns a cover art ID for an album ID
-func getCoverArtID(albumID int64) string {
-	return "al-" + strconv.FormatInt(albumID, 10)
-}

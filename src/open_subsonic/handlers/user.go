@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"fmt"
+	"encoding/xml"
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
@@ -43,7 +42,7 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 
 	// Create response
 	response := utils.SuccessResponse()
-	userResp := User{
+	userResp := utils.User{
 		Username:    user.Username,
 		Email:       user.Email,
 		ScrobblingEnabled: true, // Default true
@@ -85,12 +84,12 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 
 	// Create response
 	response := utils.SuccessResponse()
-	usersResp := Users{
-		Users: make([]User, 0, len(users)),
+	usersResp := utils.Users{
+		Users: make([]utils.User, 0, len(users)),
 	}
 
 	for _, user := range users {
-		userResp := User{
+		userResp := utils.User{
 			Username:    user.Username,
 			Email:       user.Email,
 			ScrobblingEnabled: true,

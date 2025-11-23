@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -54,7 +53,7 @@ func runContractTestServer() (*fiber.App, func()) {
 	}
 
 	// Create database manager
-	dbManager := &database.DatabaseManager{}
+	_ = &database.DatabaseManager{}
 	// In a real case we'd have a proper implementation, here we mock the GetGormDB method
 	// For this test we'll directly pass the db
 
@@ -62,9 +61,9 @@ func runContractTestServer() (*fiber.App, func()) {
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, "/tmp", 100*1024*1024) // 100MB cache

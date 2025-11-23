@@ -2,8 +2,6 @@ package handlers
 
 import (
 	"encoding/xml"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -53,7 +51,7 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 
 	// Create response
 	response := utils.SuccessResponse()
-	searchResult2 := SearchResult2{
+	searchResult2 := utils.SearchResult2{
 		Offset: offset,
 		Size:   len(artists) + len(albums) + len(songs), // This is the number of results returned in this batch
 		Artists: artists,
@@ -100,7 +98,7 @@ func (h *SearchHandler) Search2(c *fiber.Ctx) error {
 
 	// Create response
 	response := utils.SuccessResponse()
-	searchResult2 := SearchResult2{
+	searchResult2 := utils.SearchResult2{
 		Offset:  offset,
 		Size:    len(artists) + len(albums) + len(songs),
 		Artists: artists,
@@ -147,7 +145,7 @@ func (h *SearchHandler) Search3(c *fiber.Ctx) error {
 
 	// Create response
 	response := utils.SuccessResponse()
-	searchResult3 := SearchResult3{
+	searchResult3 := utils.SearchResult3{
 		XMLName: xml.Name{Local: "searchResult3"},
 		Offset:  offset,
 		Size:    len(artists) + len(albums) + len(songs),
@@ -188,7 +186,7 @@ func (h *SearchHandler) searchArtists(query string, offset, size int) ([]utils.I
 		indexArtist := utils.IndexArtist{
 			ID:         int(artist.ID),
 			Name:       artist.Name,
-			AlbumCount: artist.AlbumCountCached,
+			AlbumCount: int(artist.AlbumCountCached),
 		}
 		
 		if !artist.CreatedAt.IsZero() {
@@ -238,8 +236,8 @@ func (h *SearchHandler) searchAlbums(query string, offset, size int) ([]utils.Se
 		if album.DurationCached > 0 {
 			searchAlbum.Duration = int(album.DurationCached / 1000) // Convert to seconds
 		}
-		if album.SongCountCached > 0 {
-			searchAlbum.SongCount = album.SongCountCached
+		if int(album.SongCountCached) > 0 {
+			searchAlbum.SongCount = int(album.SongCountCached)
 		}
 
 		result = append(result, searchAlbum)
@@ -273,7 +271,7 @@ func (h *SearchHandler) searchSongs(query string, offset, size int) ([]utils.Chi
 			Title:    song.Name,
 			Album:    song.Album.Name,
 			Artist:   song.Artist.Name,
-			CoverArt: getCoverArtID(song.AlbumID), // Placeholder
+			CoverArt: getCoverArtID("album", song.AlbumID), // Placeholder
 			Created:  utils.FormatTime(song.CreatedAt),
 			Duration: int(song.Duration / 1000), // Convert to seconds
 			BitRate:  int(song.BitRate),
@@ -348,42 +346,10 @@ func normalizeSearchQuery(query string) string {
 }
 
 // getContentType returns content type based on file extension
-func getContentType(filename string) string {
-	switch {
-	case strings.HasSuffix(strings.ToLower(filename), ".mp3"):
-		return "audio/mpeg"
-	case strings.HasSuffix(strings.ToLower(filename), ".flac"):
-		return "audio/flac"
-	case strings.HasSuffix(strings.ToLower(filename), ".m4a"):
-		return "audio/mp4"
-	case strings.HasSuffix(strings.ToLower(filename), ".mp4"):
-		return "audio/mp4"
-	case strings.HasSuffix(strings.ToLower(filename), ".aac"):
-		return "audio/aac"
-	case strings.HasSuffix(strings.ToLower(filename), ".ogg"):
-		return "audio/ogg"
-	case strings.HasSuffix(strings.ToLower(filename), ".opus"):
-		return "audio/opus"
-	case strings.HasSuffix(strings.ToLower(filename), ".wav"):
-		return "audio/wav"
-	default:
-		return "audio/mpeg" // Default
-	}
-}
 
 // getSuffix returns file extension without the dot
-func getSuffix(filename string) string {
-	parts := strings.Split(filename, ".")
-	if len(parts) > 1 {
-		return parts[len(parts)-1]
-	}
-	return "mp3" // Default
-}
 
 // getCoverArtID returns a cover art ID for an album ID
-func getCoverArtID(albumID int64) string {
-	return "al-" + strconv.FormatInt(albumID, 10)
-}
 
 // SearchResult2 represents search results for search and search2 endpoints
 type SearchResult2 struct {

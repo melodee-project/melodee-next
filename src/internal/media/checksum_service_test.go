@@ -16,7 +16,7 @@ func TestChecksumService_CalculateFileChecksum(t *testing.T) {
 	tempDir := t.TempDir()
 	testFile := filepath.Join(tempDir, "test.mp3")
 	testContent := "test content for checksum validation"
-	
+
 	err := os.WriteFile(testFile, []byte(testContent), 0644)
 	assert.NoError(t, err)
 
@@ -47,7 +47,7 @@ func TestChecksumService_CalculateFileChecksumWithCRC32(t *testing.T) {
 	tempDir := t.TempDir()
 	testFile := filepath.Join(tempDir, "test.mp3")
 	testContent := "test content for CRC32 checksum validation"
-	
+
 	err := os.WriteFile(testFile, []byte(testContent), 0644)
 	assert.NoError(t, err)
 
@@ -73,7 +73,7 @@ func TestChecksumService_Idempotency(t *testing.T) {
 	tempDir := t.TempDir()
 	testFile := filepath.Join(tempDir, "idempotency_test.mp3")
 	testContent := "idempotency test content"
-	
+
 	err := os.WriteFile(testFile, []byte(testContent), 0644)
 	assert.NoError(t, err)
 
@@ -102,7 +102,7 @@ func TestChecksumService_IsFileProcessed(t *testing.T) {
 	tempDir := t.TempDir()
 	testFile := filepath.Join(tempDir, "process_test.mp3")
 	testContent := "process test content"
-	
+
 	err := os.WriteFile(testFile, []byte(testContent), 0644)
 	assert.NoError(t, err)
 
@@ -127,9 +127,9 @@ func TestChecksumService_IsFileProcessed(t *testing.T) {
 func TestChecksumService_BatchCalculateChecksums(t *testing.T) {
 	// Create temporary directory and test files
 	tempDir := t.TempDir()
-	
-	files := []struct{
-		name string
+
+	files := []struct {
+		name    string
 		content string
 	}{
 		{"file1.mp3", "content 1"},
@@ -169,14 +169,14 @@ func TestChecksumService_DefaultConfig(t *testing.T) {
 	// Test that the default config is properly set
 	config := DefaultChecksumConfig()
 	assert.Equal(t, "sha256", config.Algorithm)
-	
+
 	// Setup test database
 	db, tearDown := test.GetTestDB(t)
 	defer tearDown()
 
 	// Create service with nil config (should use defaults)
 	service := NewChecksumService(db, nil)
-	
+
 	// Verify the service uses SHA256 by default
 	assert.Equal(t, "sha256", service.config.Algorithm)
 }
@@ -186,7 +186,7 @@ func TestChecksumService_InvalidAlgorithm(t *testing.T) {
 	tempDir := t.TempDir()
 	testFile := filepath.Join(tempDir, "invalid_algo_test.mp3")
 	testContent := "invalid algorithm test content"
-	
+
 	err := os.WriteFile(testFile, []byte(testContent), 0644)
 	assert.NoError(t, err)
 

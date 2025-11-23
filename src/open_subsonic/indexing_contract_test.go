@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"encoding/xml"
-	"fmt"
 	"net/http/httptest"
 	"sort"
 	"strings"
@@ -39,7 +37,7 @@ func TestIndexingAndSorting(t *testing.T) {
 		{Name: "Led Zeppelin", NameNormalized: "led zeppelin"},
 		{Name: "The Rolling Stones", NameNormalized: "the rolling stones"}, // Should normalize as "rolling stones" for sorting
 		{Name: "Elton John", NameNormalized: "elton john"},
-		{Name: "Los Lobos", NameNormalized: "los lobos"}, // Spanish article
+		{Name: "Los Lobos", NameNormalized: "los lobos"},                     // Spanish article
 		{Name: "Les Misérables Cast", NameNormalized: "les miserables cast"}, // French article with accent
 	}
 
@@ -70,11 +68,11 @@ func TestIndexingAndSorting(t *testing.T) {
 			for i := 0; i < len(index.Artists)-1; i++ {
 				currentName := strings.ToLower(index.Artists[i].Name)
 				nextName := strings.ToLower(index.Artists[i+1].Name)
-				assert.True(t, currentName <= nextName, 
+				assert.True(t, currentName <= nextName,
 					"Artists should be sorted within each index: %s should come before %s", currentName, nextName)
 			}
 		}
-		
+
 		// Validate that indexes themselves are in alphabetical order
 		for i := 0; i < len(response.Indexes.Indexes)-1; i++ {
 			currentIndex := strings.ToLower(response.Indexes.Indexes[i].Name)
@@ -94,9 +92,9 @@ func TestNormalizationRules(t *testing.T) {
 
 	// Create artists with different normalization scenarios
 	testArtists := []struct {
-		name           string
-		expectedIndex  string  // Expected index group after normalization
-		description    string
+		name          string
+		expectedIndex string // Expected index group after normalization
+		description   string
 	}{
 		{"The Beatles", "B", "Article 'The' should be moved to end for sorting"},
 		{"Aerosmith", "A", "Regular name starts with A"},
@@ -109,7 +107,7 @@ func TestNormalizationRules(t *testing.T) {
 		{"Various Artists", "V", "Regular name starts with V"},
 	}
 
-	for i, testData := range testArtists {
+	for _, testData := range testArtists {
 		artist := models.Artist{
 			Name:           testData.name,
 			NameNormalized: strings.ToLower(testData.name), // This would normally be computed differently
@@ -154,7 +152,7 @@ func TestNormalizationRules(t *testing.T) {
 		sort.Strings(sortedNames)
 
 		for i, name := range sortedNames {
-			assert.Equal(t, name, normalizedNames[i], 
+			assert.Equal(t, name, normalizedNames[i],
 				"Artist at position %d should be %s, but was %s", i, name, normalizedNames[i])
 		}
 	}
@@ -199,12 +197,12 @@ func TestGetArtistsSorting(t *testing.T) {
 	if response.Artists != nil {
 		// Validate that artists are sorted properly for display
 		artists := response.Artists.Artists
-		
+
 		// Check that they are in alphabetical order (case-insensitive)
 		for i := 0; i < len(artists)-1; i++ {
 			currentName := strings.ToLower(artists[i].Name)
 			nextName := strings.ToLower(artists[i+1].Name)
-			
+
 			assert.True(t, currentName <= nextName,
 				"Artists should be sorted alphabetically: '%s' should come before '%s'", currentName, nextName)
 		}
@@ -224,10 +222,10 @@ func TestArticlesNormalization(t *testing.T) {
 		{Name: "A Day in the Life", NameNormalized: "a day in the life"}, // Likely an album/song
 		{Name: "Annie Lennox", NameNormalized: "annie lennox"},
 		{Name: "La Vida Es Un Carnaval", NameNormalized: "la vida es un carnaval"}, // Spanish
-		{Name: "Le Tour du Monde", NameNormalized: "le tour du monde"}, // French
-		{Name: "Los Angeles Azules", NameNormalized: "los angeles azules"}, // Spanish plural
-		{Name: "Les Paul", NameNormalized: "les paul"}, // French
-		{Name: "The The", NameNormalized: "the the"}, // Artist with "the" in both positions
+		{Name: "Le Tour du Monde", NameNormalized: "le tour du monde"},             // French
+		{Name: "Los Angeles Azules", NameNormalized: "los angeles azules"},         // Spanish plural
+		{Name: "Les Paul", NameNormalized: "les paul"},                             // French
+		{Name: "The The", NameNormalized: "the the"},                               // Artist with "the" in both positions
 	}
 
 	for _, artist := range artistsWithArticles {
@@ -300,7 +298,7 @@ func TestDiacriticsNormalization(t *testing.T) {
 		for i := 0; i < len(artists)-1; i++ {
 			currentName := strings.ToLower(artists[i].Name)
 			nextName := strings.ToLower(artists[i+1].Name)
-			
+
 			// Check that the sorting is consistent
 			assert.True(t, currentName <= nextName,
 				"Artists should be sorted: '%s' should come before '%s'", currentName, nextName)
@@ -381,9 +379,9 @@ func setupIndexingTestApp(db *gorm.DB, cfg *config.AppConfig, authMiddleware *op
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, "/tmp", 100*1024*1024)

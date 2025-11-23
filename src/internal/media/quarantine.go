@@ -8,33 +8,32 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"melodee/internal/models"
 )
 
 // QuarantineReason represents the reason for quarantining a file
 type QuarantineReason string
 
 const (
-	ChecksumMismatch    QuarantineReason = "checksum_mismatch"
-	TagParseError       QuarantineReason = "tag_parse_error"
+	ChecksumMismatch     QuarantineReason = "checksum_mismatch"
+	TagParseError        QuarantineReason = "tag_parse_error"
 	UnsupportedContainer QuarantineReason = "unsupported_container"
-	FFmpegFailure       QuarantineReason = "ffmpeg_failure"
-	PathSafety          QuarantineReason = "path_safety"
-	ValidationBounds    QuarantineReason = "validation_bounds"
-	MetadataConflict    QuarantineReason = "metadata_conflict"
-	DiskFull            QuarantineReason = "disk_full"
-	CueMissingAudio     QuarantineReason = "cue_missing_audio"
+	FFmpegFailure        QuarantineReason = "ffmpeg_failure"
+	PathSafety           QuarantineReason = "path_safety"
+	ValidationBounds     QuarantineReason = "validation_bounds"
+	MetadataConflict     QuarantineReason = "metadata_conflict"
+	DiskFull             QuarantineReason = "disk_full"
+	CueMissingAudio      QuarantineReason = "cue_missing_audio"
 )
 
 // QuarantineRecord represents a quarantined item in the database
 type QuarantineRecord struct {
-	ID           int64             `gorm:"primaryKey;autoIncrement" json:"id"`
-	FilePath     string            `gorm:"not null" json:"file_path"`
-	OriginalPath string            `gorm:"not null" json:"original_path"`
-	Reason       QuarantineReason  `gorm:"not null" json:"reason"`
-	Message      string            `json:"message"`
-	LibraryID    int32             `json:"library_id"`
-	CreatedAt    time.Time         `json:"created_at"`
+	ID           int64            `gorm:"primaryKey;autoIncrement" json:"id"`
+	FilePath     string           `gorm:"not null" json:"file_path"`
+	OriginalPath string           `gorm:"not null" json:"original_path"`
+	Reason       QuarantineReason `gorm:"not null" json:"reason"`
+	Message      string           `json:"message"`
+	LibraryID    int32            `json:"library_id"`
+	CreatedAt    time.Time        `json:"created_at"`
 }
 
 // QuarantineService handles quarantining of problematic files
@@ -204,7 +203,7 @@ func (qs *QuarantineService) ProcessQuarantineCleanup(maxAgeDays int) error {
 func (qs *QuarantineService) GetQuarantineStats() (map[QuarantineReason]int64, error) {
 	var results []struct {
 		Reason QuarantineReason `json:"reason"`
-		Count  int64           `json:"count"`
+		Count  int64            `json:"count"`
 	}
 
 	// Count files by reason

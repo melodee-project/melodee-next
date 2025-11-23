@@ -80,7 +80,7 @@ func (ts *TranscodeService) TranscodeWithCache(inputPath string, profileName str
 
 	// Create output path for transcoded file
 	outputPath := filepath.Join(ts.cache.cacheDir, cacheKey+".tmp."+format)
-	
+
 	// Perform transcoding
 	if err := ts.processor.TranscodeFile(inputPath, outputPath, profileName); err != nil {
 		// Clean up temp file if transcoding failed
@@ -128,7 +128,7 @@ func (ts *TranscodeService) generateCacheKey(inputPath string, profileName strin
 	sourceHash := fmt.Sprintf("%x", sha256.Sum256([]byte(sourceInfo)))
 
 	// Create cache key combining source hash, profile, and parameters
-	cacheKey := fmt.Sprintf("%s_%s_%d_%s_%s", 
+	cacheKey := fmt.Sprintf("%s_%s_%d_%s_%s",
 		sourceHash[:16], // First 16 chars of source hash
 		profileName,
 		maxBitRate,
@@ -323,4 +323,3 @@ func (c *TranscodeCache) ClearCache() {
 func (ts *TranscodeService) GetCacheDir() string {
 	return ts.cache.cacheDir
 }
-

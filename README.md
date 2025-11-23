@@ -58,49 +58,84 @@ For more detail on how these pieces fit together, see `docs/DIRECTORY_ORGANIZATI
 
 ## Quick Start (Development)
 
-### One-shot Linux build
+Melodee is designed to run primarily via **containers**. The recommended way to run it locally and in production is with **Podman** (or Docker-compatible Podman).
 
-On modern Debian/Ubuntu or Arch/Manjaro systems you can use the helper script in `scripts/build-linux.sh` to install common prerequisites, create a local Postgres database, and build all services + the frontend. It’s meant to be a “just get me running” helper for homelab setups.
+### Typical dev loop (TL;DR)
+
+1. Clone the repo:
+
+  ```bash
+  git clone https://github.com/melodee-project/melodee-next.git
+  cd melodee-next
+  ```
+
+2. Start the full stack in the background:
+
+  ```bash
+  podman compose -f docker-compose.yml up -d
+  ```
+
+3. Edit code under `src/` on your host.
+
+4. When you’re ready to test your changes, rebuild and restart the services:
+
+  ```bash
+  podman compose -f docker-compose.yml build
+  podman compose -f docker-compose.yml up -d
+  ```
+
+5. Hit the web UI/API on the configured localhost ports (see `docker-compose.yml`) and iterate.
+
+### Podman / Compose (recommended)
+
+Prerequisites:
+
+- Podman installed on your host.
+- Either the Docker-compatible shim (`podman-docker`) **or** `podman compose` / `podman-compose` available.
+
+#### One command to start the full stack
 
 From the repo root:
 
 ```bash
-chmod +x scripts/build-linux.sh
-./scripts/build-linux.sh
+# Using Docker-compatible CLI (podman-docker) or Podman Compose
+podman compose -f docker-compose.yml up -d
+
+# Or, if you prefer the standalone podman-compose wrapper
+podman-compose -f docker-compose.yml up -d
 ```
 
-What it does:
+This will start:
 
-- Detects a Debian-like or Arch-like distro and installs Go, Node.js, PostgreSQL, Redis, FFmpeg, and basic build tools if they aren’t already there.
-- Ensures a local `melodee` Postgres role and `melodee_dev` database exist (where possible).
-- Creates a `.env.dev` file with sensible defaults (if not present) and exports it for the build.
-- Builds Go binaries into `bin/` (`melodee`, `melodee-api`, `melodee-web`, `melodee-worker`).
-- Installs frontend dependencies and runs `npm run build` in `src/api/frontend`.
+- API, Web, and Worker services.
+- PostgreSQL and Redis.
+- Supporting infrastructure such as migrations and health checks.
 
-After it completes, you can run services directly, for example:
+All required tools (Go, Node.js, PostgreSQL, Redis, FFmpeg, etc.) are provided **inside the containers**, so you do **not** need to install them directly on your host just to run Melodee.
 
-```bash
-./bin/melodee-api
-./bin/melodee-web
-./bin/melodee-worker
-```
+Once the stack is up, you can hit the web UI and API on the mapped host ports (see `docker-compose.yml` for exact values, typically something like `http://localhost:8080` / `8081`) and `/healthz` should report healthy when everything is ready.
 
-If your distro isn’t detected correctly, the script will print what tools are missing so you can install them manually.
+#### Seeing code changes during local development
 
-### Prerequisites
+For the simplest, low-fuss flow:
 
-- Go `1.25.x` (see `src/go.mod`).
-- Node.js LTS (`>=18`) and PNPM/Yarn/NPM for the frontend.
-- PostgreSQL 17+ (15+ should work, but 17 is the recommended baseline and used in the default Docker setup).
-- Redis (for Asynq job queue).
-- FFmpeg installed and accessible on `$PATH`.
+1. Start the full stack with Podman as above.
+2. Make code changes on your host in `src/`.
+3. Rebuild and restart the affected service images when you want to test those changes:
 
-On Debian/Ubuntu derivatives, apt-based packages look roughly like:
+  ```bash
+  # From the repo root, rebuild and restart everything
+  podman compose -f docker-compose.yml build
+  podman compose -f docker-compose.yml up -d
 
-```bash
-sudo apt-get update
-sudo apt-get install -y postgresql redis-server ffmpeg
-```
+  # Or, rebuild just one service (e.g., api) and restart it
+  podman compose -f docker-compose.yml build api
+  podman compose -f docker-compose.yml up -d api
+  ```
+
+Behind the scenes this will rebuild images with your latest source and restart the containers so they pick up the new code.
+
+If you want a tighter dev loop (live reload without rebuilding images), you can run the Go API/web and the frontend directly on your host using `go run` / `npm run dev` while still relying on Podman for Postgres/Redis. That setup is more manual and is not the primary path described here.
 
 ### Clone and workspace setup
 
@@ -328,27 +363,11 @@ Common contribution areas:
 
 ### 3. Running a full dev stack
 
-For a typical local dev loop:
+For most contributors, the easiest way to run a full stack is via Podman/Compose as described in the Quick Start. If you prefer to run services directly, you can still:
 
 1. Start Postgres, Redis, and ensure FFmpeg is installed.
 2. Export or configure the env vars shown in the Quick Start.
-3. Run the API, Web, and Worker in separate terminals:
-
-   ```bash
-   cd src
-   go run ./api
-   go run ./web
-   go run ./worker
-   ```
-
-4. In another terminal, run the frontend dev server:
-
-   ```bash
-   cd src/api/frontend
-   npm run dev
-   ```
-
-5. Hit the health endpoints (`/healthz`) and any exposed API routes to confirm everything is wired up.
+3. Run the API, Web, and Worker in separate terminals from `src/`.
 
 ### 4. Coding style & conventions
 

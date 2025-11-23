@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -443,36 +441,4 @@ func (h *MediaHandler) handleRangeRequest(c *fiber.Ctx, filePath string, song mo
 	
 	// If we reach here, the range header was malformed
 	return c.Status(416).SendString("Range Not Satisfiable")
-}
-
-// getContentType returns content type based on file extension
-func getContentType(filename string) string {
-	switch {
-	case strings.HasSuffix(strings.ToLower(filename), ".mp3"):
-		return "audio/mpeg"
-	case strings.HasSuffix(strings.ToLower(filename), ".flac"):
-		return "audio/flac"
-	case strings.HasSuffix(strings.ToLower(filename), ".m4a"):
-		return "audio/mp4"
-	case strings.HasSuffix(strings.ToLower(filename), ".mp4"):
-		return "audio/mp4"
-	case strings.HasSuffix(strings.ToLower(filename), ".aac"):
-		return "audio/aac"
-	case strings.HasSuffix(strings.ToLower(filename), ".ogg"):
-		return "audio/ogg"
-	case strings.HasSuffix(strings.ToLower(filename), ".opus"):
-		return "audio/opus"
-	case strings.HasSuffix(strings.ToLower(filename), ".wav"):
-		return "audio/wav"
-	case strings.HasSuffix(strings.ToLower(filename), ".jpg"):
-		return "image/jpeg"
-	case strings.HasSuffix(strings.ToLower(filename), ".jpeg"):
-		return "image/jpeg"
-	case strings.HasSuffix(strings.ToLower(filename), ".png"):
-		return "image/png"
-	case strings.HasSuffix(strings.ToLower(filename), ".gif"):
-		return "image/gif"
-	default:
-		return "application/octet-stream"
-	}
 }

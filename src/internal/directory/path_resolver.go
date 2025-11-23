@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"melodee/internal/models"
 )
@@ -66,9 +65,10 @@ type TemplateData struct {
 // Resolve resolves a path template with the given data
 func (r *PathTemplateResolver) Resolve(artist *models.Artist, album *models.Album, library *models.Library) (string, error) {
 	template := r.config.DefaultTemplate
-	if library != nil && library.PathTemplate != "" {
-		template = library.PathTemplate
-	}
+	// TODO: Add PathTemplate field to Library model if needed
+	// if library != nil && library.PathTemplate != "" {
+	// 	template = library.PathTemplate
+	// }
 
 	// Create template data
 	data := TemplateData{
@@ -86,13 +86,13 @@ func (r *PathTemplateResolver) Resolve(artist *models.Artist, album *models.Albu
 
 	// Replace placeholders
 	path := template
-	path = strings.ReplaceAll(path, "{library}", sanitizePathSegment(data.Library))
-	path = strings.ReplaceAll(path, "{artist_dir_code}", sanitizePathSegment(data.ArtistDirCode))
-	path = strings.ReplaceAll(path, "{artist}", sanitizePathSegment(data.Artist))
-	path = strings.ReplaceAll(path, "{album}", sanitizePathSegment(data.Album))
-	path = strings.ReplaceAll(path, "{year}", sanitizePathSegment(data.Year))
-	path = strings.ReplaceAll(path, "{genre}", sanitizePathSegment(data.Genre))
-	path = strings.ReplaceAll(path, "{type}", sanitizePathSegment(data.Type))
+	path = strings.ReplaceAll(path, "{library}", r.sanitizePathSegment(data.Library))
+	path = strings.ReplaceAll(path, "{artist_dir_code}", r.sanitizePathSegment(data.ArtistDirCode))
+	path = strings.ReplaceAll(path, "{artist}", r.sanitizePathSegment(data.Artist))
+	path = strings.ReplaceAll(path, "{album}", r.sanitizePathSegment(data.Album))
+	path = strings.ReplaceAll(path, "{year}", r.sanitizePathSegment(data.Year))
+	path = strings.ReplaceAll(path, "{genre}", r.sanitizePathSegment(data.Genre))
+	path = strings.ReplaceAll(path, "{type}", r.sanitizePathSegment(data.Type))
 
 	// Remove any remaining placeholders (could be optional)
 	path = r.removeUnreplacedPlaceholders(path)
@@ -106,7 +106,7 @@ func (r *PathTemplateResolver) Resolve(artist *models.Artist, album *models.Albu
 }
 
 // sanitizePathSegment removes or replaces invalid characters for filesystems
-func sanitizePathSegment(segment string) string {
+func (r *PathTemplateResolver) sanitizePathSegment(segment string) string {
 	if segment == "" {
 		return ""
 	}
@@ -231,11 +231,11 @@ func (r *PathTemplateResolver) ResolveForStaging(artist *models.Artist, album *m
 
 	// Replace placeholders
 	path := stagingTemplate
-	path = strings.ReplaceAll(path, "{artist_dir_code}", sanitizePathSegment(data.ArtistDirCode))
-	path = strings.ReplaceAll(path, "{artist}", sanitizePathSegment(data.Artist))
-	path = strings.ReplaceAll(path, "{album}", sanitizePathSegment(data.Album))
-	path = strings.ReplaceAll(path, "{year}", sanitizePathSegment(data.Year))
-	path = strings.ReplaceAll(path, "{type}", sanitizePathSegment(data.Type))
+	path = strings.ReplaceAll(path, "{artist_dir_code}", r.sanitizePathSegment(data.ArtistDirCode))
+	path = strings.ReplaceAll(path, "{artist}", r.sanitizePathSegment(data.Artist))
+	path = strings.ReplaceAll(path, "{album}", r.sanitizePathSegment(data.Album))
+	path = strings.ReplaceAll(path, "{year}", r.sanitizePathSegment(data.Year))
+	path = strings.ReplaceAll(path, "{type}", r.sanitizePathSegment(data.Type))
 
 	// Remove any remaining placeholders
 	path = r.removeUnreplacedPlaceholders(path)
@@ -268,11 +268,11 @@ func (r *PathTemplateResolver) ResolveForInbound(artist *models.Artist, album *m
 
 	// Replace placeholders
 	path := inboundTemplate
-	path = strings.ReplaceAll(path, "{artist_dir_code}", sanitizePathSegment(data.ArtistDirCode))
-	path = strings.ReplaceAll(path, "{artist}", sanitizePathSegment(data.Artist))
-	path = strings.ReplaceAll(path, "{album}", sanitizePathSegment(data.Album))
-	path = strings.ReplaceAll(path, "{year}", sanitizePathSegment(data.Year))
-	path = strings.ReplaceAll(path, "{type}", sanitizePathSegment(data.Type))
+	path = strings.ReplaceAll(path, "{artist_dir_code}", r.sanitizePathSegment(data.ArtistDirCode))
+	path = strings.ReplaceAll(path, "{artist}", r.sanitizePathSegment(data.Artist))
+	path = strings.ReplaceAll(path, "{album}", r.sanitizePathSegment(data.Album))
+	path = strings.ReplaceAll(path, "{year}", r.sanitizePathSegment(data.Year))
+	path = strings.ReplaceAll(path, "{type}", r.sanitizePathSegment(data.Type))
 
 	// Remove any remaining placeholders
 	path = r.removeUnreplacedPlaceholders(path)

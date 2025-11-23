@@ -18,8 +18,8 @@ import (
 type ProcessingStage string
 
 const (
-	InboundStage   ProcessingStage = "inbound"
-	StagingStage   ProcessingStage = "staging"
+	InboundStage    ProcessingStage = "inbound"
+	StagingStage    ProcessingStage = "staging"
 	ProductionStage ProcessingStage = "production"
 )
 
@@ -132,7 +132,7 @@ func (mp *MediaProcessor) processInboundFile(file MediaFile, force bool) error {
 
 	// 5. Check if file has been processed before (idempotency check) using checksum service
 	if !force {
-		isProcessed, existingSong, err := mp.checksumService.IsAlreadyProcessedByContentOnly(checksum)
+		isProcessed, _, err := mp.checksumService.IsAlreadyProcessedByContentOnly(checksum)
 		if err != nil {
 			return fmt.Errorf("failed to check if file with same content is already processed: %w", err)
 		}
@@ -209,13 +209,13 @@ func (mp *MediaProcessor) getMediaFilesInDirectory(dir string) ([]MediaFile, err
 func (mp *MediaProcessor) isMediaFile(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
 	mediaExts := []string{".mp3", ".flac", ".ogg", ".opus", ".m4a", ".mp4", ".aac", ".wma", ".wav", ".aiff", ".ape", ".wv", ".dsf", ".cda"}
-	
+
 	for _, mediaExt := range mediaExts {
 		if ext == mediaExt {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -245,11 +245,11 @@ func (mp *MediaProcessor) extractMetadata(filePath string) (*MediaMetadata, erro
 	// In a real implementation, we would call an actual metadata extractor
 	// For now, return a basic metadata struct
 	return &MediaMetadata{
-		FilePath:      filePath,
-		Size:          info.Size(),
-		ModTime:       info.ModTime(),
-		Checksum:      checksum,
-		Name:          filepath.Base(filePath),
+		FilePath: filePath,
+		Size:     info.Size(),
+		ModTime:  info.ModTime(),
+		Checksum: checksum,
+		Name:     filepath.Base(filePath),
 		// Other metadata fields would be extracted here
 	}, nil
 }
@@ -319,11 +319,11 @@ func (mp *MediaProcessor) createStagingRecords(metadata *MediaMetadata, stagingP
 	stagingRecord := &models.Song{
 		Name: metadata.Name,
 		// Other fields would be populated from metadata
-		Directory:  filepath.Dir(stagingPath),
-		FileName:   filepath.Base(stagingPath),
+		Directory:    filepath.Dir(stagingPath),
+		FileName:     filepath.Base(stagingPath),
 		RelativePath: strings.TrimPrefix(stagingPath, mp.config.StagingDir),
-		CRCHash:    metadata.Checksum,
-		CreatedAt:  time.Now(),
+		CRCHash:      metadata.Checksum,
+		CreatedAt:    time.Now(),
 	}
 
 	// Create the staging record in the database
@@ -355,27 +355,27 @@ func (mp *MediaProcessor) moveToQuarantine(filePath string, reason QuarantineRea
 
 // MediaMetadata holds metadata about a media file
 type MediaMetadata struct {
-	FilePath      string
-	Size          int64
-	ModTime       time.Time
-	Checksum      string
-	Name          string
-	Artist        string
-	Album         string
-	Title         string
-	TrackNumber   int
-	DiscNumber    int
-	Genre         string
-	Year          int
-	Duration      time.Duration
-	BitRate       int
-	SampleRate    int
-	Channels      int
-	Format        string
-	ArtworkPath   string
+	FilePath           string
+	Size               int64
+	ModTime            time.Time
+	Checksum           string
+	Name               string
+	Artist             string
+	Album              string
+	Title              string
+	TrackNumber        int
+	DiscNumber         int
+	Genre              string
+	Year               int
+	Duration           time.Duration
+	BitRate            int
+	SampleRate         int
+	Channels           int
+	Format             string
+	ArtworkPath        string
 	HasEmbeddedArtwork bool
-	CueSheetPath  string
-	HasCueSheet   bool
+	CueSheetPath       string
+	HasCueSheet        bool
 }
 
 // ProcessStaging promotes approved staging content to production
@@ -477,18 +477,18 @@ func (mp *MediaProcessor) selectProductionLibrary(item models.Song) (*models.Lib
 
 // LibrarySelectionConfig defines rules for selecting production libraries
 type LibrarySelectionConfig struct {
-	LibraryStrategy string                 `mapstructure:"strategy"` // "hash", "round_robin", "directory_code", "size_based"
-	LoadBalancing   LoadBalancingConfig   `mapstructure:"load_balancing"`
-	DirectoryRules  map[string]string     `mapstructure:"directory_rules"` // Artist directory code to library mapping
-	SizeThresholds  SizeThresholdConfig   `mapstructure:"size_thresholds"`
-	HashSalt        string                `mapstructure:"hash_salt"`
+	LibraryStrategy string              `mapstructure:"strategy"` // "hash", "round_robin", "directory_code", "size_based"
+	LoadBalancing   LoadBalancingConfig `mapstructure:"load_balancing"`
+	DirectoryRules  map[string]string   `mapstructure:"directory_rules"` // Artist directory code to library mapping
+	SizeThresholds  SizeThresholdConfig `mapstructure:"size_thresholds"`
+	HashSalt        string              `mapstructure:"hash_salt"`
 }
 
 // LoadBalancingConfig holds load balancing configuration
 type LoadBalancingConfig struct {
-	Enabled             bool    `mapstructure:"enabled"`
-	ThresholdPercentage int     `mapstructure:"threshold_percentage"` // Move to next library when current is this % full
-	StopThresholdPercentage int `mapstructure:"stop_threshold_percentage"` // Stop allocations at this %
+	Enabled                 bool `mapstructure:"enabled"`
+	ThresholdPercentage     int  `mapstructure:"threshold_percentage"`      // Move to next library when current is this % full
+	StopThresholdPercentage int  `mapstructure:"stop_threshold_percentage"` // Stop allocations at this %
 }
 
 // SizeThresholdConfig holds size threshold configuration
@@ -501,8 +501,8 @@ func DefaultLibrarySelectionConfig() *LibrarySelectionConfig {
 	return &LibrarySelectionConfig{
 		LibraryStrategy: "directory_code",
 		LoadBalancing: LoadBalancingConfig{
-			Enabled:             true,
-			ThresholdPercentage: 80,
+			Enabled:                 true,
+			ThresholdPercentage:     80,
 			StopThresholdPercentage: 90,
 		},
 		DirectoryRules: make(map[string]string),
@@ -720,12 +720,12 @@ func (mp *MediaProcessor) calculateProductionPath(item models.Song, library *mod
 func (mp *MediaProcessor) createProductionRecords(item models.Song, libraryID int32, productionPath string) (int64, error) {
 	// Create a new production song record based on the staging item
 	productionSong := &models.Song{
-		Name:       item.Name,
-		Directory:  filepath.Dir(productionPath),
-		FileName:   filepath.Base(productionPath),
+		Name:         item.Name,
+		Directory:    filepath.Dir(productionPath),
+		FileName:     filepath.Base(productionPath),
 		RelativePath: strings.TrimPrefix(productionPath, mp.config.ProductionDir),
-		CRCHash:    item.CRCHash,
-		CreatedAt:  time.Now(),
+		CRCHash:      item.CRCHash,
+		CreatedAt:    time.Now(),
 		// Other fields would be copied from staging item
 	}
 
@@ -740,7 +740,7 @@ func (mp *MediaProcessor) createProductionRecords(item models.Song, libraryID in
 func (mp *MediaProcessor) markStagingItemAsPromoted(stagingID, productionID int64) error {
 	// Update the staging item to mark it as promoted
 	// In a real system, this might involve moving the record to a different table or updating status
-	return mp.db.Model(&models.Song{}).Where("id = ?", stagingID).Update("relative_path", "promoted/"+filepath.Base(stagingID)).Error
+	return mp.db.Model(&models.Song{}).Where("id = ?", stagingID).Update("relative_path", fmt.Sprintf("promoted/%d", stagingID)).Error
 }
 
 // ProcessWithRetry attempts processing with configurable retry logic

@@ -37,12 +37,12 @@ func (h *BrowsingHandler) GetMusicFolders(c *fiber.Ctx) error {
 
 	// Create response
 	response := utils.SuccessResponse()
-	musicFolders := MusicFolders{
+	musicFolders := utils.MusicFolders{
 		XMLName: xml.Name{Local: "musicFolders"},
 	}
 	
 	for _, lib := range libraries {
-		musicFolders.Folders = append(musicFolders.Folders, MusicFolder{
+		musicFolders.Folders = append(musicFolders.Folders, utils.MusicFolder{
 			ID:   int(lib.ID),
 			Name: lib.Name,
 		})
@@ -72,7 +72,7 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 	}
 
 	// Organize artists by index based on normalized name
-	artistMap := make(map[string][]IndexArtist)
+	artistMap := make(map[string][]utils.IndexArtist)
 	ignoredArticles := "The El Le La Los Las" // As specified in the fixture
 
 	for _, artist := range artists {
@@ -85,10 +85,10 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 		}
 
 		// Create index artist
-		indexArtist := IndexArtist{
+		indexArtist := utils.IndexArtist{
 			ID:         int(artist.ID),
 			Name:       artist.Name, // Display the original name, not the normalized one
-			AlbumCount: artist.AlbumCountCached,
+			AlbumCount: int(artist.AlbumCountCached),
 		}
 
 		if !artist.CreatedAt.IsZero() {
@@ -109,7 +109,7 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 	}
 
 	// Create ordered indexes
-	var orderedIndexes []Index
+	var orderedIndexes []utils.Index
 	var keys []string
 	for k := range artistMap {
 		keys = append(keys, k)
@@ -117,7 +117,7 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		orderedIndexes = append(orderedIndexes, Index{
+		orderedIndexes = append(orderedIndexes, utils.Index{
 			Name:    k,
 			Artists: artistMap[k],
 		})
@@ -125,7 +125,7 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 
 	// Create response
 	response := utils.SuccessResponse()
-	indexes := Indexes{
+	indexes := utils.Indexes{
 		XMLName:         xml.Name{Local: "indexes"},
 		LastModified:    utils.FormatTime(lastModified),
 		IgnoredArticles: ignoredArticles,
@@ -155,16 +155,16 @@ func (h *BrowsingHandler) GetArtists(c *fiber.Ctx) error {
 
 	// Build response
 	response := utils.SuccessResponse()
-	artistsResp := Artists{
+	artistsResp := utils.Artists{
 		XMLName: xml.Name{Local: "artists"},
-		Artists: make([]IndexArtist, 0, len(artists)),
+		Artists: make([]utils.IndexArtist, 0, len(artists)),
 	}
 	
 	for _, artist := range artists {
-		indexArtist := IndexArtist{
+		indexArtist := utils.IndexArtist{
 			ID:         int(artist.ID),
 			Name:       artist.Name,
-			AlbumCount: artist.AlbumCountCached,
+			AlbumCount: int(artist.AlbumCountCached),
 		}
 
 		if !artist.CreatedAt.IsZero() {
@@ -193,7 +193,7 @@ func (h *BrowsingHandler) GetArtist(c *fiber.Ctx) error {
 	var artist models.Artist
 	if err := h.db.First(&artist, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return utils.SendOpenSubsonicError(c, 70, "Artist not found")
+			return utils.SendOpenSubsonicError(c, 70, "utils.Artist not found")
 		}
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve artist")
 	}
@@ -206,20 +206,20 @@ func (h *BrowsingHandler) GetArtist(c *fiber.Ctx) error {
 
 	// Build response
 	response := utils.SuccessResponse()
-	artistResp := Artist{
+	artistResp := utils.Artist{
 		ID:         int(artist.ID),
 		Name:       artist.Name,
-		AlbumCount: artist.AlbumCountCached,
-		Albums:     make([]ArtistAlbum, 0, len(albums)),
+		AlbumCount: int(artist.AlbumCountCached),
+		Albums:     make([]utils.ArtistAlbum, 0, len(albums)),
 	}
 
 	for _, album := range albums {
-		artistAlbum := ArtistAlbum{
+		artistAlbum := utils.ArtistAlbum{
 			ID:        int(album.ID),
 			Name:      album.Name,
 			Artist:    album.Artist.Name,
 			ArtistID:  int(album.ArtistID),
-			SongCount: album.SongCountCached,
+			SongCount: int(album.SongCountCached),
 		}
 
 		if album.ReleaseDate != nil {
@@ -249,14 +249,14 @@ func (h *BrowsingHandler) GetAlbumInfo(c *fiber.Ctx) error {
 	var album models.Album
 	if err := h.db.Preload("Artist").First(&album, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return utils.SendOpenSubsonicError(c, 70, "Album not found")
+			return utils.SendOpenSubsonicError(c, 70, "utils.Album not found")
 		}
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve album")
 	}
 
 	// For now, return a basic response - more detailed implementation needed
 	response := utils.SuccessResponse()
-	albumInfo := AlbumInfo{
+	albumInfo := utils.AlbumInfo{
 		ID: int(album.ID),
 		// Add more fields as needed based on specifications
 	}
@@ -286,13 +286,13 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 		}
 
 		response := utils.SuccessResponse()
-		directory := Directory{
+		directory := utils.Directory{
 			ID:   id,
 			Name: artist.Name,
 		}
 
 		for _, album := range albums {
-			directory.Children = append(directory.Children, Child{
+			directory.Children = append(directory.Children, utils.Child{
 				ID:        int(album.ID),
 				Parent:    id,
 				IsDir:     true,
@@ -302,8 +302,7 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 				CoverArt:  fmt.Sprintf("al-%d", album.ID), // Placeholder
 				Created:   utils.FormatTime(album.CreatedAt),
 				Starred:   "", // If starred
-				Duration:  album.DurationCached / 1000, // Convert milliseconds to seconds
-				SongCount: album.SongCountCached,
+				Duration:  int(album.DurationCached / 1000), // Convert milliseconds to seconds
 			})
 		}
 
@@ -314,7 +313,7 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 		var album models.Album
 		if err := h.db.Preload("Artist").First(&album, id).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
-				return utils.SendOpenSubsonicError(c, 70, "Directory not found")
+				return utils.SendOpenSubsonicError(c, 70, "utils.Directory not found")
 			}
 			return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve directory")
 		}
@@ -326,7 +325,7 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 		}
 
 		response := utils.SuccessResponse()
-		directory := Directory{
+		directory := utils.Directory{
 			ID:     id,
 			Parent: int(album.ArtistID),
 			Name:   album.Name,
@@ -334,7 +333,7 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 		}
 
 		for _, song := range songs {
-			child := Child{
+			child := utils.Child{
 				ID:       int(song.ID),
 				Parent:   id,
 				IsDir:    false,
@@ -361,7 +360,7 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 		return utils.SendResponse(c, response)
 	}
 
-	return utils.SendOpenSubsonicError(c, 70, "Directory not found")
+	return utils.SendOpenSubsonicError(c, 70, "utils.Directory not found")
 }
 
 // GetAlbum returns album details with songs
@@ -375,7 +374,7 @@ func (h *BrowsingHandler) GetAlbum(c *fiber.Ctx) error {
 	var album models.Album
 	if err := h.db.Preload("Artist").First(&album, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return utils.SendOpenSubsonicError(c, 70, "Album not found")
+			return utils.SendOpenSubsonicError(c, 70, "utils.Album not found")
 		}
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve album")
 	}
@@ -388,7 +387,7 @@ func (h *BrowsingHandler) GetAlbum(c *fiber.Ctx) error {
 
 	// Build response
 	response := utils.SuccessResponse()
-	albumResp := &Album{
+	albumResp := &utils.Album{
 		ID:        int(album.ID),
 		Title:     album.Name,
 		Album:     album.Name,
@@ -404,9 +403,9 @@ func (h *BrowsingHandler) GetAlbum(c *fiber.Ctx) error {
 		albumResp.Year = album.ReleaseDate.Year()
 	}
 
-	albumResp.Songs = make([]Child, 0, len(songs))
+	albumResp.Songs = make([]utils.Child, 0, len(songs))
 	for _, song := range songs {
-		child := Child{
+		child := utils.Child{
 			ID:       int(song.ID),
 			Parent:   int(album.ID),
 			IsDir:    false,
@@ -449,7 +448,7 @@ func (h *BrowsingHandler) GetSong(c *fiber.Ctx) error {
 
 	// Build response
 	response := utils.SuccessResponse()
-	child := Child{
+	child := utils.Child{
 		ID:       int(song.ID),
 		Parent:   int(song.AlbumID),
 		IsDir:    false,
@@ -515,9 +514,9 @@ func (h *BrowsingHandler) GetGenres(c *fiber.Ctx) error {
 
 	// Create response
 	response := utils.SuccessResponse()
-	genres := Genres{
+	genres := utils.Genres{
 		XMLName: xml.Name{Local: "genres"},
-		Genres:  []Genre{}, // Will be populated below
+		Genres:  []utils.Genre{}, // Will be populated below
 	}
 
 	// Convert the genre map to sorted slice
@@ -538,7 +537,7 @@ func (h *BrowsingHandler) GetGenres(c *fiber.Ctx) error {
 
 	// Add to response with proper counts
 	for _, gc := range sortedGenres {
-		genres.Genres = append(genres.Genres, Genre{
+		genres.Genres = append(genres.Genres, utils.Genre{
 			Name:  gc.Name,
 			Count: gc.Count,
 		})
@@ -661,39 +660,6 @@ func normalizeForIndexing(name string) string {
 	name = strings.Join(strings.Fields(name), " ")
 
 	return name
-}
-
-// getContentType returns content type based on file extension
-func getContentType(filename string) string {
-	switch {
-	case strings.HasSuffix(strings.ToLower(filename), ".mp3"):
-		return "audio/mpeg"
-	case strings.HasSuffix(strings.ToLower(filename), ".flac"):
-		return "audio/flac"
-	case strings.HasSuffix(strings.ToLower(filename), ".m4a"):
-		return "audio/mp4"
-	case strings.HasSuffix(strings.ToLower(filename), ".mp4"):
-		return "audio/mp4"
-	case strings.HasSuffix(strings.ToLower(filename), ".aac"):
-		return "audio/aac"
-	case strings.HasSuffix(strings.ToLower(filename), ".ogg"):
-		return "audio/ogg"
-	case strings.HasSuffix(strings.ToLower(filename), ".opus"):
-		return "audio/opus"
-	case strings.HasSuffix(strings.ToLower(filename), ".wav"):
-		return "audio/wav"
-	default:
-		return "audio/mpeg" // Default
-	}
-}
-
-// getSuffix returns file extension without the dot
-func getSuffix(filename string) string {
-	parts := strings.Split(filename, ".")
-	if len(parts) > 1 {
-		return parts[len(parts)-1]
-	}
-	return "mp3" // Default
 }
 
 // extractGenreFromTags extracts genre from song tags

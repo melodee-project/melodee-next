@@ -15,12 +15,12 @@ import (
 
 // Job types for Asynq
 const (
-	TypeLibraryScan        = "library:scan"
-	TypeLibraryProcess     = "library:process"
-	TypeLibraryMoveOK      = "library:move_ok"
+	TypeLibraryScan          = "library:scan"
+	TypeLibraryProcess       = "library:process"
+	TypeLibraryMoveOK        = "library:move_ok"
 	TypeDirectoryRecalculate = "directory:recalculate"
-	TypeMetadataWriteback  = "metadata:writeback"
-	TypeMetadataEnhance    = "metadata:enhance"
+	TypeMetadataWriteback    = "metadata:writeback"
+	TypeMetadataEnhance      = "metadata:enhance"
 )
 
 // Job payloads and handlers
@@ -42,16 +42,16 @@ func HandleLibraryScan(ctx context.Context, t *asynq.Task) error {
 
 	// In a real implementation, this would scan the libraries
 	// and trigger file processing workflows
-	
+
 	// For now, just log the task
 	log.Printf("Library scan completed for libraries: %v", p.LibraryIDs)
-	
+
 	return nil
 }
 
 // LibraryProcessPayload represents the payload for library process jobs
 type LibraryProcessPayload struct {
-	LibraryID int32 `json:"library_id"`
+	LibraryID int32    `json:"library_id"`
 	FilePaths []string `json:"file_paths"`
 }
 
@@ -71,7 +71,7 @@ func HandleLibraryProcess(ctx context.Context, t *asynq.Task) error {
 	// 4. Create staging records in DB
 
 	log.Printf("Library process completed for library ID: %d", p.LibraryID)
-	
+
 	return nil
 }
 
@@ -96,7 +96,7 @@ func HandleLibraryMoveOK(ctx context.Context, t *asynq.Task) error {
 	// 4. Update database records
 
 	log.Printf("Album move completed for album ID: %d", p.AlbumID)
-	
+
 	return nil
 }
 
@@ -116,9 +116,9 @@ func HandleDirectoryRecalculate(ctx context.Context, t *asynq.Task) error {
 
 	// In a real implementation, this would recalculate directory codes
 	// for the specified artists and update references
-	
+
 	log.Printf("Directory recalculation completed for %d artists", len(p.ArtistIDs))
-	
+
 	return nil
 }
 
@@ -142,7 +142,7 @@ func HandleMetadataWriteback(ctx context.Context, t *asynq.Task) error {
 	// 3. Handle conflicts according to metadata rules
 
 	log.Printf("Metadata writeback completed for %d songs", len(p.SongIDs))
-	
+
 	return nil
 }
 
@@ -163,17 +163,17 @@ func HandleMetadataEnhance(ctx context.Context, t *asynq.Task) error {
 
 	// In a real implementation, this would fetch metadata from external sources
 	// like MusicBrainz, LastFM, etc., and update the database
-	
+
 	log.Printf("Metadata enhancement completed for album ID: %d", p.AlbumID)
-	
+
 	return nil
 }
 
 // MediaService handles media processing operations
 type MediaService struct {
-	db              *gorm.DB
-	directorySvc    *directory.DirectoryCodeGenerator
-	pathResolver    *directory.PathTemplateResolver
+	db                *gorm.DB
+	directorySvc      *directory.DirectoryCodeGenerator
+	pathResolver      *directory.PathTemplateResolver
 	QuarantineService *QuarantineService
 }
 
@@ -185,9 +185,9 @@ func NewMediaService(
 	quarantineSvc *QuarantineService,
 ) *MediaService {
 	return &MediaService{
-		db:              db,
-		directorySvc:    directorySvc,
-		pathResolver:    pathResolver,
+		db:                db,
+		directorySvc:      directorySvc,
+		pathResolver:      pathResolver,
 		QuarantineService: quarantineSvc,
 	}
 }
@@ -203,10 +203,10 @@ func (ms *MediaService) EnqueueLibraryScan(client *asynq.Client, libraryIDs []in
 	}
 
 	task := asynq.NewTask(TypeLibraryScan, payload)
-	
+
 	// Use deduplication key to prevent duplicate scans
 	dedupKey := fmt.Sprintf("library.scan:%v", libraryIDs)
-	
+
 	_, err = client.Enqueue(task, asynq.TaskID(dedupKey), asynq.Timeout(5*time.Minute))
 	if err != nil {
 		return fmt.Errorf("failed to enqueue library scan: %w", err)
@@ -226,10 +226,10 @@ func (ms *MediaService) EnqueueLibraryProcess(client *asynq.Client, libraryID in
 	}
 
 	task := asynq.NewTask(TypeLibraryProcess, payload)
-	
+
 	// Use deduplication key
 	dedupKey := fmt.Sprintf("library.process:%d", libraryID)
-	
+
 	_, err = client.Enqueue(task, asynq.TaskID(dedupKey), asynq.Timeout(10*time.Minute))
 	if err != nil {
 		return fmt.Errorf("failed to enqueue library process: %w", err)
@@ -248,10 +248,10 @@ func (ms *MediaService) EnqueueLibraryMoveOK(client *asynq.Client, albumID int64
 	}
 
 	task := asynq.NewTask(TypeLibraryMoveOK, payload)
-	
+
 	// Use deduplication key
 	dedupKey := fmt.Sprintf("library.move_ok:%d", albumID)
-	
+
 	_, err = client.Enqueue(task, asynq.TaskID(dedupKey), asynq.Timeout(30*time.Minute))
 	if err != nil {
 		return fmt.Errorf("failed to enqueue library move OK: %w", err)
@@ -270,10 +270,10 @@ func (ms *MediaService) EnqueueDirectoryRecalculate(client *asynq.Client, artist
 	}
 
 	task := asynq.NewTask(TypeDirectoryRecalculate, payload)
-	
+
 	// Use deduplication key
 	dedupKey := fmt.Sprintf("directory.recalculate:%v", artistIDs)
-	
+
 	_, err = client.Enqueue(task, asynq.TaskID(dedupKey), asynq.Timeout(2*time.Minute))
 	if err != nil {
 		return fmt.Errorf("failed to enqueue directory recalculate: %w", err)
@@ -292,11 +292,11 @@ func (ms *MediaService) EnqueueMetadataWriteback(client *asynq.Client, songIDs [
 	}
 
 	task := asynq.NewTask(TypeMetadataWriteback, payload)
-	
+
 	// Use deduplication key based on song IDs hash
 	// In a real implementation, we'd create a hash of the song IDs
 	dedupKey := fmt.Sprintf("metadata.writeback:%v", len(songIDs)) // Simplified
-	
+
 	_, err = client.Enqueue(task, asynq.TaskID(dedupKey), asynq.Timeout(2*time.Minute))
 	if err != nil {
 		return fmt.Errorf("failed to enqueue metadata writeback: %w", err)
@@ -316,10 +316,10 @@ func (ms *MediaService) EnqueueMetadataEnhance(client *asynq.Client, albumID int
 	}
 
 	task := asynq.NewTask(TypeMetadataEnhance, payload)
-	
+
 	// Use deduplication key
 	dedupKey := fmt.Sprintf("metadata.enhance:%d", albumID)
-	
+
 	_, err = client.Enqueue(task, asynq.TaskID(dedupKey), asynq.Timeout(3*time.Minute))
 	if err != nil {
 		return fmt.Errorf("failed to enqueue metadata enhance: %w", err)

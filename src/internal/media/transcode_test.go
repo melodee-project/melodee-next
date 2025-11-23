@@ -191,7 +191,7 @@ func TestTranscodeCacheWouldFit(t *testing.T) {
 
 	// Test with zero size - should always fit
 	assert.True(t, service.cache.WouldFit(0))
-	assert.True(t, service.cache.WouldFit(512)) // 512 bytes should fit in 1KB
+	assert.True(t, service.cache.WouldFit(512))   // 512 bytes should fit in 1KB
 	assert.False(t, service.cache.WouldFit(2048)) // 2KB won't fit in 1KB
 }
 

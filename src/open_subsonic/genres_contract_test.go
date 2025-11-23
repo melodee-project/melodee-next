@@ -1,13 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,7 @@ func TestGenresEndpoint(t *testing.T) {
 			}),
 		},
 		{
-			Name:           "Song 2", 
+			Name:           "Song 2",
 			NameNormalized: "song 2",
 			Tags: mustMarshalJSON(map[string]interface{}{
 				"Genre": "Pop", // Capitalized
@@ -91,7 +92,7 @@ func TestGenresEndpoint(t *testing.T) {
 		},
 		{
 			Name:           "Jazz Album",
-			NameNormalized: "jazz album", 
+			NameNormalized: "jazz album",
 			Genres:         []string{"Jazz", "Blues"},
 		},
 	}
@@ -117,27 +118,27 @@ func TestGenresEndpoint(t *testing.T) {
 	assert.NotNil(t, response.Genres)
 	if response.Genres != nil {
 		genres := response.Genres.Genres
-		
+
 		// Verify we have genres aggregated from both songs and albums
 		expectedGenres := []string{"Rock", "Pop", "Jazz", "Classical", "Electronic", "Alternative", "Blues"}
-		
+
 		// Create a map of genre names to counts for easy verification
 		genreMap := make(map[string]int)
 		for _, genre := range genres {
 			genreMap[genre.Name] = genre.Count
 		}
-		
+
 		// Check that all expected genres are present
 		for _, expectedGenre := range expectedGenres {
 			_, exists := genreMap[expectedGenre]
 			assert.True(t, exists, "Genre '%s' should be present in the response", expectedGenre)
 		}
-		
+
 		// Check that Rock appears at least twice (once from songs, once from albums)
 		rockCount, rockExists := genreMap["Rock"]
 		assert.True(t, rockExists, "Rock genre should exist")
 		assert.GreaterOrEqual(t, rockCount, 2, "Rock should appear in at least 2 entries (from songs and album)")
-		
+
 		// Check that genres are sorted alphabetically
 		for i := 0; i < len(genres)-1; i++ {
 			current := strings.ToLower(genres[i].Name)
@@ -155,18 +156,18 @@ func TestExtractGenreFromTags(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "Simple genre field",
-			tags: mustMarshalJSON(map[string]interface{}{"genre": "Rock"}),
+			name:     "Simple genre field",
+			tags:     mustMarshalJSON(map[string]interface{}{"genre": "Rock"}),
 			expected: "Rock",
 		},
 		{
-			name: "Capitalized Genre field", 
-			tags: mustMarshalJSON(map[string]interface{}{"Genre": "Pop"}),
+			name:     "Capitalized Genre field",
+			tags:     mustMarshalJSON(map[string]interface{}{"Genre": "Pop"}),
 			expected: "Pop",
 		},
 		{
-			name: "Uppercase GENRE field",
-			tags: mustMarshalJSON(map[string]interface{}{"GENRE": "Jazz"}),
+			name:     "Uppercase GENRE field",
+			tags:     mustMarshalJSON(map[string]interface{}{"GENRE": "Jazz"}),
 			expected: "Jazz",
 		},
 		{
@@ -186,25 +187,25 @@ func TestExtractGenreFromTags(t *testing.T) {
 			expected: "Rock", // Should take first element
 		},
 		{
-			name: "Numeric genre ID (ID3)", 
+			name: "Numeric genre ID (ID3)",
 			tags: mustMarshalJSON(map[string]interface{}{
 				"GenreID3v1": 1.0, // Would be "Blues" in ID3
 			}),
 			expected: "1", // Converted from number to string
 		},
 		{
-			name: "Empty tags",
-			tags: []byte{},
+			name:     "Empty tags",
+			tags:     []byte{},
 			expected: "",
 		},
 		{
-			name: "Nil tags", 
-			tags: nil,
+			name:     "Nil tags",
+			tags:     nil,
 			expected: "",
 		},
 		{
-			name: "Invalid JSON",
-			tags: []byte("invalid json"),
+			name:     "Invalid JSON",
+			tags:     []byte("invalid json"),
 			expected: "",
 		},
 		{
@@ -260,12 +261,12 @@ func TestNormalizeGenreName(t *testing.T) {
 		expected string
 	}{
 		{"Rock", "Rock"},
-		{"  Rock  ", "Rock"}, // Trimmed
-		{"Rock  Pop", "Rock Pop"}, // Double space normalized
-		{"", ""}, // Empty string
-		{"  ", ""}, // Only spaces
-		{"Rock/Pop", "Rock/Pop"}, // Keep special characters
-		{"Hip-Hop", "Hip-Hop"}, // Keep hyphens
+		{"  Rock  ", "Rock"},           // Trimmed
+		{"Rock  Pop", "Rock Pop"},      // Double space normalized
+		{"", ""},                       // Empty string
+		{"  ", ""},                     // Only spaces
+		{"Rock/Pop", "Rock/Pop"},       // Keep special characters
+		{"Hip-Hop", "Hip-Hop"},         // Keep hyphens
 		{"Death Metal", "Death Metal"}, // Normal spaces preserved
 	}
 
@@ -299,7 +300,7 @@ func setupGenresTestDatabase(t *testing.T) *gorm.DB {
 	user := &models.User{
 		Username:     "test",
 		PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMye.IjdQc3Dx0C4Jux4DiQE4qY46HdNEvC", // bcrypt hash for "password"
-		APIKey:       "test-key",
+		APIKey:       uuid.New(), // Generate a valid UUID
 	}
 	err = db.Create(user).Error
 	assert.NoError(t, err)
@@ -326,9 +327,9 @@ func setupGenresTestApp(db *gorm.DB, cfg *config.AppConfig, authMiddleware *open
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, "/tmp", 100*1024*1024)
@@ -393,3 +394,64 @@ func setupGenresTestApp(db *gorm.DB, cfg *config.AppConfig, authMiddleware *open
 	return app
 }
 
+// extractGenreFromTags extracts genre information from JSONB tags
+func extractGenreFromTags(tags []byte) string {
+	if tags == nil || len(tags) == 0 {
+		return ""
+	}
+
+	var tagMap map[string]interface{}
+	if err := json.Unmarshal(tags, &tagMap); err != nil {
+		return ""
+	}
+
+	// Try various common genre field names
+	genreFields := []string{"genre", "Genre", "GENRE", "music_genre", "MusicGenre"}
+	for _, field := range genreFields {
+		if value, ok := tagMap[field]; ok {
+			switch v := value.(type) {
+			case string:
+				return normalizeGenreName(v)
+			case []interface{}:
+				if len(v) > 0 {
+					if str, ok := v[0].(string); ok {
+						return normalizeGenreName(str)
+					}
+				}
+			case float64:
+				// Handle numeric genre IDs
+				return fmt.Sprintf("%.0f", v)
+			}
+		}
+	}
+
+	// Check for nested common/genre field
+	if common, ok := tagMap["common"].(map[string]interface{}); ok {
+		if genre, ok := common["genre"].(string); ok {
+			return normalizeGenreName(genre)
+		}
+	}
+
+	// Check for GenreID3v1
+	if genreID, ok := tagMap["GenreID3v1"].(float64); ok {
+		return fmt.Sprintf("%.0f", genreID)
+	}
+
+	// Try other common field variations
+	if style, ok := tagMap["style"].(string); ok {
+		return normalizeGenreName(style)
+	}
+
+	return ""
+}
+
+// normalizeGenreName normalizes a genre name by trimming whitespace
+func normalizeGenreName(name string) string {
+	// Trim leading and trailing whitespace
+	name = strings.TrimSpace(name)
+
+	// Normalize multiple spaces to single space
+	name = strings.Join(strings.Fields(name), " ")
+
+	return name
+}

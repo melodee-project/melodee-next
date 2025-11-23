@@ -33,7 +33,7 @@ func (h *SystemHandler) Ping(c *fiber.Ctx) error {
 func (h *SystemHandler) GetLicense(c *fiber.Ctx) error {
 	// Create license response
 	response := utils.SuccessResponse()
-	license := License{
+	license := utils.License{
 		XMLName: xml.Name{Local: "license"},
 		ID:      "melodee-license-001", // Placeholder ID
 		Email:   "license@melodee.example.com", // Placeholder email

@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -18,35 +19,34 @@ import (
 	"melodee/internal/models"
 	"melodee/open_subsonic/handlers"
 	opensubsonic_middleware "melodee/open_subsonic/middleware"
-	"melodee/open_subsonic/utils"
 )
 
 // TestCoverArtCaching validates cover art caching behavior including headers and fallbacks
 func TestCoverArtCaching(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupCoverArtTestDatabase(t)
 	cfg := getCoverArtTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupCoverArtTestApp(db, cfg, authMiddleware, transcodeService)
 
-	// Create test data 
+	// Create test data
 	createCoverArtTestData(t, db, tempDir)
 
 	// Create test cover art files
@@ -81,7 +81,7 @@ func TestCoverArtCaching(t *testing.T) {
 			expectedStatus: 200, // OpenSubsonic spec: returns 200 with XML error
 		},
 		{
-			name:           "Non-existent cover art", 
+			name:           "Non-existent cover art",
 			params:         "?id=al-999&u=test&p=enc:password",
 			expectSuccess:  false,
 			expectedStatus: 200, // Should return XML error per spec
@@ -97,7 +97,7 @@ func TestCoverArtCaching(t *testing.T) {
 
 			// Check response based on expectation
 			contentType := resp.Header.Get("Content-Type")
-			
+
 			if tt.expectSuccess {
 				// For successful cover art retrieval
 				assert.Contains(t, contentType, "image")
@@ -113,18 +113,18 @@ func TestCoverArtCaching(t *testing.T) {
 			if err != nil && err.Error() != "EOF" {
 				// In some cases body might be empty
 			}
-			
+
 			bodyStr := string(body)
 			if tt.expectSuccess {
 				// Should be image content, not XML
 				if resp.StatusCode == 200 {
-					assert.NotContains(t, bodyStr, "<subsonic-response", 
+					assert.NotContains(t, bodyStr, "<subsonic-response",
 						"Successful response should not be XML, it should be image data")
 				}
 			} else {
 				// Should be XML error response
 				if resp.StatusCode == 200 {
-					assert.Contains(t, bodyStr, "<subsonic-response", 
+					assert.Contains(t, bodyStr, "<subsonic-response",
 						"Failed response should be XML as per spec")
 					assert.Contains(t, bodyStr, `status="failed"`)
 				}
@@ -136,25 +136,25 @@ func TestCoverArtCaching(t *testing.T) {
 // TestAvatarCaching validates avatar caching behavior
 func TestAvatarCaching(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupCoverArtTestDatabase(t)
 	cfg := getCoverArtTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupCoverArtTestApp(db, cfg, authMiddleware, transcodeService)
 
@@ -172,7 +172,7 @@ func TestAvatarCaching(t *testing.T) {
 		},
 		{
 			name:           "Non-existent avatar",
-			params:         "?username=nonexistent&u=test&p=enc:password", 
+			params:         "?username=nonexistent&u=test&p=enc:password",
 			expectSuccess:  false,
 			expectedStatus: 200, // Should return XML error per spec
 		},
@@ -187,7 +187,7 @@ func TestAvatarCaching(t *testing.T) {
 
 			// Check response type
 			contentType := resp.Header.Get("Content-Type")
-			
+
 			if tt.expectSuccess {
 				// For successful avatar retrieval
 				assert.Contains(t, contentType, "image")
@@ -202,7 +202,7 @@ func TestAvatarCaching(t *testing.T) {
 			if err != nil && err.Error() != "EOF" {
 				// Body might be empty in some cases
 			}
-			
+
 			bodyStr := string(body)
 			if resp.StatusCode == 200 {
 				// Check if it's an XML error response (which is expected for missing avatar)
@@ -217,31 +217,31 @@ func TestAvatarCaching(t *testing.T) {
 // TestCacheHeaders validates proper cache headers (ETag, Last-Modified, 304 responses)
 func TestCacheHeaders(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupCoverArtTestDatabase(t)
 	cfg := getCoverArtTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupCoverArtTestApp(db, cfg, authMiddleware, transcodeService)
 
 	// Create test data and cover art file
 	createCoverArtTestData(t, db, tempDir)
-	
+
 	coverPath := filepath.Join(tempDir, "test_cover.jpg")
 	err := os.WriteFile(coverPath, []byte("fake cover content"), 0644)
 	assert.NoError(t, err)
@@ -258,11 +258,11 @@ func TestCacheHeaders(t *testing.T) {
 	req1 := httptest.NewRequest("GET", "/rest/getCoverArt.view?id=al-1&u=test&p=enc:password", nil)
 	resp1, err := app.Test(req1)
 	assert.NoError(t, err)
-	
+
 	// Check that we got proper cache headers
-	etag := resp1.Header.Get("ETag")
-	lastModified := resp1.Header.Get("Last-Modified")
-	
+	_ = resp1.Header.Get("ETag")
+	_ = resp1.Header.Get("Last-Modified")
+
 	// For successful image responses, these headers should be present
 	if resp1.StatusCode == 200 {
 		// The response might be XML error if the cover file isn't in the right location
@@ -270,37 +270,37 @@ func TestCacheHeaders(t *testing.T) {
 		coverDir := filepath.Join(tempDir, "album_dir")
 		err = os.MkdirAll(coverDir, 0755)
 		assert.NoError(t, err)
-		
+
 		coverInExpectedPath := filepath.Join(coverDir, "cover.jpg")
 		err = os.WriteFile(coverInExpectedPath, []byte("test cover image"), 0644)
 		assert.NoError(t, err)
-		
+
 		// Update album to point to this directory
 		album.Directory = coverDir
 		err = db.Save(&album).Error
 		assert.NoError(t, err)
-		
+
 		// Now try again
 		req2 := httptest.NewRequest("GET", "/rest/getCoverArt.view?id=al-1&u=test&p=enc:password", nil)
 		resp2, err := app.Test(req2)
 		assert.NoError(t, err)
-		
+
 		if resp2.StatusCode == 200 {
 			// This should now return image content
 			newEtag := resp2.Header.Get("ETag")
 			newLastModified := resp2.Header.Get("Last-Modified")
-			
+
 			// Validate cache headers exist
 			assert.NotEmpty(t, newEtag, "ETag header should be present")
 			assert.NotEmpty(t, newLastModified, "Last-Modified header should be present")
-			
+
 			// Test 304 response when client has cached version
 			req3 := httptest.NewRequest("GET", "/rest/getCoverArt.view?id=al-1&u=test&p=enc:password", nil)
 			req3.Header.Set("If-None-Match", newEtag) // Client has cached version
-			
-			resp3, err := app.Test(req3)
+
+			_, err := app.Test(req3)
 			assert.NoError(t, err)
-			
+
 			// Should return 304 Not Modified if ETag matches
 			if newEtag != "" {
 				// Note: In this test setup, the actual file caching logic might not be fully implemented
@@ -313,25 +313,25 @@ func TestCacheHeaders(t *testing.T) {
 // TestMissingArtBehavior tests behavior when cover art/avatar is missing
 func TestMissingArtBehavior(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupCoverArtTestDatabase(t)
 	cfg := getCoverArtTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupCoverArtTestApp(db, cfg, authMiddleware, transcodeService)
 
@@ -350,7 +350,7 @@ func TestMissingArtBehavior(t *testing.T) {
 	// Should be XML error response as per OpenSubsonic spec
 	assert.Contains(t, bodyStr, "<subsonic-response")
 	assert.Contains(t, bodyStr, `status="failed"`)
-	
+
 	// Check error code - should be 70 for "not found" per spec
 	assert.Contains(t, bodyStr, `code="70"`)
 }
@@ -358,25 +358,25 @@ func TestMissingArtBehavior(t *testing.T) {
 // TestFallbackCoverArt tests fallback logic for different cover art file names
 func TestFallbackCoverArt(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupCoverArtTestDatabase(t)
 	cfg := getCoverArtTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupCoverArtTestApp(db, cfg, authMiddleware, transcodeService)
 
@@ -502,7 +502,7 @@ func createCoverArtTestData(t *testing.T, db *gorm.DB, tempDir string) {
 	user := &models.User{
 		Username:     "test",
 		PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMye.IjdQc3Dx0C4Jux4DiQE4qY46HdNEvC", // bcrypt hash for "password"
-		APIKey:       "test-key",
+		APIKey:       uuid.New(),
 	}
 	err := db.Create(user).Error
 	assert.NoError(t, err)

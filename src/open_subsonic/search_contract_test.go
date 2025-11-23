@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -44,19 +43,19 @@ func TestSearchContractWithFixtures(t *testing.T) {
 		{
 			name:     "Search endpoint with fixtures",
 			endpoint: "/rest/search.view",
-			query:    "black dog", // matches "Black Dog" from fixture
+			query:    "black dog",     // matches "Black Dog" from fixture
 			fixture:  "search-ok.xml", // We'll use this as a reference structure
 		},
 		{
 			name:     "Search2 endpoint with fixtures",
 			endpoint: "/rest/search2.view",
 			query:    "led zeppelin iv", // matches "Led Zeppelin IV" from fixture
-			fixture:  "search2-ok.xml", // We'll use this as a reference structure
+			fixture:  "search2-ok.xml",  // We'll use this as a reference structure
 		},
 		{
 			name:     "Search3 endpoint with fixtures",
 			endpoint: "/rest/search3.view",
-			query:    "led zeppelin", // matches "Led Zeppelin" from fixture
+			query:    "led zeppelin",   // matches "Led Zeppelin" from fixture
 			fixture:  "search3-ok.xml", // We'll use this as a reference structure
 		},
 	}
@@ -329,9 +328,9 @@ func setupSearchTestApp(db *gorm.DB, cfg *config.AppConfig, authMiddleware *open
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, "/tmp", 100*1024*1024)
@@ -401,26 +400,26 @@ func createSearchTestData(t *testing.T, db *gorm.DB) {
 	user := &models.User{
 		Username:     "test",
 		PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMye.IjdQc3Dx0C4Jux4DiQE4qY46HdNEvC", // bcrypt hash for "password"
-		APIKey:       "test-key",
+		APIKey:       uuid.New(),
 	}
 	err := db.Create(user).Error
 	assert.NoError(t, err)
 
 	// Create test data for search
 	artist := models.Artist{
-		Name:           "Led Zeppelin",
-		NameNormalized: "led zeppelin",
+		Name:             "Led Zeppelin",
+		NameNormalized:   "led zeppelin",
 		AlbumCountCached: 9,
 	}
 	err = db.Create(&artist).Error
 	assert.NoError(t, err)
 
 	album := models.Album{
-		Name:           "Led Zeppelin IV",
-		NameNormalized: "led zeppelin iv",
-		ArtistID:       artist.ID,
+		Name:            "Led Zeppelin IV",
+		NameNormalized:  "led zeppelin iv",
+		ArtistID:        artist.ID,
 		SongCountCached: 8,
-		DurationCached: 2550 * 1000, // 2550 seconds * 1000 ms
+		DurationCached:  2550 * 1000, // 2550 seconds * 1000 ms
 	}
 	err = db.Create(&album).Error
 	assert.NoError(t, err)

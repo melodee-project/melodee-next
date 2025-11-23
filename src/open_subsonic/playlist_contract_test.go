@@ -3,10 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/xml"
-	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -269,9 +270,9 @@ func setupPlaylistTestApp(db *gorm.DB, cfg *config.AppConfig, authMiddleware *op
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, "/tmp", 100*1024*1024)
@@ -341,7 +342,7 @@ func createPlaylistTestData(t *testing.T, db *gorm.DB) {
 	user := &models.User{
 		Username:     "test",
 		PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMye.IjdQc3Dx0C4Jux4DiQE4qY46HdNEvC", // bcrypt hash for "password"
-		APIKey:       "test-key",
+		APIKey:       uuid.New(),
 	}
 	err := db.Create(user).Error
 	assert.NoError(t, err)
@@ -377,12 +378,12 @@ func createPlaylistTestData(t *testing.T, db *gorm.DB) {
 
 	// Create test playlist
 	playlist := models.Playlist{
-		Name:      "Test Playlist",
-		Comment:   "Test playlist comment",
-		Public:    false,
-		UserID:    user.ID,
-		CreatedAt: nil,
-		ChangedAt: nil,
+		Name:    "Test Playlist",
+		Comment: "Test playlist comment",
+		Public:  false,
+		UserID:  user.ID,
+		// CreatedAt: nil,
+		// ChangedAt: nil,
 	}
 	err = db.Create(&playlist).Error
 	assert.NoError(t, err)

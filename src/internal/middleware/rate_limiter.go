@@ -92,20 +92,6 @@ func RateLimiterForAuth() fiber.Handler {
 
 // IPBasedRateLimiter creates a rate limiter based on IP with different limits per IP type
 func IPBasedRateLimiter() fiber.Handler {
-	config := &RateLimiterConfig{
-		Max:        100,             // 100 requests per minute for regular IPs
-		Expiration: 1 * time.Minute,
-		KeyGenerator: func(c *fiber.Ctx) string {
-			ip := extractClientIP(c)
-			// For internal IPs, allow more requests
-			if isLocalIP(ip) {
-				return "internal:" + ip
-			}
-			return "external:" + ip
-		},
-		Message: "Too many requests from your IP address",
-	}
-	
 	// Custom limiter with different rates based on IP
 	return func(c *fiber.Ctx) error {
 		ip := extractClientIP(c)

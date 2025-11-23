@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -17,38 +15,38 @@ import (
 
 // ChecksumService handles checksum calculation, validation, and idempotency
 type ChecksumService struct {
-	db         *gorm.DB
-	mutex      sync.RWMutex
-	cache      map[string]*ChecksumEntry
-	config     *ChecksumConfig
+	db     *gorm.DB
+	mutex  sync.RWMutex
+	cache  map[string]*ChecksumEntry
+	config *ChecksumConfig
 }
 
 // ChecksumConfig holds configuration for checksum service
 type ChecksumConfig struct {
-	Algorithm  string `mapstructure:"algorithm"`  // Only SHA256 supported for now
-	EnableCaching bool `mapstructure:"enable_caching"` // Whether to cache checksums
-	CacheTTL   time.Duration `mapstructure:"cache_ttl"` // How long to cache checksums
-	StoreLocation string `mapstructure:"store_location"` // Where to store checksums (DB, file, memory)
+	Algorithm     string        `mapstructure:"algorithm"`      // Only SHA256 supported for now
+	EnableCaching bool          `mapstructure:"enable_caching"` // Whether to cache checksums
+	CacheTTL      time.Duration `mapstructure:"cache_ttl"`      // How long to cache checksums
+	StoreLocation string        `mapstructure:"store_location"` // Where to store checksums (DB, file, memory)
 }
 
 // DefaultChecksumConfig returns the default checksum configuration
 func DefaultChecksumConfig() *ChecksumConfig {
 	return &ChecksumConfig{
-		Algorithm:  "SHA256",
+		Algorithm:     "SHA256",
 		EnableCaching: true,
-		CacheTTL:   24 * time.Hour,
+		CacheTTL:      24 * time.Hour,
 		StoreLocation: "DB", // Store in database by default
 	}
 }
 
 // ChecksumEntry represents a cached checksum entry
 type ChecksumEntry struct {
-	Checksum    string
-	FilePath    string
-	FileSize    int64
-	ModTime     time.Time
-	CreatedAt   time.Time
-	ExpiresAt   time.Time
+	Checksum  string
+	FilePath  string
+	FileSize  int64
+	ModTime   time.Time
+	CreatedAt time.Time
+	ExpiresAt time.Time
 }
 
 // NewChecksumService creates a new checksum service
@@ -157,12 +155,12 @@ func (cs *ChecksumService) MarkAsProcessed(filePath, checksum string, song *mode
 	// If file already exists in database, prevent duplicate insertion
 	var existingSong models.Song
 	result := cs.db.Where("crc_hash = ? AND relative_path = ?", checksum, filePath).First(&existingSong)
-	
+
 	if result.Error == nil {
 		// Already exists, return early to maintain idempotency
 		return nil
 	}
-	
+
 	if result.Error != gorm.ErrRecordNotFound {
 		return result.Error
 	}
@@ -217,7 +215,7 @@ func (cs *ChecksumService) PurgeInvalidEntries() error {
 
 	// In a real implementation, we'd iterate through stored checksum records
 	// and remove those where the file no longer exists
-	
+
 	return nil
 }
 
@@ -348,7 +346,7 @@ func (cs *ChecksumService) GetConsistencyReport() (*ConsistencyReport, error) {
 	// This is a simplified version for demonstration
 	var songCount int64
 	cs.db.Model(&models.Song{}).Count(&songCount)
-	
+
 	report.TotalFiles = int(songCount)
 	report.VerifiedFiles = 0
 	report.CorruptedFiles = 0
@@ -359,11 +357,11 @@ func (cs *ChecksumService) GetConsistencyReport() (*ConsistencyReport, error) {
 
 // ConsistencyReport represents the results of a file consistency check
 type ConsistencyReport struct {
-	GeneratedAt   time.Time `json:"generated_at"`
-	TotalFiles    int       `json:"total_files"`
-	VerifiedFiles int       `json:"verified_files"`
-	CorruptedFiles int      `json:"corrupted_files"`
-	MissingFiles  int       `json:"missing_files"`
+	GeneratedAt    time.Time `json:"generated_at"`
+	TotalFiles     int       `json:"total_files"`
+	VerifiedFiles  int       `json:"verified_files"`
+	CorruptedFiles int       `json:"corrupted_files"`
+	MissingFiles   int       `json:"missing_files"`
 	IntegrityScore float64   `json:"integrity_score"` // Percentage of verified files (0-100)
 }
 

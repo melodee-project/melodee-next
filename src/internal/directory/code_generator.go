@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 
 	"gorm.io/gorm"
 	"melodee/internal/models"

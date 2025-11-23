@@ -3,7 +3,6 @@ package media
 import (
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -55,7 +54,7 @@ func NewFFmpegProcessor(config *FFmpegConfig) *FFmpegProcessor {
 	if config == nil {
 		config = DefaultFFmpegConfig()
 	}
-	
+
 	return &FFmpegProcessor{
 		config: config,
 	}
@@ -72,16 +71,16 @@ func (fp *FFmpegProcessor) TranscodeFile(inputPath, outputPath, profileName stri
 	cmdArgs := []string{
 		"-i", inputPath, // Input file
 	}
-	
+
 	// Add profile-specific arguments
 	cmdArgs = append(cmdArgs, strings.Split(profile.CommandLine, " ")...)
-	
+
 	// Add output file
 	cmdArgs = append(cmdArgs, outputPath)
 
 	// Create the command
 	cmd := exec.Command(fp.config.FFmpegPath, cmdArgs...)
-	
+
 	// Run with timeout
 	done := make(chan error, 1)
 	go func() {
@@ -107,7 +106,7 @@ func (fp *FFmpegProcessor) TranscodeFile(inputPath, outputPath, profileName stri
 func (fp *FFmpegProcessor) ConvertFile(inputPath, outputPath, format string) error {
 	// Determine the appropriate command for the output format
 	var cmdArgs []string
-	
+
 	switch format {
 	case "mp3":
 		cmdArgs = []string{
@@ -147,7 +146,7 @@ func (fp *FFmpegProcessor) ConvertFile(inputPath, outputPath, format string) err
 
 	// Create the command
 	cmd := exec.Command(fp.config.FFmpegPath, cmdArgs...)
-	
+
 	// Run with timeout
 	done := make(chan error, 1)
 	go func() {
@@ -172,12 +171,12 @@ func (fp *FFmpegProcessor) ConvertFile(inputPath, outputPath, format string) err
 // ExtractAudioFromVideo extracts audio from a video file
 func (fp *FFmpegProcessor) ExtractAudioFromVideo(inputPath, outputPath string, format string) error {
 	var cmdArgs []string
-	
+
 	switch format {
 	case "mp3":
 		cmdArgs = []string{
 			"-i", inputPath,
-			"-vn",                    // No video
+			"-vn", // No video
 			"-c:a", "libmp3lame",
 			"-b:a", "320k",
 			"-ar", "44100",
@@ -187,7 +186,7 @@ func (fp *FFmpegProcessor) ExtractAudioFromVideo(inputPath, outputPath string, f
 	case "flac":
 		cmdArgs = []string{
 			"-i", inputPath,
-			"-vn",           // No video
+			"-vn", // No video
 			"-c:a", "flac",
 			"-compression_level", "5",
 			outputPath,
@@ -198,7 +197,7 @@ func (fp *FFmpegProcessor) ExtractAudioFromVideo(inputPath, outputPath string, f
 
 	// Create the command
 	cmd := exec.Command(fp.config.FFmpegPath, cmdArgs...)
-	
+
 	// Run with timeout
 	done := make(chan error, 1)
 	go func() {
@@ -222,15 +221,15 @@ func (fp *FFmpegProcessor) ExtractAudioFromVideo(inputPath, outputPath string, f
 
 // GetFileInfo gets information about a media file using FFprobe
 func (fp *FFmpegProcessor) GetFileInfo(filePath string) (*FileInfo, error) {
-	cmd := exec.Command("ffprobe", 
+	cmd := exec.Command("ffprobe",
 		"-v", "quiet",
 		"-show_format",
 		"-show_streams",
 		"-print_format", "json",
 		filePath,
 	)
-	
-	output, err := cmd.Output()
+
+	_, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("ffprobe failed: %w", err)
 	}
@@ -256,12 +255,12 @@ type FileInfo struct {
 
 // StreamInfo represents information about a media stream
 type StreamInfo struct {
-	Index    int
-	Type     string // "audio", "video", etc.
-	Codec    string
-	BitRate  int
+	Index      int
+	Type       string // "audio", "video", etc.
+	Codec      string
+	BitRate    int
 	SampleRate int
-	Channels int
+	Channels   int
 }
 
 // ProcessArtwork processes artwork using FFmpeg
@@ -276,7 +275,7 @@ func (fp *FFmpegProcessor) ProcessArtwork(inputPath, outputPath string, maxWidth
 	}
 
 	cmd := exec.Command(fp.config.FFmpegPath, cmdArgs...)
-	
+
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Run()
@@ -328,7 +327,7 @@ func (fp *FFmpegProcessor) CreateMosaic(inputImages []string, outputPath string,
 	))
 
 	cmd := exec.Command(fp.config.FFmpegPath, cmdArgs...)
-	
+
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Run()
@@ -360,7 +359,7 @@ func (fp *FFmpegProcessor) ExtractArtwork(audioPath, artworkPath string) error {
 	}
 
 	cmd := exec.Command(fp.config.FFmpegPath, cmdArgs...)
-	
+
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Run()
@@ -397,7 +396,7 @@ func (fp *FFmpegProcessor) NormalizeAudio(inputPath, outputPath string) error {
 	}
 
 	cmd := exec.Command(fp.config.FFmpegPath, cmdArgs...)
-	
+
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Run()
@@ -431,7 +430,7 @@ func (fp *FFmpegProcessor) ProcessGaplessMetadata(inputPath, outputPath string, 
 	}
 
 	cmd := exec.Command(fp.config.FFmpegPath, cmdArgs...)
-	
+
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Run()

@@ -1,14 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"io"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -20,31 +19,30 @@ import (
 	"melodee/internal/models"
 	"melodee/open_subsonic/handlers"
 	opensubsonic_middleware "melodee/open_subsonic/middleware"
-	"melodee/open_subsonic/utils"
 )
 
 // TestStreamingContract validates streaming endpoints with maxBitRate, format, and Range behavior
 func TestStreamingContract(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupStreamingTestDatabase(t)
 	cfg := getStreamingTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupStreamingTestApp(db, cfg, authMiddleware, transcodeService)
 
@@ -107,7 +105,7 @@ func TestStreamingContract(t *testing.T) {
 				// That's expected behavior when files are missing
 				body := make([]byte, resp.ContentLength)
 				_, readErr := resp.Body.Read(body)
-				
+
 				// The response could be actual audio or an XML error (if file doesn't exist in test)
 				bodyStr := string(body)
 				if strings.Contains(bodyStr, "<subsonic-response") {
@@ -127,25 +125,25 @@ func TestStreamingContract(t *testing.T) {
 // TestRangeRequestContract validates HTTP Range request behavior for streaming
 func TestRangeRequestContract(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupStreamingTestDatabase(t)
 	cfg := getStreamingTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupStreamingTestApp(db, cfg, authMiddleware, transcodeService)
 
@@ -188,10 +186,10 @@ func TestRangeRequestContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/rest/stream.view?id=1&u=test&p=enc:password", nil)
 			req.Header.Set("Range", tt.rangeHeader)
-			
+
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
-			
+
 			if resp.StatusCode != 200 {
 				// If it's not 200, it should be the expected status
 				assert.Equal(t, tt.expectedStatus, resp.StatusCode)
@@ -205,25 +203,25 @@ func TestRangeRequestContract(t *testing.T) {
 // TestTranscodingHeaders validates headers for transcoding operations
 func TestTranscodingHeaders(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupStreamingTestDatabase(t)
 	cfg := getStreamingTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupStreamingTestApp(db, cfg, authMiddleware, transcodeService)
 
@@ -265,7 +263,7 @@ func TestTranscodingHeaders(t *testing.T) {
 			// In test environment, actual transcoding may fail due to missing FFmpeg
 			// The important thing is that the parameters are processed correctly
 			contentType := resp.Header.Get("Content-Type")
-			
+
 			// If we get an XML response, that's fine (error response per spec)
 			// If we get audio content type, that's also fine
 			if !strings.Contains(contentType, "xml") && !strings.Contains(contentType, "text") {
@@ -280,25 +278,25 @@ func TestTranscodingHeaders(t *testing.T) {
 // TestDownloadEndpoint validates download endpoint behavior
 func TestDownloadEndpoint(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	db := setupStreamingTestDatabase(t)
 	cfg := getStreamingTestConfig()
-	
+
 	// Setup quarantine service as it's required by media service
 	quarantineSvc := media.NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	// Create media service with quarantine service
-	mediaSvc := media.NewMediaService(db, nil, nil, quarantineSvc)
+	_ = media.NewMediaService(db, nil, nil, quarantineSvc)
 	ffmpegProcessor := media.NewFFmpegProcessor(&media.FFmpegConfig{
 		FFmpegPath: "ffmpeg", // This will fail in tests but that's OK
 		Profiles: map[string]media.FFmpegProfile{
-			"transcode_high":      {Command: "-c:a libmp3lame -b:a 320k"},
-			"transcode_mid":       {Command: "-c:a libmp3lame -b:a 192k"},
-			"transcode_opus_mobile": {Command: "-c:a libopus -b:a 96k"},
+			"transcode_high":        {CommandLine: "-c:a libmp3lame -b:a 320k"},
+			"transcode_mid":         {CommandLine: "-c:a libmp3lame -b:a 192k"},
+			"transcode_opus_mobile": {CommandLine: "-c:a libopus -b:a 96k"},
 		},
 	})
 	transcodeService := media.NewTranscodeService(ffmpegProcessor, filepath.Join(tempDir, "cache"), 100*1024*1024)
-	
+
 	authMiddleware := opensubsonic_middleware.NewOpenSubsonicAuthMiddleware(db, cfg.JWT.Secret)
 	app := setupStreamingTestApp(db, cfg, authMiddleware, transcodeService)
 
@@ -418,7 +416,7 @@ func createStreamingTestData(t *testing.T, db *gorm.DB, tempDir string) {
 	user := &models.User{
 		Username:     "test",
 		PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMye.IjdQc3Dx0C4Jux4DiQE4qY46HdNEvC", // bcrypt hash for "password"
-		APIKey:       "test-key",
+		APIKey:       uuid.New(),
 	}
 	err := db.Create(user).Error
 	assert.NoError(t, err)

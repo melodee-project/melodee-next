@@ -26,7 +26,7 @@ func TestMediaProcessor(t *testing.T) {
 	ffmpegProcessor := NewFFmpegProcessor(ffmpegConfig)
 
 	quarantineService := NewQuarantineService(db, filepath.Join(tempDir, "quarantine"))
-	
+
 	dirConfig := directory.DefaultPathTemplateConfig()
 	dirResolver := directory.NewPathTemplateResolver(dirConfig)
 
@@ -59,7 +59,7 @@ func TestMediaFileValidator(t *testing.T) {
 	// Create a temporary file for testing
 	tempDir := t.TempDir()
 	testFile := filepath.Join(tempDir, "test.mp3")
-	
+
 	// Create a small test file
 	err := os.WriteFile(testFile, []byte("fake MP3 content"), 0644)
 	assert.NoError(t, err)
@@ -79,7 +79,7 @@ func TestMediaFileValidator(t *testing.T) {
 	emptyFile := filepath.Join(tempDir, "empty.mp3")
 	err = os.WriteFile(emptyFile, []byte(""), 0644)
 	assert.NoError(t, err)
-	
+
 	err = validator.Validate(emptyFile)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "file is empty")
@@ -117,8 +117,8 @@ func TestMediaFileValidatorConfig(t *testing.T) {
 	assert.Equal(t, 64, config.MinBitRate)
 	assert.Equal(t, 320, config.MaxBitRate)
 	assert.Equal(t, int64(500*1024*1024), config.MaxFileSize) // 500MB
-	assert.Equal(t, 10, config.MinDuration) // 10 seconds
-	assert.Equal(t, 7200, config.MaxDuration) // 2 hours
+	assert.Equal(t, 10, config.MinDuration)                   // 10 seconds
+	assert.Equal(t, 7200, config.MaxDuration)                 // 2 hours
 	assert.True(t, config.CheckCorruption)
 }
 
@@ -152,10 +152,10 @@ func TestMediaProcessorDirectoryCodeMatching(t *testing.T) {
 
 	// Test range matching
 	testCases := []struct {
-		name     string
-		code     string
+		name      string
+		code      string
 		rangeRule string
-		expected bool
+		expected  bool
 	}{
 		{"Code A matches A-C", "A", "A-C", true},
 		{"Code B matches A-C", "B", "A-C", true},
@@ -211,7 +211,7 @@ func TestMediaProcessorValidation(t *testing.T) {
 	config := &ValidationConfig{
 		MinBitRate:      8,
 		MaxBitRate:      500,
-		MaxFileSize:     10 * 1024 * 1024, // 10MB for testing
+		MaxFileSize:     10 * 1024 * 1024,         // 10MB for testing
 		AllowedFormats:  []string{".mp3", ".txt"}, // Add txt for testing
 		MinDuration:     1,
 		MaxDuration:     3600,
@@ -220,7 +220,7 @@ func TestMediaProcessorValidation(t *testing.T) {
 		MinChannels:     1,
 		MaxChannels:     8,
 		MaxArtworkSize:  50 * 1024 * 1024, // 50MB
-		CheckCorruption: false, // Disable corruption check for test files
+		CheckCorruption: false,            // Disable corruption check for test files
 	}
 
 	validator := NewMediaFileValidator(config)
@@ -317,7 +317,7 @@ func TestCalculateChecksum(t *testing.T) {
 	tempDir := t.TempDir()
 	testFile := filepath.Join(tempDir, "checksum_test.txt")
 	content := "test content for checksum calculation"
-	
+
 	err := os.WriteFile(testFile, []byte(content), 0644)
 	assert.NoError(t, err)
 

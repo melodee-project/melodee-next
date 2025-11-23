@@ -17,10 +17,10 @@ func TestTranscodeServiceTranscodeWithCache(t *testing.T) {
 	tempDir := t.TempDir()
 	inputDir := filepath.Join(tempDir, "input")
 	cacheDir := filepath.Join(tempDir, "cache")
-	
+
 	err := os.MkdirAll(inputDir, 0755)
 	assert.NoError(t, err)
-	
+
 	// Create a test input file
 	testInputPath := filepath.Join(inputDir, "test_input.mp3")
 	err = os.WriteFile(testInputPath, []byte("fake mp3 content for testing"), 0644)
@@ -36,7 +36,7 @@ func TestTranscodeServiceTranscodeWithCache(t *testing.T) {
 	// Test transcoding with cache
 	// This will fail in test environment without actual FFmpeg, but should handle gracefully
 	outputPath, err := service.TranscodeWithCache(testInputPath, "transcode_mid", 128, "mp3")
-	
+
 	// In test environment without FFmpeg, this may return an error, but let's check the logic
 	// The main purpose is to test the cache key generation and file handling logic
 	if err != nil {
@@ -50,7 +50,7 @@ func TestTranscodeServiceTranscodeWithCache(t *testing.T) {
 
 	// Test with different parameters to verify different cache keys are generated
 	outputPath2, err2 := service.TranscodeWithCache(testInputPath, "transcode_high", 320, "mp3")
-	
+
 	if err2 != nil {
 		// Expected in test environment without FFmpeg
 		assert.Contains(t, err2.Error(), "transcoding failed")
@@ -66,10 +66,10 @@ func TestTranscodeServiceCacheKeyGeneration(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
 	inputDir := filepath.Join(tempDir, "input")
-	
+
 	err := os.MkdirAll(inputDir, 0755)
 	assert.NoError(t, err)
-	
+
 	// Create a test input file
 	testInputPath := filepath.Join(inputDir, "test_input.mp3")
 	err = os.WriteFile(testInputPath, []byte("fake mp3 content for testing"), 0644)
@@ -117,10 +117,10 @@ func TestTranscodeServiceCacheKeyWithFileChanges(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
 	inputDir := filepath.Join(tempDir, "input")
-	
+
 	err := os.MkdirAll(inputDir, 0755)
 	assert.NoError(t, err)
-	
+
 	// Create a test input file
 	testInputPath := filepath.Join(inputDir, "test_input.mp3")
 	content1 := "fake mp3 content for testing - version 1"
@@ -154,10 +154,10 @@ func TestTranscodeServiceMaxBitRateLogic(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
 	inputDir := filepath.Join(tempDir, "input")
-	
+
 	err := os.MkdirAll(inputDir, 0755)
 	assert.NoError(t, err)
-	
+
 	// Create a test input file
 	testInputPath := filepath.Join(inputDir, "test_input.mp3")
 	err = os.WriteFile(testInputPath, []byte("fake mp3 content for testing"), 0644)
@@ -179,7 +179,7 @@ func TestTranscodeServiceMaxBitRateLogic(t *testing.T) {
 	// This will fail without actual FFmpeg, but we're testing the profile selection logic in the implementation
 	// The implementation should map to appropriate profiles
 
-	// For bitrates < 128, should select "transcode_opus_mobile" 
+	// For bitrates < 128, should select "transcode_opus_mobile"
 	_, err2 := handler.transcodeFile(testInputPath, 96, "opus")
 	// Same - testing the logic path
 
@@ -196,10 +196,10 @@ func TestTranscodeServiceFormatDetection(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir := t.TempDir()
 	inputDir := filepath.Join(tempDir, "input")
-	
+
 	err := os.MkdirAll(inputDir, 0755)
 	assert.NoError(t, err)
-	
+
 	// Create test files with different extensions
 	testFiles := map[string]string{
 		"test.mp3":  "fake mp3 content",
@@ -236,10 +236,10 @@ func TestTranscodeServiceIdempotency(t *testing.T) {
 	tempDir := t.TempDir()
 	inputDir := filepath.Join(tempDir, "input")
 	cacheDir := filepath.Join(tempDir, "cache")
-	
+
 	err := os.MkdirAll(inputDir, 0755)
 	assert.NoError(t, err)
-	
+
 	// Create a test input file
 	testInputPath := filepath.Join(inputDir, "test_input.mp3")
 	err = os.WriteFile(testInputPath, []byte("fake mp3 content for idempotency test"), 0644)
