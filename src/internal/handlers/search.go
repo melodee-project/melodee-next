@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
 )
@@ -50,9 +51,12 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 			return utils.SendInternalServerError(c, "Failed to search artists")
 		}
 
+		// Calculate pagination metadata according to OpenAPI spec
+		paginationMeta := pagination.CalculateWithOffset(total, offset, limit)
+
 		return c.JSON(fiber.Map{
 			"data":       artists,
-			"pagination": fiber.Map{"offset": offset, "limit": limit, "total": total},
+			"pagination": paginationMeta,
 		})
 
 	case "album", "albums":
@@ -61,9 +65,12 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 			return utils.SendInternalServerError(c, "Failed to search albums")
 		}
 
+		// Calculate pagination metadata according to OpenAPI spec
+		paginationMeta := pagination.CalculateWithOffset(total, offset, limit)
+
 		return c.JSON(fiber.Map{
 			"data":       albums,
-			"pagination": fiber.Map{"offset": offset, "limit": limit, "total": total},
+			"pagination": paginationMeta,
 		})
 
 	case "song", "songs":
@@ -72,9 +79,12 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 			return utils.SendInternalServerError(c, "Failed to search songs")
 		}
 
+		// Calculate pagination metadata according to OpenAPI spec
+		paginationMeta := pagination.CalculateWithOffset(total, offset, limit)
+
 		return c.JSON(fiber.Map{
 			"data":       songs,
-			"pagination": fiber.Map{"offset": offset, "limit": limit, "total": total},
+			"pagination": paginationMeta,
 		})
 
 	case "any", "all", "":
@@ -96,13 +106,16 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 			return utils.SendInternalServerError(c, "Failed to search songs")
 		}
 
+		// Calculate pagination metadata according to OpenAPI spec
+		paginationMeta := pagination.CalculateWithOffset(total, offset, limit)
+
 		return c.JSON(fiber.Map{
 			"data": fiber.Map{
 				"artists": artists,
 				"albums":  albums,
 				"songs":   songs,
 			},
-			"pagination": fiber.Map{"offset": offset, "limit": limit, "total": total},
+			"pagination": paginationMeta,
 		})
 
 	default:

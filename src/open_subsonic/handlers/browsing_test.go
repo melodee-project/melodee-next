@@ -8,24 +8,19 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
-	"melodee/internal/config"
 	"melodee/internal/models"
 	"melodee/internal/services"
 )
 
-func TestMediaHandler_Stream(t *testing.T) {
+func TestBrowsingHandler_GetArtists(t *testing.T) {
 	// Create a minimal setup for testing
 	db := getTestDB()
 	repo := services.NewRepository(db)
-	cfg := &config.AppConfig{}
-	// For testing purposes, we'll pass nil transcodeService
-	var transcodeService interface{} // Would be a transcode service in real implementation
-	
-	mediaHandler := NewMediaHandler(repo, cfg, nil) // Simplified constructor call
+	browsingHandler := NewBrowsingHandler(repo)
 
 	// Create Fiber app for testing
 	app := fiber.New()
-	app.Get("/rest/stream", func(c *fiber.Ctx) error {
+	app.Get("/rest/getArtists", func(c *fiber.Ctx) error {
 		// Simulate authenticated user context
 		testUser := &models.User{
 			ID:       1,
@@ -34,73 +29,71 @@ func TestMediaHandler_Stream(t *testing.T) {
 			IsAdmin:  false,
 		}
 		c.Locals("user", testUser)
-		return mediaHandler.Stream(c)
-	})
-
-	// Test basic request with id parameter
-	req := httptest.NewRequest("GET", "/rest/stream?id=1", nil)
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-
-	// Should return 200 OK or 404 (not found) or similar (not authentication error)
-	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
-}
-
-func TestMediaHandler_GetCoverArt(t *testing.T) {
-	// Create a minimal setup for testing
-	db := getTestDB()
-	repo := services.NewRepository(db)
-	cfg := &config.AppConfig{}
-	mediaHandler := NewMediaHandler(repo, cfg, nil) // Simplified constructor call
-
-	// Create Fiber app for testing
-	app := fiber.New()
-	app.Get("/rest/getCoverArt", func(c *fiber.Ctx) error {
-		// Simulate authenticated user context
-		testUser := &models.User{
-			ID:       1,
-			Username: "testuser",
-			Email:    "test@example.com",
-			IsAdmin:  false,
-		}
-		c.Locals("user", testUser)
-		return mediaHandler.GetCoverArt(c)
-	})
-
-	// Test basic request with id parameter
-	req := httptest.NewRequest("GET", "/rest/getCoverArt?id=1", nil)
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-
-	// Should return 200 OK or 404 (not found) or similar (not authentication error)
-	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
-}
-
-func TestMediaHandler_GetAvatar(t *testing.T) {
-	// Create a minimal setup for testing
-	db := getTestDB()
-	repo := services.NewRepository(db)
-	cfg := &config.AppConfig{}
-	mediaHandler := NewMediaHandler(repo, cfg, nil) // Simplified constructor call
-
-	// Create Fiber app for testing
-	app := fiber.New()
-	app.Get("/rest/getAvatar", func(c *fiber.Ctx) error {
-		// Simulate authenticated user context
-		testUser := &models.User{
-			ID:       1,
-			Username: "testuser",
-			Email:    "test@example.com",
-			IsAdmin:  false,
-		}
-		c.Locals("user", testUser)
-		return mediaHandler.GetAvatar(c)
+		return browsingHandler.GetArtists(c)
 	})
 
 	// Test basic request
-	req := httptest.NewRequest("GET", "/rest/getAvatar", nil)
+	req := httptest.NewRequest("GET", "/rest/getArtists", nil)
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+
+	// Should return 200 OK or similar (not authentication error)
+	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
+	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestBrowsingHandler_GetMusicFolders(t *testing.T) {
+	// Create a minimal setup for testing
+	db := getTestDB()
+	repo := services.NewRepository(db)
+	browsingHandler := NewBrowsingHandler(repo)
+
+	// Create Fiber app for testing
+	app := fiber.New()
+	app.Get("/rest/getMusicFolders", func(c *fiber.Ctx) error {
+		// Simulate authenticated user context
+		testUser := &models.User{
+			ID:       1,
+			Username: "testuser",
+			Email:    "test@example.com",
+			IsAdmin:  false,
+		}
+		c.Locals("user", testUser)
+		return browsingHandler.GetMusicFolders(c)
+	})
+
+	// Test basic request
+	req := httptest.NewRequest("GET", "/rest/getMusicFolders", nil)
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+
+	// Should return 200 OK or similar (not authentication error)
+	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
+	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestBrowsingHandler_GetArtist(t *testing.T) {
+	// Create a minimal setup for testing
+	db := getTestDB()
+	repo := services.NewRepository(db)
+	browsingHandler := NewBrowsingHandler(repo)
+
+	// Create Fiber app for testing
+	app := fiber.New()
+	app.Get("/rest/getArtist", func(c *fiber.Ctx) error {
+		// Simulate authenticated user context
+		testUser := &models.User{
+			ID:       1,
+			Username: "testuser",
+			Email:    "test@example.com",
+			IsAdmin:  false,
+		}
+		c.Locals("user", testUser)
+		return browsingHandler.GetArtist(c)
+	})
+
+	// Test basic request with artist parameter
+	req := httptest.NewRequest("GET", "/rest/getArtist?id=1", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
 

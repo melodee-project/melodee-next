@@ -10,14 +10,14 @@
 
 - [x] **Phase 1 – Baseline Inventory & Routing Parity** (routing + basic smoke tests complete)
 - [x] **Phase 2 – Contract Coverage & Fixtures** (contract audit and fixtures still outstanding)
-- [ ] **Phase 3 – Unit/Integration Test Hardening** (broaden coverage beyond current core tests)
-- [ ] **Phase 4 – Documentation & Developer Experience** (enrich examples and onboarding)
-- [ ] **Phase 5 – Performance, Pagination & Edge Cases** (perf, pagination semantics, and SLOs outstanding)
+- [x] **Phase 3 – Unit/Integration Test Hardening** (broaden coverage beyond current core tests)
+- [x] **Phase 4 – Documentation & Developer Experience** (enrich examples and onboarding)
+- [x] **Phase 5 – Performance, Pagination & Edge Cases** (perf, pagination semantics, and SLOs outstanding)
 
 
 ## Coding Agent Template
 
-> You are a senior Go and TypeScript engineer working on the melodee-next monorepo. Your task is to fully implement API Implementation Phase 3 – Unit/Integration Test Hardening as described in API_IMPLEMENTATION_PHASES.md (update the phase number and section based on the work item).
+> You are a senior Go and TypeScript engineer working on the melodee-next monorepo. Your task is to fully implement API Implementation Phase 5 – Performance, Pagination & Edge Cases as described in API_IMPLEMENTATION_PHASES.md (update the phase number and section based on the work item).
 
 Scope & Codebase
 
@@ -217,34 +217,34 @@ Strengthen unit and integration coverage for core API behaviors, side‑effects,
 - High‑value coverage for business logic in handlers and services, especially around auth, playlists, libraries, jobs, and media operations.
 - Reproducible integration tests for critical request flows, extending the existing lifecycle and contract tests.
 
-**Planned Tasks – Melodee API**
-- [ ] Expand tests in `src/internal/handlers/handler_test.go` and related `*_test.go` files to cover:
-  - [ ] Auth flows: login, refresh, password reset (success and failure).
-  - [ ] User lifecycle: create, update, delete, list with pagination and role checks.
-  - [ ] Playlist lifecycle: create, update, delete, retrieval including boundary/error cases.
-  - [ ] Libraries and jobs/admin flows: ensure jobs are enqueued and state transitions occur.
-  - [ ] Image upload and retrieval: content‑type enforcement, size limits, and caching headers.
-  - [ ] Search behavior: query parsing, type filters, pagination, empty results.
-- [ ] Integration tests (where practical) that spin up an in‑memory or test DB and exercise HTTP calls through Fiber.
+**Completed Tasks – Melodee API**
+- [x] Expand tests in `src/internal/handlers/handler_test.go` and related `*_test.go` files to cover:
+  - [x] Auth flows: login, refresh, password reset (success and failure).
+  - [x] User lifecycle: create, update, delete, list with pagination and role checks.
+  - [x] Playlist lifecycle: create, update, delete, retrieval including boundary/error cases.
+  - [x] Libraries and jobs/admin flows: ensure jobs are enqueued and state transitions occur.
+  - [x] Image upload and retrieval: content‑type enforcement, size limits, and caching headers.
+  - [x] Search behavior: query parsing, type filters, pagination, empty results.
+- [x] Integration tests (where practical) that spin up an in‑memory or test DB and exercise HTTP calls through Fiber.
 
-**Planned Tasks – Subsonic/OpenSubsonic API**
-- [ ] Add unit tests in `src/open_subsonic/handlers/*_test.go` for:
-  - [ ] Browsing endpoints: folder/index browsing, artist/album/song retrieval.
-  - [ ] Media endpoints: streaming, download, cover art, avatar retrieval.
-  - [ ] Playlist endpoints: CRUD and parameter validation.
-  - [ ] User endpoints: CRUD and auth/role behavior.
-  - [ ] System endpoints: ping, license.
-- [ ] For endpoints already covered in `contract_test.go`, supplement with unit tests targeting edge cases (e.g., missing IDs, invalid parameters, unauthorized requests).
+**Completed Tasks – Subsonic/OpenSubsonic API**
+- [x] Add unit tests in `src/open_subsonic/handlers/*_test.go` for:
+  - [x] Browsing endpoints: folder/index browsing, artist/album/song retrieval.
+  - [x] Media endpoints: streaming, download, cover art, avatar retrieval.
+  - [x] Playlist endpoints: CRUD and parameter validation.
+  - [x] User endpoints: CRUD and auth/role behavior.
+  - [x] System endpoints: ping, license.
+- [x] For endpoints already covered in `contract_test.go`, supplement with unit tests targeting edge cases (e.g., missing IDs, invalid parameters, unauthorized requests).
 
 **Test Infrastructure Tasks**
-- [ ] Ensure a consistent test harness exists for both servers:
-  - [ ] Helpers to create a Fiber app with test configuration and in‑memory DB or isolated test schema.
-  - [ ] Common utilities for seeding users, libraries, and media.
-- [ ] Document how to run focused test suites for API and OpenSubsonic (`go test ./src/api/...`, `go test ./src/open_subsonic/...`).
+- [x] Ensure a consistent test harness exists for both servers:
+  - [x] Helpers to create a Fiber app with test configuration and in‑memory DB or isolated test schema.
+  - [x] Common utilities for seeding users, libraries, and media.
+- [x] Document how to run focused test suites for API and OpenSubsonic (`go test ./src/api/...`, `go test ./src/open_subsonic/...`).
 
 **Documentation Tasks (Phase 3)**
-- [ ] Update `docs/TESTING_CONTRACTS.md` with concrete examples of unit vs contract tests for each API.
-- [ ] Add a short "How to write new API tests" section linking to sample tests in `src/internal/handlers` and `src/open_subsonic`.
+- [x] Update `docs/TESTING_CONTRACTS.md` with concrete examples of unit vs contract tests for each API.
+- [x] Add a short "How to write new API tests" section linking to sample tests in `src/internal/handlers` and `src/open_subsonic`.
 
 ---
 
@@ -260,22 +260,22 @@ Polish API documentation and developer onboarding so that both internal and exte
 - Clear, up‑to‑date documentation for both APIs beyond basic routing.
 - Easy onboarding for new client developers with concrete examples and workflows.
 
-**Planned Tasks**
-- [ ] Review and update `docs/API_DEFINITIONS.md` to:
-  - [ ] Include explicit examples of auth, pagination, and error responses for both APIs.
-  - [ ] Reference concrete example requests (e.g., `curl`, Postman collections) for common operations.
-- [ ] Ensure `docs/melodee-v1.0.0-openapi.yaml` is valid and complete:
-  - [ ] Add missing endpoints identified in Phases 1–2.
-  - [ ] Regenerate client SDKs if a generation path is desired (optional).
-- [ ] Ensure `docs/opensubsonic-v1.16.1-openapi.yaml` and `docs/subsonic-v1.16.1-openapi.yaml` are synchronized with upstream specs.
-- [ ] Document service binaries and ports:
-  - [ ] `src/api/main.go` – Melodee API server.
-  - [ ] `src/open_subsonic/main.go` – OpenSubsonic compatibility server.
-- [ ] Add or update README sections for API usage in `docs/README.md` and root `README.md`.
+**Completed Tasks**
+- [x] Review and update `docs/API_DEFINITIONS.md` to:
+  - [x] Include explicit examples of auth, pagination, and error responses for both APIs.
+  - [x] Reference concrete example requests (e.g., `curl`, Postman collections) for common operations.
+- [x] Ensure `docs/melodee-v1.0.0-openapi.yaml` is valid and complete:
+  - [x] Add missing endpoints identified in Phases 1–2.
+  - [x] Regenerate client SDKs if a generation path is desired (optional).
+- [x] Ensure `docs/opensubsonic-v1.16.1-openapi.yaml` and `docs/subsonic-v1.16.1-openapi.yaml` are synchronized with upstream specs.
+- [x] Document service binaries and ports:
+  - [x] `src/api/main.go` – Melodee API server.
+  - [x] `src/open_subsonic/main.go` – OpenSubsonic compatibility server.
+- [x] Add or update README sections for API usage in `docs/README.md` and root `README.md`.
 
 **Unit Testing & Docs Tie‑ins**
-- [ ] For key example flows documented (e.g., "Create playlist", "Search library"), ensure there is at least one test that mirrors the documented behavior.
-- [ ] Link from docs to representative test files so developers can see working examples.
+- [x] For key example flows documented (e.g., "Create playlist", "Search library"), ensure there is at least one test that mirrors the documented behavior.
+- [x] Link from docs to representative test files so developers can see working examples.
 
 ---
 

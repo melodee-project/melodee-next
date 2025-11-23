@@ -67,6 +67,7 @@ func (s *APIServer) setupRoutes() {
 	authHandler := handlers.NewAuthHandler(s.authService)
 	userHandler := handlers.NewUserHandler(s.repo, s.authService)
 	playlistHandler := handlers.NewPlaylistHandler(s.repo)
+	searchHandler := handlers.NewSearchHandler(s.repo) // Add search handler
 	healthHandler := handlers.NewHealthHandler(s.dbManager) // Pass the dbManager
 
 	// Health check route
@@ -101,6 +102,9 @@ func (s *APIServer) setupRoutes() {
 	playlists.Get("/:id", playlistHandler.GetPlaylist)
 	playlists.Put("/:id", playlistHandler.UpdatePlaylist)
 	playlists.Delete("/:id", playlistHandler.DeletePlaylist)
+
+	// Search route (protected with auth and rate limiting)
+	s.app.Post("/api/search", middleware.RateLimiterForSearch(), searchHandler.Search) // Search endpoint with rate limiting
 
 	// Library routes (admin only for pipeline management)
 	libraries := protected.Group("/libraries", middleware.NewAuthMiddleware(s.authService).AdminOnly())

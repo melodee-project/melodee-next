@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"melodee/internal/models"
+	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
 )
@@ -56,16 +57,11 @@ type Pagination struct {
 
 // GetShares retrieves all shares
 func (h *SharesHandler) GetShares(c *fiber.Ctx) error {
-	page := c.QueryInt("page", 1)
-	size := c.QueryInt("size", 50)
-	
-	if size > 100 {
-		size = 100 // Max page size
-	}
-	
+	page, pageSize := pagination.GetPaginationParams(c, 1, 50)
+
 	// In a real implementation, this would fetch shares from the database
 	// For now, return a sample response with pagination as specified in documentation
-	
+
 	// This is a simplified implementation that matches the documented contract
 	shares := []Share{
 		{
@@ -78,19 +74,16 @@ func (h *SharesHandler) GetShares(c *fiber.Ctx) error {
 			CreatedAt:           time.Now(),
 		},
 	}
-	
-	total := len(shares) // In real implementation, would query total from DB
-	
-	response := GetSharesResponse{
-		Data: shares,
-		Pagination: Pagination{
-			Page:  page,
-			Size:  len(shares),
-			Total: total,
-		},
-	}
-	
-	return c.JSON(response)
+
+	total := int64(len(shares)) // In real implementation, would query total from DB
+
+	// Calculate pagination metadata according to OpenAPI spec
+	paginationMeta := pagination.Calculate(total, page, pageSize)
+
+	return c.JSON(fiber.Map{
+		"data":       shares,
+		"pagination": paginationMeta,
+	})
 }
 
 // CreateShare creates a new share

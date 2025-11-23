@@ -40,6 +40,7 @@ For implementation sequencing, see `IMPLEMENTATION_GUIDE.md`.
 - `METADATA_MAPPING.md`  Metadata rules and mappings
 - `GO_MODULE_PLAN.md`  Go module layout
 - `DB_CONNECTION_PLAN.md`  DB connection strategy and pooling
+- `SERVICE_ARCHITECTURE.md` ‒ Service binaries and runtime configuration
 - `CONFIG_ENTRY_POINT_PLAN.md`  Config entrypoint and env strategy
 
 ### 2.3 APIs & Contracts

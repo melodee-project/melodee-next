@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"melodee/internal/middleware"
 	"melodee/internal/models"
+	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
 )
@@ -33,11 +34,10 @@ func (h *PlaylistHandler) GetPlaylists(c *fiber.Ctx) error {
 	}
 
 	// Get pagination parameters
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	limit, _ := strconv.Atoi(c.Query("limit", "10"))
-	offset := (page - 1) * limit
+	page, pageSize := pagination.GetPaginationParams(c, 1, 10)
+	offset := pagination.CalculateOffset(page, pageSize)
 
-	playlists, total, err := h.repo.GetPlaylistsWithUser(limit, offset)
+	playlists, total, err := h.repo.GetPlaylistsWithUser(pageSize, offset)
 	if err != nil {
 		return utils.SendInternalServerError(c, "Failed to fetch playlists")
 	}
@@ -56,13 +56,12 @@ func (h *PlaylistHandler) GetPlaylists(c *fiber.Ctx) error {
 		}
 	}
 
+	// Calculate pagination metadata according to OpenAPI spec
+	paginationMeta := pagination.Calculate(total, page, pageSize)
+
 	return c.JSON(fiber.Map{
-		"data": filteredPlaylists,
-		"pagination": fiber.Map{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-		},
+		"data":       filteredPlaylists,
+		"pagination": paginationMeta,
 	})
 }
 

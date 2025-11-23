@@ -2,8 +2,10 @@ package middleware
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	jwtware "github.com/gofiber/jwt/v3"
 	"melodee/internal/services"
 )
@@ -11,6 +13,37 @@ import (
 // AuthMiddleware provides authentication for API endpoints
 type AuthMiddleware struct {
 	authService *services.AuthService
+}
+
+// RateLimiterConfig holds the configuration for rate limiting
+type RateLimiterConfig struct {
+	// General API limits
+	GeneralLimit    int           // Requests per window for general API endpoints
+	GeneralWindow   time.Duration // Time window for general API endpoints
+
+	// Auth-specific limits
+	AuthLimit     int           // Requests per window for auth endpoints
+	AuthWindow    time.Duration // Time window for auth endpoints
+
+	// Search-specific limits
+	SearchLimit   int           // Requests per window for search endpoints
+	SearchWindow  time.Duration // Time window for search endpoints
+
+	// Per-user rate limiting (default false for IP-based)
+	PerUser       bool          // Whether to apply limits per user or per IP
+}
+
+// DefaultRateLimiterConfig returns the default rate limiter configuration
+func DefaultRateLimiterConfig() RateLimiterConfig {
+	return RateLimiterConfig{
+		GeneralLimit:  100,        // 100 requests per 15 minutes
+		GeneralWindow: 15 * time.Minute,
+		AuthLimit:     10,         // 10 requests per 5 minutes (to prevent brute force)
+		AuthWindow:    5 * time.Minute,
+		SearchLimit:   50,         // 50 search requests per 10 minutes
+		SearchWindow:  10 * time.Minute,
+		PerUser:       false,      // Default to IP-based limiting
+	}
 }
 
 // NewAuthMiddleware creates a new authentication middleware
@@ -28,6 +61,54 @@ func (m *AuthMiddleware) JWTProtected() fiber.Handler {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error":   "Unauthorized",
 				"message": "Authentication required",
+			})
+		},
+	})
+}
+
+// RateLimiterForAuth creates a rate limiter specifically for authentication endpoints
+func RateLimiterForAuth() fiber.Handler {
+	config := DefaultRateLimiterConfig()
+	return limiter.New(limiter.Config{
+		Max:        config.AuthLimit,
+		Expiration: config.AuthWindow,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded",
+				"message": "Too many authentication attempts. Please try again later.",
+				"retry_after": config.AuthWindow.Seconds(),
+			})
+		},
+	})
+}
+
+// RateLimiterForGeneral creates a rate limiter for general API endpoints
+func RateLimiterForGeneral() fiber.Handler {
+	config := DefaultRateLimiterConfig()
+	return limiter.New(limiter.Config{
+		Max:        config.GeneralLimit,
+		Expiration: config.GeneralWindow,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded",
+				"message": "Too many requests. Please try again later.",
+				"retry_after": config.GeneralWindow.Seconds(),
+			})
+		},
+	})
+}
+
+// RateLimiterForSearch creates a rate limiter for search endpoints
+func RateLimiterForSearch() fiber.Handler {
+	config := DefaultRateLimiterConfig()
+	return limiter.New(limiter.Config{
+		Max:        config.SearchLimit,
+		Expiration: config.SearchWindow,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded",
+				"message": "Too many search requests. Please try again later.",
+				"retry_after": config.SearchWindow.Seconds(),
 			})
 		},
 	})

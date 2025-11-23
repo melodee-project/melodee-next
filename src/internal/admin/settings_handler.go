@@ -8,6 +8,7 @@ import (
 
 	"melodee/internal/middleware"
 	"melodee/internal/models"
+	"melodee/internal/pagination"
 	"melodee/internal/services"
 )
 
@@ -79,23 +80,17 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 	}
 
 	// Parse query parameters
-	page := c.QueryInt("page", 1)
-	size := c.QueryInt("size", 50)
+	page, pageSize := pagination.GetPaginationParams(c, 1, 50)
 	filter := c.Query("filter", "")
 	category := c.Query("category", "")
 
-	// Set limits
-	if size > 100 {
-		size = 100 // Max page size
-	}
-
 	// Build query
 	query := h.db.Model(&models.Setting{})
-	
+
 	if filter != "" {
 		query = query.Where("key ILIKE ?", "%"+filter+"%")
 	}
-	
+
 	if category != "" {
 		catValue := -1
 		// In a real app, category would be validated against an enum/lookup table
@@ -112,8 +107,8 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 
 	// Get settings with pagination
 	var dbSettings []models.Setting
-	offset := (page - 1) * size
-	if err := query.Offset(offset).Limit(size).Find(&dbSettings).Error; err != nil {
+	offset := pagination.CalculateOffset(page, pageSize)
+	if err := query.Offset(offset).Limit(pageSize).Find(&dbSettings).Error; err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to retrieve settings",
 		})
@@ -133,16 +128,13 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 		}
 	}
 
-	response := GetSettingsResponse{
-		Data: settings,
-		Pagination: Pagination{
-			Page:  page,
-			Size:  len(settings),
-			Total: int(total),
-		},
-	}
+	// Calculate pagination metadata according to OpenAPI spec
+	paginationMeta := pagination.Calculate(total, page, pageSize)
 
-	return c.JSON(response)
+	return c.JSON(fiber.Map{
+		"data":       settings,
+		"pagination": paginationMeta,
+	})
 }
 
 // GetSetting retrieves a specific application setting

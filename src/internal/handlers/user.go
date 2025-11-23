@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"melodee/internal/middleware"
 	"melodee/internal/models"
+	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
 )
@@ -34,22 +35,20 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 	}
 
 	// Get pagination parameters
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	limit, _ := strconv.Atoi(c.Query("limit", "10"))
-	offset := (page - 1) * limit
+	page, pageSize := pagination.GetPaginationParams(c, 1, 10)
+	offset := pagination.CalculateOffset(page, pageSize)
 
 	// In a real implementation, we would fetch users with pagination
 	// For now, we'll return an empty list
 	users := []models.User{}
-	total := 0
+	total := int64(0)
+
+	// Calculate pagination metadata according to OpenAPI spec
+	paginationMeta := pagination.Calculate(total, page, pageSize)
 
 	return c.JSON(fiber.Map{
-		"data": users,
-		"pagination": fiber.Map{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-		},
+		"data":       users,
+		"pagination": paginationMeta,
 	})
 }
 

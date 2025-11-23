@@ -71,15 +71,15 @@ groups:
       summary: "Job queue {{ $labels.queue }} is growing too large"
       description: "The job queue {{ $labels.queue }} has {{ $value }} items, which may indicate processing issues."
 
-  # API performance alerts
+  # API performance alerts - Melodee API (/api namespace)
   - alert: HighAPIErrorRate
     expr: 100 * sum(rate(http_requests_total{status=~"5..", handler=~"/api/.*"}[5m])) / sum(rate(http_requests_total{handler=~"/api/.*"}[5m])) > 10
     for: 2m
     labels:
       severity: warning
     annotations:
-      summary: "High API error rate"
-      description: "More than 10% of API requests are returning 5xx errors over the last 5 minutes."
+      summary: "High Melodee API error rate"
+      description: "More than 10% of Melodee API requests are returning 5xx errors over the last 5 minutes."
 
   - alert: SlowAPIResponse
     expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{handler=~"/api/.*"}[5m])) > 5
@@ -87,8 +87,46 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Slow API response times"
-      description: "The 95th percentile of API requests is taking more than 5 seconds to respond."
+      summary: "Slow Melodee API response times"
+      description: "The 95th percentile of Melodee API requests is taking more than 5 seconds to respond."
+
+  # OpenSubsonic API performance alerts (/rest namespace)
+  - alert: HighOpenSubsonicErrorRate
+    expr: 100 * sum(rate(http_requests_total{status=~"5..", handler=~"/rest/.*"}[5m])) / sum(rate(http_requests_total{handler=~"/rest/.*"}[5m])) > 10
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High OpenSubsonic API error rate"
+      description: "More than 10% of OpenSubsonic API requests are returning 5xx errors over the last 5 minutes."
+
+  - alert: SlowOpenSubsonicResponse
+    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{handler=~"/rest/.*"}[5m])) > 5
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Slow OpenSubsonic API response times"
+      description: "The 95th percentile of OpenSubsonic API requests is taking more than 5 seconds to respond."
+
+  # Combined API performance alerts
+  - alert: HighCombinedAPIErrorRate
+    expr: 100 * sum(rate(http_requests_total{status=~"5..", handler=~"/(api|rest)/.*"}[5m])) / sum(rate(http_requests_total{handler=~"/(api|rest)/.*"}[5m])) > 5
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High combined API error rate"
+      description: "More than 5% of all API requests (both Melodee and OpenSubsonic) are returning 5xx errors over the last 5 minutes."
+
+  - alert: SlowCombinedAPIResponse
+    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{handler=~"/(api|rest)/.*"}[5m])) > 3
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Slow combined API response times"
+      description: "The 95th percentile of all API requests (both Melodee and OpenSubsonic) is taking more than 3 seconds to respond."
 
   # System resource alerts
   - alert: HighMemoryUsage

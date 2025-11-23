@@ -15,7 +15,7 @@ Under the hood you’ll find a Go backend, background workers, and a React/TypeS
 
 ## Features
 
-- **OpenSubsonic compatible API** – works with clients that speak Subsonic/OpenSubsonic.
+- **Dual API architecture** – Melodee API for native clients and admin functions, plus OpenSubsonic compatibility API for third-party clients.
 - **Modern Go backend** – Fiber + PostgreSQL + GORM + Redis + Asynq.
 - **Built for big libraries** – directory codes, partitioning, and an optimized schema aimed at millions of tracks and beyond.
 - **Background media pipeline** – scans, ingests, normalizes, and writes back metadata without blocking playback.
@@ -333,6 +333,44 @@ npm test
 ```
 
 ---
+
+## API Usage
+
+Melodee provides two primary APIs for different use cases:
+
+### Melodee API (Native/Management)
+- **Base path:** `/api`
+- **Authentication:** JWT tokens via `/api/auth/login`
+- **Usage:** Admin functions, user management, library operations, system monitoring
+- **Example:** Managing users, configuring settings, monitoring jobs, library operations
+
+```bash
+# Get authentication token
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password"}'
+
+# Use token for admin operations
+curl -X GET http://localhost:8080/api/users \
+  -H "Authorization: Bearer <jwt_token>"
+```
+
+### OpenSubsonic API (Compatibility)
+- **Base path:** `/rest`
+- **Authentication:** Subsonic-style credentials
+- **Usage:** Third-party Subsonic/OpenSubsonic clients
+- **Example:** Mobile apps, desktop players that support Subsonic
+
+```bash
+# Browse artists with Subsonic API
+curl "http://localhost:8080/rest/getArtists.view?u=username&p=enc:password&v=1.16.1&c=melodee"
+```
+
+For complete API documentation, see:
+- `docs/API_DEFINITIONS.md` - Overview and examples
+- `docs/INTERNAL_API_ROUTES.md` - Admin/internal API routes
+- `docs/SERVICE_ARCHITECTURE.md` - Service configuration and ports
+- OpenAPI specs in `docs/` directory
 
 ## Developer Onboarding
 

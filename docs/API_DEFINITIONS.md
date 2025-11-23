@@ -145,12 +145,148 @@ Melodee intentionally deviates from the upstream Subsonic/OpenSubsonic specifica
 - **Authentication**: Extended JWT token support in addition to standard Subsonic authentication methods.
 - **Job queue management**: Additional administration endpoints for managing the job queue (DLQ, requeue, purge operations) not present in the standard Subsonic spec.
 
+## Authentication Examples
+
+### Melodee API Authentication
+To authenticate with the Melodee API, first obtain a JWT token:
+
+```bash
+curl -X POST https://your-melodee-instance.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "your-username",
+    "password": "your-password"
+  }'
+```
+
+Response:
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "def50200...",
+  "expires_in": 900,
+  "user": {
+    "id": "user-123",
+    "username": "admin",
+    "is_admin": true
+  }
+}
+```
+
+Then use the token in subsequent requests:
+```bash
+curl -X GET https://your-melodee-instance.com/api/users \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Subsonic/OpenSubsonic Authentication
+Subsonic API uses token or password-salt authentication:
+```bash
+curl "https://your-melodee-instance.com/rest/getMusicFolders.view?u=username&p=enc:hashed_password&t=token&s=salt&v=1.16.1&c=melodee"
+```
+
+## Pagination Examples
+
+### Melodee API Pagination
+All list endpoints in the Melodee API return consistent pagination metadata:
+
+```bash
+curl "https://your-melodee-instance.com/api/users?page=1&limit=10"
+```
+
+Response:
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "username": "user1",
+      "email": "user1@example.com",
+      "is_admin": false
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 10,
+    "total": 150
+  }
+}
+```
+
+### Subsonic/OpenSubsonic Pagination
+Subsonic API uses offset-based pagination:
+```bash
+curl "https://your-melodee-instance.com/rest/getArtists.view?u=username&p=enc:password&v=1.16.1&c=melodee&musicFolderId=1&offset=0&size=20"
+```
+
+## Error Response Examples
+
+### Melodee API Error Responses
+Melodee API returns structured JSON error responses:
+
+```json
+{
+  "error": "Invalid credentials",
+  "code": "AUTH_INVALID_CREDENTIALS",
+  "details": {
+    "field": "password",
+    "reason": "Username or password is incorrect"
+  }
+}
+```
+
+### Subsonic/OpenSubsonic Error Responses
+Subsonic API returns XML error responses:
+```xml
+<subsonic-response xmlns="http://subsonic.org/restapi" status="failed" version="1.16.1">
+  <error code="40" message="Wrong username or password"/>
+</subsonic-response>
+```
+
+## Common Operations Examples
+
+### Create Playlist (Melodee API)
+```bash
+curl -X POST https://your-melodee-instance.com/api/playlists \
+  -H "Authorization: Bearer JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My New Playlist",
+    "comment": "A collection of favorite tracks",
+    "public": false,
+    "song_ids": [1, 5, 10]
+  }'
+```
+
+### Search Library (Melodee API)
+```bash
+curl "https://your-melodee-instance.com/api/search?q=artist&type=artist" \
+  -H "Authorization: Bearer JWT_TOKEN"
+```
+
+### Stream Track (Subsonic API)
+```bash
+curl "https://your-melodee-instance.com/rest/stream.view?u=username&p=enc:password&id=123&v=1.16.1&c=melodee"
+```
+
 ## Related documentation
 
 - Internal admin‑focused routes (user management, libraries, jobs, etc.) live under `/api/...` and are cataloged in `docs/INTERNAL_API_ROUTES.md`.
+- Service binaries and runtime configuration documented in `docs/SERVICE_ARCHITECTURE.md`.
 - Baseline Subsonic spec lives in `docs/subsonic-openapi.yaml`; OpenSubsonic extensions (additional endpoints, auth mechanisms, form‑post variants) live in `docs/opensubsonic-openapi.yaml` and should be regenerated whenever upstream publishes a new JSON spec.
 - Fixtures for request/response samples reside in `docs/fixtures/` and can be referenced from either API depending on the context.
 - When exposing a capability via both APIs, explicitly call out any behavioral differences (pagination limits, response fields) in release notes to avoid client regressions.
+
+## Test Examples
+
+For implementation examples and test patterns, see:
+- Authentication: `src/internal/handlers/auth_test.go`
+- User management: `src/internal/handlers/user_test.go`
+- Playlist operations: `src/internal/handlers/playlist_test.go`
+- Library and job management: `src/internal/handlers/library_job_test.go`
+- Image handling: `src/internal/handlers/image_test.go`
+- Search functionality: `src/internal/handlers/search_test.go`
+- OpenSubsonic compatibility: `src/open_subsonic/handlers/*_test.go`
 
 
 

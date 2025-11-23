@@ -1,0 +1,25 @@
+{
+  // Let the Go extension discover tests across the repo
+  "go.testOnSave": false,
+  "go.toolsEnvVars": {
+    // Ensure module mode; you can add GOPATH/GOMODCACHE here if needed
+    "GO111MODULE": "on"
+  },
+  // Tell Go extension to use ./src as the main module root when running tests from workspace level
+  "go.testEnvVars": {
+    "GO111MODULE": "on"
+  },
+  // Optional: if you want tests to run from src/ when you click "Run Tests" at workspace level
+  "go.testDir": "src",
+  // Improve test UI
+  "go.testExplorerPackages": [
+    "./src/..."
+  ],
+  // Playwright test configuration (e2e tests)
+  "playwright.configPath": "e2e/playwright.config.js",
+  // Vitest / React frontend tests: ensure VS Code detects node test framework
+  "vitest.enable": true,
+  "vitest.root": "src/frontend",
+  // Optional: automatically show Testing view when tests are discovered
+  "testing.automaticallyOpenPeekView": "never"
+}

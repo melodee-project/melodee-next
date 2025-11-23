@@ -29,5 +29,41 @@ Purpose: bind fixtures to automated tests to ensure API contracts remain stable.
 - Run OpenSubsonic contract tests: `go test ./src/open_subsonic/... -v` to ensure compatibility.
 - Run Melodee API contract tests: `go test ./src/internal/handlers/... -v` to validate internal API contracts.
 
+## Unit vs Contract Tests
+- **Unit tests** (`*_test.go` files): Focus on individual handler functions and service logic in isolation. Examples: `src/internal/handlers/user_test.go`, `src/internal/handlers/auth_test.go`.
+- **Contract tests** (`*_contract_test.go` files): Validate API responses match documented contracts and fixtures. Examples: `src/open_subsonic/contract_test.go`, `src/internal/handlers/dlq_contract_test.go`.
+
+## How to write new API tests
+- For handler unit tests, follow the patterns in `src/internal/handlers/user_test.go` and `src/internal/handlers/playlist_test.go`
+- For contract tests, follow the patterns in `src/internal/handlers/dlq_contract_test.go` and `src/open_subsonic/contract_test.go`
+- Use the test database helpers from `src/internal/test/test_helpers.go` for database-dependent tests
+- Always test both success and failure scenarios, including authentication/authorization checks
+
+## Representative Test Examples by Feature
+
+### Authentication Tests
+- `src/internal/handlers/auth_test.go` - Comprehensive auth flow tests with success and failure cases
+
+### User Management Tests
+- `src/internal/handlers/user_test.go` - Complete CRUD operations with pagination and role checks
+
+### Playlist Management Tests
+- `src/internal/handlers/playlist_test.go` - Full playlist lifecycle with permission validation
+
+### Library and Job Management Tests
+- `src/internal/handlers/library_job_test.go` - Library stats, DLQ operations, settings, and shares
+- `src/internal/handlers/library_contract_test.go` - Contract compliance for library endpoints
+
+### Image Handling Tests
+- `src/internal/handlers/image_test.go` - Avatar upload and retrieval with security validation
+
+### Search Tests
+- `src/internal/handlers/search_test.go` - Query parsing, type filtering, and pagination tests
+
+### OpenSubsonic Tests
+- `src/open_subsonic/handlers/browsing_test.go` - Music browsing operations
+- `src/open_subsonic/handlers/media_test.go` - Streaming, cover art, and media operations
+- `src/open_subsonic/handlers/playlist_test.go` - Playlist operations for compatibility API
+
 ## Pending Additions
 - Add fixtures for avatar/cover upload success/invalid MIME and bind to upload tests once implemented.

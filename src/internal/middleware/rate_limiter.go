@@ -1,199 +1,140 @@
 package middleware
 
 import (
-	"fmt"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/time/rate"
 )
 
 // RateLimiterConfig holds the configuration for rate limiting
 type RateLimiterConfig struct {
-	// Max requests allowed within the time window
-	Max int
-	// Time window for rate limiting
-	Expiration time.Duration
-	// Extract the key to rate limit by
-	KeyGenerator func(*fiber.Ctx) string
-	// Message returned when rate limit is exceeded
-	Message string
-	// Rate limiter for in-memory limiting (when Redis is not available)
-	InMemoryLimiter *rate.Limiter
+	// General API limits
+	GeneralLimit    int           // Requests per window for general API endpoints
+	GeneralWindow   time.Duration // Time window for general API endpoints
+	
+	// Auth-specific limits
+	AuthLimit     int           // Requests per window for auth endpoints
+	AuthWindow    time.Duration // Time window for auth endpoints
+	
+	// Search-specific limits
+	SearchLimit   int           // Requests per window for search endpoints
+	SearchWindow  time.Duration // Time window for search endpoints
+	
+	// Per-user rate limiting (default false for IP-based)
+	PerUser       bool          // Whether to apply limits per user or per IP
 }
 
-// DefaultRateLimiterConfig returns a default configuration
-func DefaultRateLimiterConfig() *RateLimiterConfig {
-	return &RateLimiterConfig{
-		Max:         30,            // 30 requests
-		Expiration:  1 * time.Minute, // per minute
-		KeyGenerator: defaultKeyGenerator,
-		Message:     "Too many requests, please try again later",
+// DefaultRateLimiterConfig returns the default rate limiter configuration
+func DefaultRateLimiterConfig() RateLimiterConfig {
+	return RateLimiterConfig{
+		GeneralLimit:  100,        // 100 requests per 15 minutes
+		GeneralWindow: 15 * time.Minute,
+		AuthLimit:     10,         // 10 requests per 5 minutes (to prevent brute force)
+		AuthWindow:    5 * time.Minute,
+		SearchLimit:   50,         // 50 search requests per 10 minutes
+		SearchWindow:  10 * time.Minute,
+		PerUser:       false,      // Default to IP-based limiting
 	}
 }
 
-// defaultKeyGenerator generates a key based on the client IP
-func defaultKeyGenerator(c *fiber.Ctx) string {
-	// Get the real IP address, considering common headers
-	ip := c.Get("X-Forwarded-For")
-	if ip == "" {
-		ip = c.Get("X-Real-IP")
-	}
-	if ip == "" {
-		ip = c.IP()
-	}
-	return ip
-}
-
-// RateLimiter creates a new rate limiter middleware
-func RateLimiter(cfg *RateLimiterConfig) fiber.Handler {
-	if cfg == nil {
-		cfg = DefaultRateLimiterConfig()
-	}
-
+// NewRateLimiter creates a new rate limiter middleware with the provided configuration
+func NewRateLimiter(config RateLimiterConfig) fiber.Handler {
 	return limiter.New(limiter.Config{
-		Max:        cfg.Max,
-		Expiration: cfg.Expiration,
-		KeyGenerator: cfg.KeyGenerator,
+		Max:        config.GeneralLimit,
+		Expiration: config.GeneralWindow,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error":   "Rate limit exceeded",
-				"message": cfg.Message,
-				"code":    fiber.StatusTooManyRequests,
+				"error": "Rate limit exceeded",
+				"message": "Too many requests. Please try again later.",
+				"retry_after": config.GeneralWindow.Seconds(),
 			})
 		},
 	})
 }
 
-// RateLimiterForPublicAPI creates a rate limiter for public APIs
-func RateLimiterForPublicAPI() fiber.Handler {
-	config := &RateLimiterConfig{
-		Max:        60,              // 60 requests per minute for public APIs
-		Expiration: 1 * time.Minute,
-		KeyGenerator: defaultKeyGenerator,
-		Message:    "Too many requests to public API, please try again later",
-	}
-	return RateLimiter(config)
-}
-
-// RateLimiterForAuth creates a rate limiter for authentication endpoints
-func RateLimiterForAuth() fiber.Handler {
-	config := &RateLimiterConfig{
-		Max:        5,               // Only 5 attempts per minute for auth endpoints
-		Expiration: 1 * time.Minute,
-		KeyGenerator: defaultKeyGenerator,
-		Message:    "Too many authentication attempts, please try again later",
-	}
-	return RateLimiter(config)
-}
-
-// IPBasedRateLimiter creates a rate limiter based on IP with different limits per IP type
-func IPBasedRateLimiter() fiber.Handler {
-	// Custom limiter with different rates based on IP
-	return func(c *fiber.Ctx) error {
-		ip := extractClientIP(c)
-		
-		// Different rate limits based on IP type
-		maxRequests := 100
-		if isLocalIP(ip) {
-			maxRequests = 500 // Higher limit for local IPs
-		} else if isBotIP(ip) {
-			maxRequests = 10 // Lower limit for bot-like IPs
-		}
-		
-		// Use the original limiter but with dynamic max
-		limiterMiddleware := limiter.New(limiter.Config{
-			Max:        maxRequests,
-			Expiration: 1 * time.Minute,
-			KeyGenerator: func(c *fiber.Ctx) string {
-				return extractClientIP(c)
-			},
-			LimitReached: func(c *fiber.Ctx) error {
-				return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-					"error":   "Rate limit exceeded",
-					"message": "Too many requests from your IP address",
-					"code":    fiber.StatusTooManyRequests,
-				})
-			},
-		})
-		
-		return limiterMiddleware(c)
-	}
-}
-
-// extractClientIP extracts the client IP address considering common headers
-func extractClientIP(c *fiber.Ctx) string {
-	// Check X-Forwarded-For header first (multiple IPs possible)
-	forwarded := c.Get("X-Forwarded-For")
-	if forwarded != "" {
-		// Take the first IP if multiple are provided
-		ips := strings.Split(forwarded, ",")
-		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
-		}
-	}
-	
-	// Check X-Real-IP header
-	realIP := c.Get("X-Real-IP")
-	if realIP != "" {
-		return realIP
-	}
-	
-	// Fallback to the direct IP
-	return c.IP()
-}
-
-// isLocalIP checks if the IP is a local network IP
-func isLocalIP(ip string) bool {
-	// This is a simplified check - in a real implementation you'd want to parse the IP properly
-	return strings.HasPrefix(ip, "10.") || 
-		   strings.HasPrefix(ip, "172.") || 
-		   strings.HasPrefix(ip, "192.168.") ||
-		   ip == "127.0.0.1" || 
-		   ip == "::1" ||
-		   strings.HasPrefix(ip, "::ffff:127.0.0.1")
-}
-
-// isBotIP is a simplified check for potential bot IPs
-func isBotIP(ip string) bool {
-	// In a real implementation, this would be more sophisticated
-	// For now, just return false
-	return false
-}
-
-// RedisRateLimiter uses Redis to store rate limit data for distributed systems
-func RedisRateLimiter(redisClient *redis.Client) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ip := extractClientIP(c)
-		
-		// Create a key for this IP and current minute
-		key := fmt.Sprintf("rate_limit:%s:%d", ip, time.Now().Unix()/60)
-		
-		// Use Redis to track requests
-		current, err := redisClient.Incr(c.Context(), key).Result()
-		if err != nil {
-			// If Redis fails, we might want to be permissive
-			// For now, continue with the request
-			return c.Next()
-		}
-		
-		// Set expiration if this is the first increment
-		if current == 1 {
-			redisClient.Expire(c.Context(), key, 60*time.Second)
-		}
-		
-		// Check if rate limit is exceeded (100 requests per minute per IP)
-		if current > 100 {
+// NewAuthRateLimiter creates a rate limiter specifically for authentication endpoints
+func NewAuthRateLimiter(config RateLimiterConfig) fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        config.AuthLimit,
+		Expiration: config.AuthWindow,
+		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error":   "Rate limit exceeded",
-				"message": "Too many requests from your IP address",
-				"code":    fiber.StatusTooManyRequests,
+				"error": "Rate limit exceeded",
+				"message": "Too many authentication attempts. Please try again later.",
+				"retry_after": config.AuthWindow.Seconds(),
+			})
+		},
+	})
+}
+
+// NewSearchRateLimiter creates a rate limiter specifically for search endpoints
+func NewSearchRateLimiter(config RateLimiterConfig) fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        config.SearchLimit,
+		Expiration: config.SearchWindow,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded",
+				"message": "Too many search requests. Please try again later.",
+				"retry_after": config.SearchWindow.Seconds(),
+			})
+		},
+	})
+}
+
+// NewCustomRateLimiter creates a custom rate limiter with specific parameters
+func NewCustomRateLimiter(limit int, window time.Duration, message string) fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        limit,
+		Expiration: window,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded",
+				"message": message,
+				"retry_after": window.Seconds(),
+			})
+		},
+	})
+}
+
+// RateLimitByUser creates a rate limiter that applies limits per user rather than per IP
+// This requires that the user is authenticated and the user ID is available
+func RateLimitByUser(queriesPerWindow int, window time.Duration) fiber.Handler {
+	limiterStore := make(map[string]*rate.Limiter)
+	windowStart := time.Now().Truncate(window)
+
+	return func(c *fiber.Ctx) error {
+		// Get user ID from context if available
+		user, ok := GetUserFromContext(c)
+		var userID string
+		
+		if ok && user.ID != 0 {
+			userID = strconv.FormatInt(user.ID, 10)
+		} else {
+			// Fallback to IP address if user not authenticated
+			userID = c.IP()
+		}
+
+		// Create a key based on current window to reset counters periodically
+		key := userID + ":" + windowStart.Format("2006-01-02-15:04")
+
+		limiter, exists := limiterStore[key]
+		if !exists {
+			limiter = rate.NewLimiter(rate.Every(window/time.Duration(queriesPerWindow)), queriesPerWindow)
+			limiterStore[key] = limiter
+		}
+
+		if !limiter.Allow() {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded",
+				"message": "Too many requests. Please try again later.",
+				"retry_after": window.Seconds(),
 			})
 		}
-		
+
 		return c.Next()
 	}
 }

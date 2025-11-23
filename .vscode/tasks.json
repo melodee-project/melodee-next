@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "go: test all",
+      "type": "shell",
+      "command": "cd src && go test ./...",
+      "group": "test",
+      "problemMatcher": "$go"
+    },
+    {
+      "label": "e2e: playwright test",
+      "type": "shell",
+      "command": "cd e2e && npx playwright test",
+      "group": "test"
+    },
+    {
+      "label": "frontend: test",
+      "type": "shell",
+      "command": "cd src/frontend && npm test",
+      "group": "test"
+    }
+  ]
+}

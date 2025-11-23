@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/hibiken/asynq"
+	"melodee/internal/pagination"
 	"melodee/internal/utils"
 )
 
@@ -44,19 +45,23 @@ type DLQPurgeRequest struct {
 
 // GetDLQItems retrieves the list of items in the dead letter queue
 func (h *DLQHandler) GetDLQItems(c *fiber.Ctx) error {
+	// Get pagination parameters
+	page, pageSize := pagination.GetPaginationParams(c, 1, 50)
+	offset := pagination.CalculateOffset(page, pageSize)
+
 	// Get all queues
 	queueNames, err := h.inspector.Queues()
 	if err != nil {
 		return utils.SendInternalServerError(c, "Failed to get queues")
 	}
 
-	var dlqItems []DLQItem
+	var allDLQItems []DLQItem
 
 	// For each queue, get its dead letter tasks
 	for _, queueName := range queueNames {
 		// Get the dead letter queue info
 		dlqName := asynq.Queue(queueName).Dead()
-		
+
 		// Get dead task IDs
 		taskIds, err := h.inspector.ListDead(dlqName)
 		if err != nil {
@@ -81,18 +86,31 @@ func (h *DLQHandler) GetDLQItems(c *fiber.Ctx) error {
 				CreatedAt:  task.NextProcessAt.String(), // Using next process time as created time for now
 				RetryCount: int(task.Retried),
 			}
-			dlqItems = append(dlqItems, item)
+			allDLQItems = append(allDLQItems, item)
 		}
 	}
 
+	// Apply pagination
+	total := int64(len(allDLQItems))
+	var dlqItems []DLQItem
+
+	if offset < len(allDLQItems) {
+		endIndex := offset + pageSize
+		if endIndex > len(allDLQItems) {
+			endIndex = len(allDLQItems)
+		}
+		dlqItems = allDLQItems[offset:endIndex]
+	} else {
+		dlqItems = []DLQItem{}
+	}
+
+	// Calculate pagination metadata according to OpenAPI spec
+	paginationMeta := pagination.Calculate(total, page, pageSize)
+
 	// Return the results with pagination metadata
 	return c.JSON(fiber.Map{
-		"data": dlqItems,
-		"pagination": fiber.Map{
-			"page": 1,
-			"size": len(dlqItems),
-			"total": len(dlqItems),
-		},
+		"data":       dlqItems,
+		"pagination": paginationMeta,
 	})
 }
 

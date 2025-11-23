@@ -279,7 +279,15 @@ Example error:
 - **Resource-Level Access**: Limit access based on ownership
 - **API Rate Limiting**: Prevent abuse of API endpoints
 
-### 6.3 Data Protection
+### 6.3 Rate Limiting Strategy
+- **General API Endpoints**: 100 requests per 15 minutes per IP/user
+- **Authentication Endpoints**: 10 requests per 5 minutes per IP (to prevent brute force)
+- **Search Endpoints**: 50 requests per 10 minutes per IP/user
+- **Per-User vs Per-IP**: Rate limits apply per user when authenticated, per IP when not
+- **Rate Limit Response**: HTTP 429 with JSON/XML error response including retry-after information
+- **Bypass Mechanism**: Admin users may have elevated rate limits or bypass in some cases
+
+### 6.4 Data Protection
 - **Input Validation**: Sanitize all user inputs
 - **SQL Injection Prevention**: Use parameterized queries
 - **XSS Protection**: Sanitize output for web interface
@@ -296,9 +304,17 @@ Example error:
 - **Connection Pooling**: Use connection pooling for database access
 - **Query Optimization**: Optimize queries with indexes and proper joins
 - **Pagination**: Implement efficient pagination for large result sets
+
+### 7.3 Server-Side Limits for Large Libraries
+- **Maximum Page Size**: 200 items per page (for all paginated endpoints)
+- **Search Result Limits**: Maximum 500 results per search request
+- **Large Offset Handling**: Implement cursor-based pagination for large result sets (> 10,000 items)
+- **Query Timeout**: Database queries timeout after 30 seconds to prevent hung connections
+- **Memory Limits**: Search and indexing operations limited to prevent memory exhaustion
+- **Concurrent Request Limits**: Per-user request limits as defined in rate limiting section
 - **Database Partitioning**: Consider partitioning for large tables
 
-### 7.3 File System Optimization
+### 7.4 File System Optimization
 - **Efficient File Access**: Use streaming for large file operations
 - **Asynchronous Processing**: Process files asynchronously
 - **Concurrent Operations**: Support multiple file operations simultaneously
