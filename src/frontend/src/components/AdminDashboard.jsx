@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { libraryService, adminService } from '../services/apiService';
+import { libraryService, adminService, healthService } from '../services/apiService';
 
 function AdminDashboard() {
   const [stats, setStats] = useState({});
   const [jobs, setJobs] = useState([]);
+  const [health, setHealth] = useState({});
+  const [capacity, setCapacity] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,6 +23,24 @@ function AdminDashboard() {
       // For now, we'll just use DLQ items as the jobs list, but in real implementation
       // there would be a dedicated endpoint for recent jobs
       setJobs(jobsResponse.data.data || jobsResponse.data || []);
+
+      // Fetch system health
+      try {
+        const healthResponse = await healthService.getHealth();
+        setHealth(healthResponse.data.data || healthResponse.data || {});
+      } catch (healthError) {
+        console.error('Error fetching health status:', healthError);
+        setHealth({});
+      }
+
+      // Fetch capacity metrics
+      try {
+        const capacityResponse = await healthService.getCapacity();
+        setCapacity(capacityResponse.data.data || capacityResponse.data || []);
+      } catch (capacityError) {
+        console.error('Error fetching capacity status:', capacityError);
+        setCapacity([]);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       // Set default values in case of error
@@ -44,6 +64,40 @@ function AdminDashboard() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
 
+      {/* Health Status Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="font-semibold">Overall Health</h3>
+          <p className={`text-2xl ${
+            health.status === 'ok' ? 'text-green-600' :
+            health.status === 'degraded' ? 'text-yellow-600' : 'text-red-600'
+          }`}>
+            {health.status || 'Unknown'}
+          </p>
+        </div>
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="font-semibold">Database Status</h3>
+          <p className={`text-2xl ${
+            health.db?.status === 'ok' ? 'text-green-600' :
+            health.db?.status === 'degraded' ? 'text-yellow-600' : 'text-red-600'
+          }`}>
+            {health.db?.status || 'Unknown'}
+            {health.db?.latency_ms !== undefined && ` (${health.db.latency_ms}ms)`}
+          </p>
+        </div>
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="font-semibold">Redis Status</h3>
+          <p className={`text-2xl ${
+            health.redis?.status === 'ok' ? 'text-green-600' :
+            health.redis?.status === 'degraded' ? 'text-yellow-600' : 'text-red-600'
+          }`}>
+            {health.redis?.status || 'Unknown'}
+            {health.redis?.latency_ms !== undefined && ` (${health.redis.latency_ms}ms)`}
+          </p>
+        </div>
+      </div>
+
+      {/* Library Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white p-4 rounded shadow">
           <h3 className="font-semibold">Total Artists</h3>
@@ -59,7 +113,37 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* Additional stats row */}
+      {/* Capacity Status Row */}
+      {capacity.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">Storage Capacity</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {capacity.map((item, index) => (
+              <div key={index} className="bg-white p-4 rounded shadow">
+                <h3 className="font-semibold truncate">{item.Path || item.path || `Library ${index + 1}`}</h3>
+                <div className="mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className={`h-2.5 rounded-full ${
+                        (item.UsedPercent || item.usedPercent || 0) > 90 ? 'bg-red-600' :
+                        (item.UsedPercent || item.usedPercent || 0) > 75 ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, item.UsedPercent || item.usedPercent || 0)}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm mt-1">
+                    {item.AvailableSpace !== undefined && item.TotalSpace !== undefined ?
+                      `${Math.round(((item.TotalSpace - item.AvailableSpace) / item.TotalSpace) * 100)}% Used` :
+                      `${(item.UsedPercent || item.usedPercent || 0).toFixed(1)}%`}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pipeline stats row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white p-4 rounded shadow">
           <h3 className="font-semibold">Inbound Files</h3>

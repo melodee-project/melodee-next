@@ -16,6 +16,15 @@ import (
 	"melodee/internal/utils"
 )
 
+// AccountLockedException represents an account that is temporarily locked
+type AccountLockedException struct {
+	LockedUntil time.Time
+}
+
+func (e *AccountLockedException) Error() string {
+	return fmt.Sprintf("account is temporarily locked until %v", e.LockedUntil)
+}
+
 // AuthService handles authentication logic
 type AuthService struct {
 	db        *gorm.DB
@@ -122,7 +131,9 @@ func (a *AuthService) Login(username, password string) (*AuthToken, *models.User
 
 	// Check if account is locked
 	if user.LockedUntil != nil && user.LockedUntil.After(time.Now()) {
-		return nil, nil, fmt.Errorf("account is temporarily locked until %v", user.LockedUntil)
+		return nil, nil, &AccountLockedException{
+			LockedUntil: *user.LockedUntil,
+		}
 	}
 
 	// Compare password hash

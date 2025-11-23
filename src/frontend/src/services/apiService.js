@@ -113,6 +113,26 @@ export const libraryService = {
   processInbound: () => apiService.post('/libraries/process'),
   moveOkAlbums: () => apiService.post('/libraries/move-ok'),
   getLibraries: () => apiService.get('/libraries'),
+  getQuarantineItems: (params = {}) => apiService.get('/libraries/quarantine', { params }),
+  resolveQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/resolve`),
+  requeueQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/requeue`),
+};
+
+// System health and capacity monitoring endpoints
+export const healthService = {
+  getHealth: () => apiService.get('/healthz'),
+  getMetrics: () => apiService.get('/metrics'),
+  getCapacity: () => apiService.get('/admin/capacity'),
+  getCapacityForLibrary: (libraryId) => apiService.get(`/admin/capacity/${libraryId}`),
+  probeCapacityNow: () => apiService.post('/admin/capacity/probe-now'),
+};
+
+// Quarantine management endpoints
+export const quarantineService = {
+  getQuarantineItems: (params = {}) => apiService.get('/libraries/quarantine', { params }),
+  resolveQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/resolve`),
+  requeueQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/requeue`),
+  deleteQuarantineItem: (id) => apiService.delete(`/libraries/quarantine/${id}`)
 };
 
 // Metrics and health-related endpoints

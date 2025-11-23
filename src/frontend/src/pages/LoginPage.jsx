@@ -23,7 +23,25 @@ function LoginPage() {
         // Redirect to admin dashboard
         navigate('/admin');
       } else {
-        setError(result.error || 'Login failed');
+        // Check if error message contains lockout information
+        const errorMessage = result.error || 'Login failed';
+
+        // Check if the error is related to account being locked
+        if (errorMessage.toLowerCase().includes('account is locked') || errorMessage.toLowerCase().includes('temporarily locked')) {
+          // Extract the locked until time if present
+          const lockoutMatch = errorMessage.match(/until ([^.]*)/);
+          if (lockoutMatch && lockoutMatch[1]) {
+            setError(`Account is temporarily locked until ${lockoutMatch[1]}`);
+          } else {
+            setError(errorMessage);
+          }
+        } else if (errorMessage.toLowerCase().includes('invalid credentials')) {
+          setError('Invalid username or password. Please try again.');
+        } else if (errorMessage.toLowerCase().includes('invalid request body')) {
+          setError('Invalid request. Please contact administrator.');
+        } else {
+          setError(errorMessage);
+        }
       }
     } catch (err) {
       setError('Network error occurred');

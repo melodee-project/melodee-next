@@ -8,6 +8,8 @@ import UserManagement from './components/UserManagement';
 import SettingsManagement from './components/SettingsManagement';
 import SharesManagement from './components/SharesManagement';
 import LibraryManagement from './components/LibraryManagement';
+import QuarantineManagement from './components/QuarantineManagement';
+import PlaylistManagement from './components/PlaylistManagement';
 
 // ProtectedRoute component to restrict access to authenticated users
 function ProtectedRoute({ children }) {
@@ -32,6 +34,7 @@ function AdminRoute({ children }) {
   return isAuthenticated && isAdmin ? children : <Navigate to="/login" />;
 }
 
+
 // Main Layout Component with Navigation
 function Layout({ children }) {
   const { user, isAuthenticated, logout } = useAuth();
@@ -54,6 +57,8 @@ function Layout({ children }) {
               <li><Link to="/admin/settings" className="hover:underline">Settings</Link></li>
               <li><Link to="/admin/shares" className="hover:underline">Shares</Link></li>
               <li><Link to="/admin/libraries" className="hover:underline">Libraries</Link></li>
+              <li><Link to="/admin/quarantine" className="hover:underline">Quarantine</Link></li>
+              <li><Link to="/admin/playlists" className="hover:underline">Playlists</Link></li>
             </ul>
             <div className="flex items-center space-x-4">
               <span>Welcome, {user?.username || user?.Username || 'User'}!</span>
@@ -129,6 +134,20 @@ function App() {
             <AdminRoute>
               <Layout>
                 <LibraryManagement />
+              </Layout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/quarantine" element={
+            <AdminRoute>
+              <Layout>
+                <QuarantineManagement />
+              </Layout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/playlists" element={
+            <AdminRoute>
+              <Layout>
+                <PlaylistManagement />
               </Layout>
             </AdminRoute>
           } />

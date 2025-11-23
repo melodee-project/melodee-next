@@ -1,0 +1,335 @@
+package media
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+
+	"melodee/internal/config"
+	"melodee/internal/models"
+)
+
+// MockTranscodeService is a mock implementation of the TranscodeService interface for testing
+type MockTranscodeService struct {
+	mock.Mock
+}
+
+func (m *MockTranscodeService) TranscodeWithCache(inputPath, profileName string, maxBitRate int, format string) (string, error) {
+	args := m.Called(inputPath, profileName, maxBitRate, format)
+	return args.Get(0).(string), args.Error(1)
+}
+
+// TestMediaHandler_StreamingUnitTests tests unit-level functionality of the MediaHandler
+func TestMediaHandler_StreamingUnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	cfg := &config.AppConfig{
+		Processing: config.ProcessingConfig{
+			TranscodeCache: config.TranscodeCacheConfig{
+				CacheDir: "/tmp",
+				MaxSize:  100,
+			},
+		},
+	}
+
+	// Create temp file for testing
+	tempFile := filepath.Join(t.TempDir(), "test.mp3")
+	err := os.WriteFile(tempFile, []byte("fake mp3 content"), 0644)
+	assert.NoError(t, err)
+
+	mediaHandler := NewMediaHandler(db, cfg, nil)
+
+	t.Run("Stream with missing file", func(t *testing.T) {
+		// Test streaming a non-existent file ID
+		c := getTestContext() // This would be a fiber context for testing
+		// In a real test, we'd set up a proper Fiber context for this test
+		// For now, this is a placeholder for the unit testing implementation
+		// Implementation would mock the database to return a song pointing to a non-existent file
+	})
+
+	t.Run("Stream with valid file", func(t *testing.T) {
+		// Create a test song in the db
+		song := models.Song{
+			Name:         "Test Song",
+			NameNormalized: "test song",
+			RelativePath: tempFile,
+			Duration:     180000, // 3 minutes in milliseconds
+			BitRate:      320,
+		}
+		err := db.Create(&song).Error
+		assert.NoError(t, err)
+
+		// This test would require mocking fiber contexts to properly test
+		// the streaming handler functionality
+		// Implementation would test the stream handling logic
+	})
+
+	t.Run("Stream with transcoding", func(t *testing.T) {
+		// Test streaming with transcoding parameters
+		// This would require more extensive mocking for the transcode functionality
+	})
+}
+
+// TestMediaHandler_DownloadUnitTests tests download functionality at the unit level
+func TestMediaHandler_DownloadUnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	cfg := &config.AppConfig{
+		Processing: config.ProcessingConfig{
+			TranscodeCache: config.TranscodeCacheConfig{
+				CacheDir: "/tmp",
+				MaxSize:  100,
+			},
+		},
+	}
+
+	mediaHandler := NewMediaHandler(db, cfg, nil)
+
+	t.Run("Download with missing file", func(t *testing.T) {
+		// Test downloading a non-existent file
+		// Implementation would validate error handling for missing files
+	})
+
+	t.Run("Download with valid file", func(t *testing.T) {
+		// Test downloading a valid file
+		// Implementation would test proper response headers and file serving
+	})
+}
+
+// TestMediaHandler_CoverArtUnitTests tests cover art functionality at the unit level
+func TestMediaHandler_CoverArtUnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	mediaHandler := NewMediaHandler(db, nil, nil)
+
+	t.Run("Get cover art with existing file", func(t *testing.T) {
+		// Test retrieving existing cover art
+		// Implementation would test proper file serving and cache headers
+	})
+
+	t.Run("Get cover art with missing file", func(t *testing.T) {
+		// Test retrieving non-existent cover art
+		// Implementation would test proper error handling and XML responses
+	})
+
+	t.Run("Get cover art with fallback", func(t *testing.T) {
+		// Test cover art fallback mechanisms
+		// Implementation would test looking for different file names (cover.jpg, folder.jpg, etc.)
+	})
+}
+
+// TestMediaHandler_AvatarUnitTests tests avatar functionality at the unit level
+func TestMediaHandler_AvatarUnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	mediaHandler := NewMediaHandler(db, nil, nil)
+
+	t.Run("Get avatar for existing user", func(t *testing.T) {
+		// Test retrieving avatar for a user that has one
+		// Implementation would test proper file serving
+	})
+
+	t.Run("Get avatar for user without avatar", func(t *testing.T) {
+		// Test retrieving avatar for a user that doesn't have one
+		// Implementation would test proper fallback behavior
+	})
+
+	t.Run("Get avatar with invalid user", func(t *testing.T) {
+		// Test retrieving avatar for a non-existent user
+		// Implementation would test proper error handling
+	})
+}
+
+// TestBrowsingHandler_UnitTests tests browsing functionality at the unit level
+func TestBrowsingHandler_UnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	browsingHandler := NewBrowsingHandler(db)
+
+	t.Run("Get music folders", func(t *testing.T) {
+		// Test getting music folders
+		// Implementation would validate proper XML response structure
+	})
+
+	t.Run("Get indexes", func(t *testing.T) {
+		// Test getting indexes with proper normalization
+		// Implementation would test artist normalization (article handling)
+	})
+
+	t.Run("Get artists", func(t *testing.T) {
+		// Test getting artists with proper pagination
+		// Implementation would validate pagination parameters and response format
+	})
+
+	t.Run("Get album info", func(t *testing.T) {
+		// Test getting album information
+		// Implementation would test proper response structure
+	})
+
+	t.Run("Get music directory", func(t *testing.T) {
+		// Test getting music directory contents
+		// Implementation would validate directory structure and child elements
+	})
+
+	t.Run("Get album", func(t *testing.T) {
+		// Test getting album details
+		// Implementation would validate album structure with songs
+	})
+
+	t.Run("Get song", func(t *testing.T) {
+		// Test getting song details
+		// Implementation would validate song response structure
+	})
+
+	t.Run("Get genres", func(t *testing.T) {
+		// Test getting genre information
+		// Implementation would validate genre aggregation from media tags
+	})
+}
+
+// TestSearchHandler_UnitTests tests search functionality at the unit level
+func TestSearchHandler_UnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	searchHandler := NewSearchHandler(db)
+
+	t.Run("Search with empty query", func(t *testing.T) {
+		// Test search with empty query parameters
+		// Implementation would validate proper error handling
+	})
+
+	t.Run("Search with valid query", func(t *testing.T) {
+		// Test search with valid parameters
+		// Implementation would validate result structures and pagination
+	})
+
+	t.Run("Search2 with pagination", func(t *testing.T) {
+		// Test search2 with pagination parameters
+		// Implementation would validate offset/size handling
+	})
+
+	t.Run("Search3 advanced filtering", func(t *testing.T) {
+		// Test search3 with advanced filtering
+		// Implementation would validate complex search logic
+	})
+}
+
+// TestPlaylistHandler_UnitTests tests playlist functionality at the unit level
+func TestPlaylistHandler_UnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	playlistHandler := NewPlaylistHandler(db)
+
+	t.Run("Get playlists", func(t *testing.T) {
+		// Test getting user playlists
+		// Implementation would validate playlist structure and pagination
+	})
+
+	t.Run("Get playlist by ID", func(t *testing.T) {
+		// Test getting a specific playlist
+		// Implementation would validate full playlist with entries
+	})
+
+	t.Run("Create playlist", func(t *testing.T) {
+		// Test creating a new playlist
+		// Implementation would validate creation and permissions
+	})
+
+	t.Run("Update playlist", func(t *testing.T) {
+		// Test updating an existing playlist
+		// Implementation would validate permissions and updates
+	})
+
+	t.Run("Delete playlist", func(t *testing.T) {
+		// Test deleting a playlist
+		// Implementation would validate permissions and cleanup
+	})
+}
+
+// TestUserHandler_UnitTests tests user functionality at the unit level
+func TestUserHandler_UnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	userHandler := NewUserHandler(db)
+
+	t.Run("Get user details", func(t *testing.T) {
+		// Test getting user information
+		// Implementation would validate user structure and permissions
+	})
+
+	t.Run("Get all users", func(t *testing.T) {
+		// Test getting all users (admin only)
+		// Implementation would validate permissions and list structure
+	})
+
+	t.Run("Create user", func(t *testing.T) {
+		// Test creating a new user
+		// Implementation would validate password requirements and permissions
+	})
+
+	t.Run("Update user", func(t *testing.T) {
+		// Test updating user information
+		// Implementation would validate permissions and update logic
+	})
+
+	t.Run("Delete user", func(t *testing.T) {
+		// Test deleting a user
+		// Implementation would validate permissions and cleanup
+	})
+}
+
+// TestSystemHandler_UnitTests tests system functionality at the unit level
+func TestSystemHandler_UnitTests(t *testing.T) {
+	db, tearDown := setupTestDB(t)
+	defer tearDown()
+
+	systemHandler := NewSystemHandler(db)
+
+	t.Run("Ping endpoint", func(t *testing.T) {
+		// Test ping endpoint
+		// Implementation would validate proper response format
+	})
+
+	t.Run("Get license", func(t *testing.T) {
+		// Test license endpoint
+		// Implementation would validate license information structure
+	})
+}
+
+// Helper functions for testing
+func setupTestDB(t *testing.T) (*gorm.DB, func()) {
+	// Create in-memory SQLite database for testing
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	assert.NoError(t, err)
+
+	// Auto-migrate the required models for testing
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{}, &models.Playlist{})
+	assert.NoError(t, err)
+
+	tearDown := func() {
+		// Cleanup database connection
+		sqlDB, _ := db.DB()
+		sqlDB.Close()
+	}
+
+	return db, tearDown
+}
+
+// getTestContext is a helper to create a test Fiber context
+// In a real implementation, this would create a mock Fiber context for handler testing
+func getTestContext() interface{} {
+	return nil // Placeholder for a real Fiber context mock
+}

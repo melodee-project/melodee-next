@@ -60,9 +60,36 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
+      // Extract more detailed error information from the response
+      let errorMessage = 'Login failed';
+      let errorDetails = '';
+
+      if (error.response) {
+        // Server responded with error status
+        if (error.response.data && typeof error.response.data === 'object') {
+          if (error.response.data.error) {
+            errorMessage = error.response.data.error;
+          } else if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response.data.Error) {
+            // Handle OpenSubsonic error format
+            errorMessage = error.response.data.Error?.Message || 'Login failed';
+          }
+        } else {
+          errorMessage = error.response.statusText || 'Server error occurred';
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'Network error - could not connect to server';
+      } else {
+        // Something else happened in setting up the request
+        errorMessage = error.message || 'Login failed';
+      }
+
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Login failed'
+        error: errorMessage,
+        errorDetails: errorDetails
       };
     }
   };

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -38,28 +39,13 @@ func NewHealthMetricsHandler(
 	}
 }
 
-// NewHealthMetricsHandler creates a new health and metrics handler
-func NewHealthMetricsHandler(
-	db *gorm.DB,
-	config *config.AppConfig,
-	capacityProbe *capacity.CapacityProbe,
-	asynqInspector *asynq.Inspector,
-) *HealthMetricsHandler {
-	return &HealthMetricsHandler{
-		db:              db,
-		config:          config,
-		capacityProbe:   capacityProbe,
-		asynqInspector:  asynqInspector,
-	}
-}
-
 // HealthCheck handles the health check endpoint
 func (h *HealthMetricsHandler) HealthCheck(c *fiber.Ctx) error {
 	// Check database health
 	dbStartTime := time.Now()
 	dbErr := h.db.Exec("SELECT 1").Error
 	dbLatency := time.Since(dbStartTime).Milliseconds()
-	
+
 	dbStatus := "ok"
 	if dbErr != nil {
 		dbStatus = "down"
@@ -71,7 +57,7 @@ func (h *HealthMetricsHandler) HealthCheck(c *fiber.Ctx) error {
 	redisStartTime := time.Now()
 	_, redisErr := h.asynqInspector.Queues()
 	redisLatency := time.Since(redisStartTime).Milliseconds()
-	
+
 	redisStatus := "ok"
 	if redisErr != nil {
 		redisStatus = "down"
@@ -141,9 +127,9 @@ func (h *HealthMetricsHandler) MetricsEndpoint(c *fiber.Ctx) error {
 		// Log the error but continue with other metrics
 		h.logError("Failed to get capacity statuses for metrics: %v", err)
 	} else {
+		metrics += "# HELP melodee_capacity_percent Percentage of capacity used by library\n"
+		metrics += "# TYPE melodee_capacity_percent gauge\n"
 		for _, status := range capacityStatuses {
-			metrics += fmt.Sprintf("# HELP melodee_capacity_percent Percentage of capacity used by library\n")
-			metrics += fmt.Sprintf("# TYPE melodee_capacity_percent gauge\n")
 			metrics += fmt.Sprintf("melodee_capacity_percent{path=\"%s\"} %f\n", status.Path, status.UsedPercent)
 		}
 	}
@@ -157,27 +143,33 @@ func (h *HealthMetricsHandler) MetricsEndpoint(c *fiber.Ctx) error {
 		metrics += "# TYPE melodee_queue_size gauge\n"
 		
 		for _, queueName := range queues {
-			size, err := h.asynqInspector.GetQueueInfo(queueName)
+			queueInfo, err := h.asynqInspector.GetQueueInfo(queueName)
 			if err != nil {
 				h.logError("Failed to get queue info for %s: %v", queueName, err)
 				continue
 			}
-			
-			metrics += fmt.Sprintf("melodee_queue_size{queue=\"%s\"} %d\n", queueName, size.Active)
+
+			metrics += fmt.Sprintf("melodee_queue_size{queue=\"%s\"} %d\n", queueName, queueInfo.Active)
 		}
 
 		// Add dead letter queue metrics
 		metrics += "# HELP melodee_dlq_size Number of tasks in dead letter queue\n"
 		metrics += "# TYPE melodee_dlq_size gauge\n"
-		
+
 		for _, queueName := range queues {
-			dlqSize, err := h.asynqInspector.GetQueueInfo(queueName + ":dlq")
+			// Get the DLQ name by convention (asynq uses queue_name + ":dlq")
+			dlqName := queueName
+			if !strings.HasSuffix(dlqName, ":dlq") {
+				dlqName = queueName + ":dlq"
+			}
+
+			dlqQueueInfo, err := h.asynqInspector.GetQueueInfo(dlqName)
 			if err != nil {
 				// DLQ might not exist, which is fine
 				continue
 			}
-			
-			metrics += fmt.Sprintf("melodee_dlq_size{queue=\"%s\"} %d\n", queueName, dlqSize.Pending)
+
+			metrics += fmt.Sprintf("melodee_dlq_size{queue=\"%s\"} %d\n", queueName, dlqQueueInfo.Pending)
 		}
 	}
 

@@ -3,10 +3,13 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"melodee/internal/services"
 	"melodee/internal/utils"
+	opensubsonic_utils "melodee/open_subsonic/utils"
 )
 
 // AuthHandler handles authentication-related requests
@@ -40,7 +43,15 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	// Authenticate user
 	authToken, user, err := h.authService.Login(req.Username, req.Password)
 	if err != nil {
-		return utils.SendUnauthorizedError(c, "Invalid credentials")
+		// Check if the error is related to account lockout for more detailed error response
+		errMsg := err.Error()
+
+		// Check if it's an account lockout error
+		if strings.Contains(errMsg, "account is temporarily locked") {
+			return opensubsonic_utils.SendOpenSubsonicError(c, 50, errMsg)
+		}
+
+		return opensubsonic_utils.SendOpenSubsonicError(c, 40, "Invalid credentials") // Using 40 for authentication failure per spec
 	}
 
 	return c.JSON(fiber.Map{
