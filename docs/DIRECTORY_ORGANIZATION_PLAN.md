@@ -1,5 +1,11 @@
 # Directory Organization Service with Directory Code Generation Plan
 
+**Audience:** Backend engineers, filesystem/ops engineers
+
+**Purpose:** Canonical plan for directory codes, path templates, and filesystem integration.
+
+**Source of truth for:** Directory code rules, normalization, collision handling, and path template behavior.
+
 ## Overview
 This document outlines the design for the Directory Organization Service, which is a critical component for handling massive music libraries (300k+ artists) by generating unique directory codes to prevent filesystem performance issues. This service will address the scalability challenges mentioned in the PRD by implementing the directory code feature with collision handling and configurable templates.
 

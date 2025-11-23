@@ -1,5 +1,11 @@
 # Melodee - Optimized Database Schema for High-Performance Music Library Management
 
+**Audience:** Backend engineers, DBAs, performance engineers
+
+**Purpose:** Canonical definition of Melodee's relational schema and performance strategies.
+
+**Source of truth for:** Table/column definitions, indexes, partitioning, views, and DB performance playbook.
+
 ## Overview
 
 This document defines the optimized database schema for Melodee, designed specifically for handling massive music libraries (tens of millions of songs, 300k+ artists) with optimal performance. The schema incorporates partitioning, efficient indexing, and performance-oriented design patterns to address the scaling challenges of large music collections.

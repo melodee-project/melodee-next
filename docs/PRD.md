@@ -1,5 +1,11 @@
 # Melodee - Product Requirements Document (PRD)
 
+**Audience:** Product, engineering leads, stakeholders
+
+**Purpose:** Canonical description of what Melodee should do and for whom.
+
+**Source of truth for:** Product vision, target users, core capabilities, and success criteria.
+
 ## 1. Executive Summary
 
 Melodee is a comprehensive music management and streaming system designed to handle large music libraries with tens of millions of songs. This system provides a complete solution for processing, organizing, and serving music collections through both RESTful and OpenSubsonic-compatible APIs. The application is built for users with substantial music collections who need media processing capabilities, metadata editing, and seamless client integration.

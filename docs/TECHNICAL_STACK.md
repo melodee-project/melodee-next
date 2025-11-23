@@ -1,5 +1,11 @@
 # Melodee - Technical Stack Recommendations
 
+**Audience:** Engineers, tech leads, contributors
+
+**Purpose:** Canonical reference for chosen technologies, libraries, and supporting tooling.
+
+**Source of truth for:** Backend/frontend stack, infra/tooling choices, and rationale.
+
 ## Executive Summary
 
 This document outlines the recommended technology stack for the Melodee music management and streaming system, with a primary focus on high-performance file serving for music streaming while maintaining security and best practices.

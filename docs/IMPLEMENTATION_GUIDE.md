@@ -1,5 +1,11 @@
 # Implementation Guide (Phase Plan)
 
+**Audience:** Engineers and coding agents implementing Melodee
+
+**Purpose:** Sequence of implementation phases with links to canonical specs.
+
+**Source of truth for:** Implementation order and phase deliverables (not detailed behavior).
+
 Use this guide to sequence work for coding agents. Check off phases as completed.
 
 ## Phase Map
@@ -20,7 +26,7 @@ Use this guide to sequence work for coding agents. Check off phases as completed
 
 ## Phase 1: Bootstrapping & Contracts
 - Align on contracts and configs:
-  - Read `TECHNICAL_SPEC.md`, `INTERNAL_API_ROUTES.md`, `METADATA_MAPPING.md`, `HEALTH_CHECK.md`, `CAPACITY_PROBES.md`.
+  - Read canonical specs: `TECHNICAL_SPEC.md`, `INTERNAL_API_ROUTES.md`, `METADATA_MAPPING.md`, `HEALTH_CHECK.md`, `CAPACITY_PROBES.md`, `DATABASE_SCHEMA.md`.
   - Use fixtures in `docs/fixtures/` and mapping in `TESTING_CONTRACTS.md`.
   - Envs: `CONFIG_ENTRY_POINT_PLAN.md` (env matrix, per-service samples).
 - Deliverables:

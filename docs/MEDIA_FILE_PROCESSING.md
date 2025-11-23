@@ -1,5 +1,11 @@
 # Media File Processing in Go-based Melodee System
 
+**Audience:** Backend engineers, worker/FFmpeg implementers
+
+**Purpose:** Canonical description of the media pipeline and processing rules.
+
+**Source of truth for:** Inbound→staging→production flows, FFmpeg profiles, checksums/idempotency, quarantine, and library selection behavior.
+
 ## Overview
 
 This document outlines the media file processing pipeline for the Go-based Melodee system. The processing follows a three-stage workflow: inbound → staging → production, allowing for preprocessing with external tools, manual review, and intelligent distribution to production libraries based on configurable rules.
