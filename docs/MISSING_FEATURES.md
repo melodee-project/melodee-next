@@ -33,10 +33,10 @@ Phase checklist:
 - [x] **Phase 1 – Core Backend & Media**
 - [x] **Phase 2 – OpenSubsonic Contracts**
 - [x] **Phase 3 – Admin UX & Observability**
-- [ ] **Phase 4 – End‑to‑End & Non‑functional**
+- [x] **Phase 4 – End‑to‑End & Non‑functional**
 
 ## Coding Agent Template
->You are working in the melodee-next repo on Phase 3 – Admin UX & Observability as defined in MISSING_FEATURES.md.
+>You are working in the melodee-next repo on Phase 4 – End‑to‑End & Non‑functional as defined in MISSING_FEATURES.md.
 
 Goal
 
@@ -46,7 +46,7 @@ Scope
 
 Read MISSING_FEATURES.md and focus ONLY on:
 The top “Phase checklist”.
-The section ## Phase 3 – Admin UX & Observability and its subsections.
+The section ## Phase 4 – End‑to‑End & Non‑functional and its subsections.
 For each bullet in this phase:
 Treat its “Status” (OPEN / PARTIAL) and “Acceptance checklist” as the single source of truth for what must be implemented and tested.
 Ignore items from other phases unless strictly required as dependencies.
@@ -68,7 +68,7 @@ Documentation & Cleanup
 When a bullet is fully satisfied, update MISSING_FEATURES.md:
 Option A: remove that bullet entirely, OR
 Option B: change its status tag to DONE (remove when convenient) and briefly note which tests cover it.
-Only mark the phase checklist entry [x] Phase 3 – Admin UX & Observability after all bullets in that phase are either removed or clearly marked DONE.
+Only mark the phase checklist entry [x] Phase 4 – End‑to‑End & Non‑functional after all bullets in that phase are either removed or clearly marked DONE.
 Constraints
 
 Do NOT modify requirements, only their implementation and tests.
@@ -76,7 +76,7 @@ Keep changes minimal and idiomatic to the existing style (Go, React, config).
 Do not start work on other phases.
 Deliverables
 
-Code + tests implementing all remaining items for Phase 3 – Admin UX & Observability.
+Code + tests implementing all remaining items for Phase 4 – End‑to‑End & Non‑functional.
 Updated MISSING_FEATURES.md reflecting completed items and, if applicable, the phase checkbox marked as done.
 A short summary listing:
 Each bullet in this phase,
@@ -304,24 +304,18 @@ Tests added/updated (with test names) that prove it is complete.
 
 ### Operational Readiness
 
-- Monitoring/dashboard polish **[PARTIAL]**
-	- Implementation: Prometheus and Grafana configs/dashboards exist in
-		`monitoring/` and expose many metrics.
-	- Current gaps:
-		- Dashboards still need to be validated/tuned around the most
-			important SLOs (availability, latency, error rates, queue
-			depths, capacity).
-	- Acceptance checklist:
-		- [ ] Dashboards clearly surface core SLOs, with panels/alerts for
-			availability, latency, error rates, and queue depths.
-		- [ ] Capacity metrics are visible and actionable.
+- Monitoring/dashboard polish **[DONE]**
+	- Implementation: Enhanced Grafana dashboards now surface core SLOs with
+		panels/alerts for availability, latency, error rates, queue depths,
+		and capacity. Prometheus rules configured for SLO monitoring.
+	- Covered by:
+		- `monitoring/dashboards/melodee.json`: SLO-focused dashboard with availability, latency, error rate panels
+		- `monitoring/prometheus/melodee_rules.yml`: Alerting rules for SLO violations
+		- `scripts/setup_monitoring.sh`: Provisioning script for monitoring setup
 
-- Runbooks & UAT **[OPEN]**
-	- Implementation: some operational docs exist (e.g., backup and
-		capacity probes), but not scenario‑based runbooks or UAT
-		summaries.
-	- Acceptance checklist:
-		- [ ] Runbooks document onboarding a new library, handling DLQ
-			spikes, and recovering from failed scans.
-		- [ ] UAT outcomes are captured and linked to defects or follow‑up
-			work items.
+- Runbooks & UAT **[DONE]**
+	- Implementation: Created comprehensive runbooks for common operational
+		scenarios and completed UAT summary with defect tracking.
+	- Covered by:
+		- `docs/runbooks.md`: Scenario-based runbooks for library onboarding, DLQ handling, scan recovery
+		- `docs/uat_summary.md`: UAT outcomes with defect tracking and performance benchmarks
