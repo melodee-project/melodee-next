@@ -9,6 +9,7 @@ import (
 	"melodee/internal/middleware"
 	"melodee/internal/models"
 	"melodee/internal/services"
+	"melodee/internal/utils"
 )
 
 // PlaylistHandler handles playlist-related requests
@@ -28,9 +29,7 @@ func (h *PlaylistHandler) GetPlaylists(c *fiber.Ctx) error {
 	// Check authentication
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Authentication required",
-		})
+		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
 	// Get pagination parameters
@@ -40,9 +39,7 @@ func (h *PlaylistHandler) GetPlaylists(c *fiber.Ctx) error {
 
 	playlists, total, err := h.repo.GetPlaylistsWithUser(limit, offset)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to fetch playlists",
-		})
+		return utils.SendInternalServerError(c, "Failed to fetch playlists")
 	}
 
 	// Filter to user's playlists or public playlists
@@ -74,31 +71,23 @@ func (h *PlaylistHandler) GetPlaylist(c *fiber.Ctx) error {
 	// Check authentication
 	_, ok := middleware.GetUserFromContext(c)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Authentication required",
-		})
+		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
 	playlistID, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid playlist ID",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid playlist ID")
 	}
 
 	playlist, err := h.repo.GetPlaylistByID(int32(playlistID))
 	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": "Playlist not found",
-		})
+		return utils.SendNotFoundError(c, "Playlist")
 	}
 
 	// Check if user has permission to access this playlist
 	currentUser, _ := middleware.GetUserFromContext(c)
 	if !currentUser.IsAdmin && playlist.UserID != currentUser.ID && !playlist.Public {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Access denied",
-		})
+		return utils.SendForbiddenError(c, "Access denied")
 	}
 
 	return c.JSON(playlist)
@@ -109,9 +98,7 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 	// Check authentication
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Authentication required",
-		})
+		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
 	var req struct {
@@ -122,9 +109,7 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	// Create playlist
@@ -138,9 +123,7 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 	}
 
 	if err := h.repo.CreatePlaylist(playlist); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create playlist",
-		})
+		return utils.SendInternalServerError(c, "Failed to create playlist")
 	}
 
 	return c.Status(http.StatusCreated).JSON(fiber.Map{
@@ -159,16 +142,12 @@ func (h *PlaylistHandler) UpdatePlaylist(c *fiber.Ctx) error {
 	// Check authentication
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Authentication required",
-		})
+		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
 	playlistID, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid playlist ID",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid playlist ID")
 	}
 
 	var req struct {
@@ -179,23 +158,17 @@ func (h *PlaylistHandler) UpdatePlaylist(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	playlist, err := h.repo.GetPlaylistByID(int32(playlistID))
 	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": "Playlist not found",
-		})
+		return utils.SendNotFoundError(c, "Playlist")
 	}
 
 	// Check if user has permission to edit this playlist
 	if !currentUser.IsAdmin && playlist.UserID != currentUser.ID {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Access denied",
-		})
+		return utils.SendForbiddenError(c, "Access denied")
 	}
 
 	// Update fields if provided
@@ -211,9 +184,7 @@ func (h *PlaylistHandler) UpdatePlaylist(c *fiber.Ctx) error {
 	playlist.ChangedAt = time.Now()
 
 	if err := h.repo.UpdatePlaylist(playlist); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to update playlist",
-		})
+		return utils.SendInternalServerError(c, "Failed to update playlist")
 	}
 
 	return c.JSON(fiber.Map{
@@ -230,36 +201,26 @@ func (h *PlaylistHandler) DeletePlaylist(c *fiber.Ctx) error {
 	// Check authentication
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Authentication required",
-		})
+		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
 	playlistID, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid playlist ID",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid playlist ID")
 	}
 
 	playlist, err := h.repo.GetPlaylistByID(int32(playlistID))
 	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": "Playlist not found",
-		})
+		return utils.SendNotFoundError(c, "Playlist")
 	}
 
 	// Check if user has permission to delete this playlist
 	if !currentUser.IsAdmin && playlist.UserID != currentUser.ID {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Access denied",
-		})
+		return utils.SendForbiddenError(c, "Access denied")
 	}
 
 	if err := h.repo.DeletePlaylist(int32(playlistID)); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to delete playlist",
-		})
+		return utils.SendInternalServerError(c, "Failed to delete playlist")
 	}
 
 	return c.JSON(fiber.Map{

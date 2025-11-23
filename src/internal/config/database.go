@@ -6,20 +6,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// DatabaseConfig represents the database configuration
-type DatabaseConfig struct {
-	Host              string        `mapstructure:"host"`
-	Port              int           `mapstructure:"port"`
-	User              string        `mapstructure:"user"`
-	Password          string        `mapstructure:"password"`
-	DBName            string        `mapstructure:"dbname"`
-	SSLMode           string        `mapstructure:"sslmode"`
-	MaxOpenConns      int           `mapstructure:"max_open_conns"`      // Default: 50
-	MaxIdleConns      int           `mapstructure:"max_idle_conns"`      // Default: 25
-	ConnMaxLifetime   time.Duration `mapstructure:"conn_max_lifetime"`   // Default: 30 minutes
-	ConnMaxIdleTime   time.Duration `mapstructure:"conn_max_idle_time"`  // Default: 15 minutes
-}
-
 // Default recommended values for large-scale operations
 const (
 	DefaultMaxOpenConns    = 50

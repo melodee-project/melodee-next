@@ -53,12 +53,13 @@ func DefaultProcessingConfig() *ProcessingConfig {
 
 // MediaProcessor handles the complete media processing workflow
 type MediaProcessor struct {
-	config           *ProcessingConfig
-	db               *gorm.DB
-	directoryService *directory.PathTemplateResolver
+	config            *ProcessingConfig
+	db                *gorm.DB
+	directoryService  *directory.PathTemplateResolver
 	quarantineService *QuarantineService
-	mediaValidator   *MediaFileValidator
-	ffmpegProcessor  *FFmpegProcessor
+	mediaValidator    *MediaFileValidator
+	ffmpegProcessor   *FFmpegProcessor
+	checksumService   *ChecksumService
 }
 
 // NewMediaProcessor creates a new media processor
@@ -69,6 +70,7 @@ func NewMediaProcessor(
 	quarantineService *QuarantineService,
 	mediaValidator *MediaFileValidator,
 	ffmpegProcessor *FFmpegProcessor,
+	checksumService *ChecksumService,
 ) *MediaProcessor {
 	if config == nil {
 		config = DefaultProcessingConfig()
@@ -81,6 +83,7 @@ func NewMediaProcessor(
 		quarantineService: quarantineService,
 		mediaValidator:    mediaValidator,
 		ffmpegProcessor:   ffmpegProcessor,
+		checksumService:   checksumService,
 	}
 }
 
@@ -110,26 +113,36 @@ func (mp *MediaProcessor) processInboundFile(file MediaFile, force bool) error {
 		return mp.moveToQuarantine(file.Path, ValidationBounds, fmt.Sprintf("File validation failed: %v", err), 0)
 	}
 
-	// 2. Extract metadata using embedded libraries
+	// 2. Calculate checksum using the checksum service
+	checksum, err := mp.checksumService.CalculateChecksum(file.Path)
+	if err != nil {
+		return mp.moveToQuarantine(file.Path, ChecksumMismatch, fmt.Sprintf("Checksum calculation failed: %v", err), 0)
+	}
+
+	// 3. Extract metadata using embedded libraries
 	metadata, err := mp.extractMetadata(file.Path)
 	if err != nil {
 		return mp.moveToQuarantine(file.Path, TagParseError, fmt.Sprintf("Metadata extraction failed: %v", err), 0)
 	}
+	// Update metadata with the calculated checksum
+	metadata.Checksum = checksum
 
-	// 3. Normalize metadata according to system rules
+	// 4. Normalize metadata according to system rules
 	normalizedMetadata := mp.normalizeMetadata(metadata)
 
-	// 4. Check if file has been processed before (idempotency check)
+	// 5. Check if file has been processed before (idempotency check) using checksum service
 	if !force {
-		if processed, err := mp.isAlreadyProcessed(file.Path, normalizedMetadata.Checksum); err != nil {
-			return fmt.Errorf("failed to check if file is already processed: %w", err)
-		} else if processed {
-			fmt.Printf("File %s already processed, skipping\n", file.Path)
+		isProcessed, existingSong, err := mp.checksumService.IsAlreadyProcessedByContentOnly(checksum)
+		if err != nil {
+			return fmt.Errorf("failed to check if file with same content is already processed: %w", err)
+		}
+		if isProcessed {
+			fmt.Printf("File with same content as %s already processed (checksum: %s), skipping\n", file.Path, checksum)
 			return nil
 		}
 	}
 
-	// 5. Determine destination in staging area using directory code
+	// 6. Determine destination in staging area using directory code
 	stagingPath, err := mp.calculateStagingPath(normalizedMetadata)
 	if err != nil {
 		return mp.moveToQuarantine(file.Path, PathSafety, fmt.Sprintf("Failed to calculate staging path: %v", err), 0)
@@ -140,12 +153,12 @@ func (mp *MediaProcessor) processInboundFile(file MediaFile, force bool) error {
 		return fmt.Errorf("failed to create staging directory: %w", err)
 	}
 
-	// 6. Move file to staging with normalized structure
+	// 7. Move file to staging with normalized structure
 	if err := mp.moveFile(file.Path, stagingPath); err != nil {
 		return fmt.Errorf("failed to move file to staging: %w", err)
 	}
 
-	// 7. Create database records in staging state
+	// 8. Create database records in staging state
 	if err := mp.createStagingRecords(normalizedMetadata, stagingPath); err != nil {
 		// Move file back to inbound if DB record creation fails
 		if rollbackErr := mp.moveFile(stagingPath, file.Path); rollbackErr != nil {
@@ -154,8 +167,8 @@ func (mp *MediaProcessor) processInboundFile(file MediaFile, force bool) error {
 		return fmt.Errorf("failed to create staging records: %w", err)
 	}
 
-	// 8. Mark file as processed
-	if err := mp.markAsProcessed(file.Path, normalizedMetadata.Checksum); err != nil {
+	// 9. Mark file as processed using checksum service
+	if err := mp.checksumService.MarkAsProcessed(stagingPath, checksum, nil); err != nil {
 		fmt.Printf("Warning: failed to mark file as processed: %v\n", err)
 	}
 
@@ -389,13 +402,18 @@ func (mp *MediaProcessor) promoteStagingItem(item models.Song) error {
 	// Get the staging file path
 	stagingPath := filepath.Join(mp.config.StagingDir, item.RelativePath)
 
-	// Validate file integrity by re-checking checksum
-	currentChecksum, err := mp.calculateChecksum(stagingPath)
+	// Validate file integrity by re-checking checksum using the checksum service
+	isValid, err := mp.checksumService.VerifyFileIntegrity(stagingPath, item.CRCHash)
 	if err != nil {
-		return mp.moveToQuarantine(stagingPath, ChecksumMismatch, fmt.Sprintf("Failed to calculate checksum: %v", err), 0)
+		return mp.moveToQuarantine(stagingPath, ChecksumMismatch, fmt.Sprintf("Failed to verify file integrity: %v", err), 0)
 	}
 
-	if currentChecksum != item.CRCHash {
+	if !isValid {
+		currentChecksum, err := mp.checksumService.CalculateChecksum(stagingPath)
+		if err != nil {
+			return mp.moveToQuarantine(stagingPath, ChecksumMismatch, fmt.Sprintf("Failed to calculate current checksum: %v", err), 0)
+		}
+
 		return mp.moveToQuarantine(stagingPath, ChecksumMismatch, fmt.Sprintf("Checksum mismatch: expected %s, got %s", item.CRCHash, currentChecksum), 0)
 	}
 

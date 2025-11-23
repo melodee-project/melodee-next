@@ -77,12 +77,12 @@ func (s *WebServer) setupRoutes() {
 	metricsHandler := handlers.NewMetricsHandler()
 	s.app.Get("/metrics", metricsHandler.Metrics())
 
-	// Auth routes
+	// Auth routes (public, requires rate limiting)
 	auth := s.app.Group("/api/auth")
-	auth.Post("/login", authHandler.Login)
-	auth.Post("/refresh", authHandler.Refresh)
-	auth.Post("/request-reset", authHandler.RequestReset)
-	auth.Post("/reset", authHandler.ResetPassword)
+	auth.Post("/login", middleware.RateLimiterForAuth(), authHandler.Login)
+	auth.Post("/refresh", middleware.RateLimiterForAuth(), authHandler.Refresh)
+	auth.Post("/request-reset", middleware.RateLimiterForAuth(), authHandler.RequestReset)
+	auth.Post("/reset", middleware.RateLimiterForAuth(), authHandler.ResetPassword)
 
 	// Protected routes
 	protected := s.app.Group("/api", middleware.NewAuthMiddleware(s.authService).JWTProtected())

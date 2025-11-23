@@ -30,9 +30,7 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 	// Check if user is admin
 	user, ok := middleware.GetUserFromContext(c)
 	if !ok || !user.IsAdmin {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Admin access required",
-		})
+		return utils.SendForbiddenError(c, "Admin access required")
 	}
 
 	// Get pagination parameters
@@ -60,9 +58,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	// Check if user is admin
 	user, ok := middleware.GetUserFromContext(c)
 	if !ok || !user.IsAdmin {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Admin access required",
-		})
+		return utils.SendForbiddenError(c, "Admin access required")
 	}
 
 	var req struct {
@@ -73,32 +69,23 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	// Validate required fields
 	if req.Username == "" || req.Password == "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Username and password are required",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Username and password are required")
 	}
 
 	// Validate password
 	if err := utils.ValidatePassword(req.Password); err != nil {
-		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{
-			"error":   "Password validation failed",
-			"details": err.Error(),
-		})
+		return utils.SendValidationError(c, "password", err.Error())
 	}
 
 	// Hash password
 	passwordHash, err := h.authService.HashPassword(req.Password)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to hash password",
-		})
+		return utils.SendInternalServerError(c, "Failed to hash password")
 	}
 
 	// Create user
@@ -110,9 +97,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	if err := h.repo.CreateUser(newUser); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create user",
-		})
+		return utils.SendInternalServerError(c, "Failed to create user")
 	}
 
 	return c.Status(http.StatusCreated).JSON(fiber.Map{
@@ -129,31 +114,23 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	// Check if user is admin or accessing own profile
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Authentication required",
-		})
+		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
 	// Get user ID from route params
 	userID, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid user ID",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid user ID")
 	}
 
 	// Allow access if user is admin or requesting their own profile
 	if !currentUser.IsAdmin && currentUser.ID != int64(userID) {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Access denied",
-		})
+		return utils.SendForbiddenError(c, "Access denied")
 	}
 
 	user, err := h.repo.GetUserByID(int64(userID))
 	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": "User not found",
-		})
+		return utils.SendNotFoundError(c, "User")
 	}
 
 	return c.JSON(fiber.Map{
@@ -171,24 +148,18 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	// Check if user is admin or updating own profile
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Authentication required",
-		})
+		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
 	// Get user ID from route params
 	userID, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid user ID",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid user ID")
 	}
 
 	// Allow update if user is admin or updating their own profile
 	if !currentUser.IsAdmin && currentUser.ID != int64(userID) {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Access denied",
-		})
+		return utils.SendForbiddenError(c, "Access denied")
 	}
 
 	var req struct {
@@ -199,17 +170,13 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	// Get the user to update
 	user, err := h.repo.GetUserByID(int64(userID))
 	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": "User not found",
-		})
+		return utils.SendNotFoundError(c, "User")
 	}
 
 	// Update fields if provided
@@ -222,35 +189,26 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	if req.IsAdmin != nil {
 		// Only admin can change admin status
 		if !currentUser.IsAdmin {
-			return c.Status(http.StatusForbidden).JSON(fiber.Map{
-				"error": "Only admins can change admin status",
-			})
+			return utils.SendForbiddenError(c, "Only admins can change admin status")
 		}
 		user.IsAdmin = *req.IsAdmin
 	}
 	if req.Password != nil {
 		// Validate password if provided
 		if err := utils.ValidatePassword(*req.Password); err != nil {
-			return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{
-				"error":   "Password validation failed",
-				"details": err.Error(),
-			})
+			return utils.SendValidationError(c, "password", err.Error())
 		}
 
 		// Hash new password
 		passwordHash, err := h.authService.HashPassword(*req.Password)
 		if err != nil {
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Failed to hash password",
-			})
+			return utils.SendInternalServerError(c, "Failed to hash password")
 		}
 		user.PasswordHash = passwordHash
 	}
 
 	if err := h.repo.UpdateUser(user); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to update user",
-		})
+		return utils.SendInternalServerError(c, "Failed to update user")
 	}
 
 	return c.JSON(fiber.Map{
@@ -267,31 +225,23 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	// Check if user is admin
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok || !currentUser.IsAdmin {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Admin access required",
-		})
+		return utils.SendForbiddenError(c, "Admin access required")
 	}
 
 	// Get user ID from route params
 	userID, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid user ID",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid user ID")
 	}
 
 	// Prevent admin from deleting themselves
 	if currentUser.ID == int64(userID) {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Cannot delete your own account",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Cannot delete your own account")
 	}
 
 	// Delete the user
 	if err := h.repo.DeleteUser(int64(userID)); err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to delete user",
-		})
+		return utils.SendInternalServerError(c, "Failed to delete user")
 	}
 
 	return c.JSON(fiber.Map{

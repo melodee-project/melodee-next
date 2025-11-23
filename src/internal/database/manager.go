@@ -81,7 +81,7 @@ func NewDatabaseManager(config *config.DatabaseConfig, logger *zerolog.Logger) (
 	return &DatabaseManager{
 		config: config,
 		gormDB: db,
-		sqlDB:  xdb,
+		sqlDB:  sqlDB,
 		logger: logger,
 	}, nil
 }

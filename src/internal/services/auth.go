@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"melodee/internal/models"
+	"melodee/internal/utils"
 )
 
 // AuthService handles authentication logic
@@ -142,7 +142,8 @@ func (a *AuthService) Login(username, password string) (*AuthToken, *models.User
 	}
 
 	// Update last login time
-	user.LastLoginAt = &time.Now()
+	now := time.Now()
+	user.LastLoginAt = &now
 	if err := a.db.Save(&user).Error; err != nil {
 		return nil, nil, fmt.Errorf("failed to update login time: %w", err)
 	}
@@ -196,10 +197,10 @@ func (a *AuthService) ResetUserPassword(resetToken, newPassword string) error {
 	}
 
 	// Hash the new password
-	hashedPassword, err := a.HashPassword(newPassword)
-	if err != nil {
-		return fmt.Errorf("failed to hash new password: %w", err)
-	}
+	// hashedPassword, err := a.HashPassword(newPassword)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to hash new password: %w", err)
+	// }
 
 	// In a real implementation, we'd verify the reset token and update the user's password
 	// For this implementation, we'll just return an error indicating it requires a real implementation

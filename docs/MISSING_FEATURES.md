@@ -1,296 +1,163 @@
-# Missing Features Analysis & Implementation Plan
+# Remaining Gaps
 
-This document summarizes remaining gaps in the current Melodee implementation, with a focus on:
+This document only tracks **current gaps** in the Melodee implementation.
+It is intentionally forward‑looking and does not try to describe what is
+already built – use `IMPLEMENTATION_GUIDE.md`, `INTERNAL_API_ROUTES.md`,
+`TECHNICAL_SPEC.md`, and `MEDIA_FILE_PROCESSING.md` for the full picture
+of the implemented system.
 
-- Serving OpenSubsonic clients in a production‑ready way
-- Providing a robust, full‑featured admin frontend for operating the system
-
-It reflects the current codebase (Go services + Vite admin UI) and the requirements described in `PRD.md`, `TECHNICAL_SPEC.md`, `INTERNAL_API_ROUTES.md`, `MEDIA_FILE_PROCESSING.md`, `DIRECTORY_ORGANIZATION_PLAN.md`, and `IMPLEMENTATION_GUIDE.md`.
-
-Coding agents should treat the checklists below as **actionable work items**. For each bullet:
-
-- Reference the mentioned files and docs.
-- Implement or adjust code and tests in the indicated locations.
-- Keep changes minimal and consistent with the existing style.
-- When a gap is fully addressed (including tests), mark the checkbox as completed in this file.
-
-## Phase Map
-- [x] Phase 1: Core Backend Services & Infrastructure
-- [x] Phase 2: Media Processing Pipeline
-- [x] Phase 3: Frontend Integration & UI
-- [x] Phase 4: Service Integration & Orchestration
-- [x] Phase 5: Deployment & Environment Configuration
-- [x] Phase 6: Final Testing & Documentation
+Each bullet below should be treated as an actionable work item. When a
+gap is fully addressed (including tests), remove the bullet from this
+file as part of the change.
 
 ---
 
-## Coding agent template
-> Implement Phase <n> from MISSING_FEATURES.md: read the referenced specs/fixtures for that phase, implement the items under “Remaining Gaps” for that phase (code + tests), keep changes minimal and consistent with existing style, then (1) mark the Phase <n> checkbox and any completed bullets in MISSING_FEATURES.md, (2) update the OpenSubsonic endpoint status matrix rows you’ve fully implemented, and (3) summarize what you completed and what’s left for later phases.
+## Backend Core
 
-
----
-
-## Phase 1: Core Backend Services & Infrastructure
-
-### Status Summary
-
-- Core service layout (`api`, `web`, `worker`) and Go modules exist and compile.
-- Internal REST routes for auth, users, playlists, libraries, jobs, settings, and shares are wired in `src/main.go` against the internal repository.
-- Database connection manager, migrations, and partition helpers are implemented per `DATABASE_SCHEMA.md`/`DB_CONNECTION_PLAN.md`.
-- JWT authentication middleware and login/refresh flows exist; password reset and lockout are partially represented but not fully wired through UX and tests.
-- Basic health endpoint and metrics stubs exist.
-
-### Remaining Gaps (Backend Core)
-
-- [x] **Auth flows completeness**
-	- Implement and test password reset + account lockout per `INTERNAL_API_ROUTES.md` and `TECHNICAL_SPEC.md`:
-		- Implement `/api/auth/request-reset` and `/api/auth/reset` handlers in `src/internal/handlers` (or appropriate package) including email‑agnostic 202 behavior, token verification, and password policy errors.
-		- Implement lockout tracking (failed login counters, lockout window) in the auth service/repository.
-		- Add unit tests under `src/internal/tests` to cover success and error paths.
-- [x] **Error model + consistency**
-	- Standardize internal REST error responses according to `TESTING_CONTRACTS.md`:
-		- Introduce a shared error response helper (similar to OpenSubsonic’s `SendOpenSubsonicError`) in `src/internal/utils`.
-		- Update handlers in `src/internal/handlers` to use this helper, and add/adjust tests to assert on error JSON shape.
-- [x] **Security middleware**
-	- Add rate‑limiting/IP throttling middleware in `src/internal/middleware` and wire it in `src/main.go` for public APIs.
-	- Implement stronger upload guards (size and MIME) for `/api/images/avatar` based on fixtures under `docs/fixtures/internal` once they exist, with tests.
-- [x] **Config + env validation coverage**
-	- Extend `src/internal/config` to:
-		- Validate FFmpeg binary path and required profiles from `MEDIA_FILE_PROCESSING.md` at startup.
-		- Optionally check presence of external metadata service tokens if/when those integrations are enabled.
-	- Add tests in `config_test.go` for missing/invalid FFmpeg configuration.
-- [x] **Repository coverage**
-	- Extend the internal repository in `src/internal/services/repository.go` (and related files) to support:
-		- All filters and pagination options required by `GET /api/search` and playlist endpoints.
-	- Add repository tests that exercise these new methods.
-
-## Phase 2: Media Processing Pipeline
-
-### Description
-Build the core media processing functionality following the three-stage workflow (inbound → staging → production) with proper file handling and organization.
-
-### Checklist
-- [ ] Implement inbound directory scanning service
-- [ ] Build file validation and metadata extraction
-- [ ] Create staging area with proper quarantine handling
-- [ ] Implement directory code generation with collision handling
-- [ ] Build FFmpeg transcoding integration
-- [ ] Create checksum validation and idempotency checks
-- [ ] Implement file normalization and organization logic
-- [ ] Build three-stage workflow: inbound → staging → production
-- [ ] Create quarantine system with reason codes
-- [ ] Build job queue processing for media tasks
-- [ ] Implement capacity monitoring and probes
-- [ ] Create path template resolution with directory codes
-- [ ] Implement album/song/cue sheet processing
-- [ ] Build metadata mapping and conflict resolution
-
-### Notes vs Current Implementation
-
-- Core scan/process/promote jobs exist in `internal/jobs` and are wired via Asynq; quarantine reasons in `internal/media/quarantine.go` match the codes in `METADATA_MAPPING.md`.
-- Directory codes and path templates are implemented in `internal/directory` but collision and normalization behavior is only lightly tested.
-- FFmpeg integration is intentionally stubbed: handlers in `open_subsonic/handlers/media.go` call a placeholder transcoder that currently just returns the original file path.
-
-**Remaining Gaps (Pipeline)**
-
-- [x] Implement FFmpeg‑based transcoding and caching per `MEDIA_FILE_PROCESSING.md` (profiles, max bit‑rate, idempotent outputs).
-- [x] Add tests/fixtures that validate directory code generation and path template behavior for the collision and normalization scenarios described in `DIRECTORY_ORGANIZATION_PLAN.md`.
-- [ ] Expose inbound/staging/production and quarantine state through internal APIs and the admin UI (per `PRD.md` user flows).
-
-## Phase 3: Frontend Integration & UI
-
-### Description
-Connect React/Vite frontend components to backend services, implement admin UI, and create user interfaces for all required functionality.
-
-### Checklist
-- [ ] Complete API service integration with backend endpoints
-- [ ] Implement authentication context and flow
-- [ ] Build user dashboard with library statistics
-- [ ] Create library browsing interface (folders, indexes, artists, albums, songs)
-- [ ] Develop media streaming and download functionality
-- [ ] Build search interface with filters and pagination
-- [ ] Create playlist management UI
-- [ ] Implement user management interface (admin only)
-- [ ] Build admin dashboard with system monitoring
-- [ ] Create DLQ management interface
-- [ ] Implement settings management UI
-- [ ] Build shares management interface
-- [ ] Add proper navigation and routing
-- [ ] Create responsive and accessible UI components
-
-### Notes vs Current Implementation
-
-- A Vite/React admin app exists under `src/frontend` with routes for `/login`, `/admin`, `/admin/dlq`, `/admin/users`, `/admin/settings`, and a placeholder `/admin/shares`.
-- Components `DLQManagement`, `UserManagement`, and `SettingsManagement` implement basic tables/forms, but they currently call non‑versioned paths like `/users`, `/admin/jobs/dlq`, `/admin/settings` instead of the `/api/...` contracts in `INTERNAL_API_ROUTES.md`.
-- `AdminDashboard` exists twice (static component in `components/AdminDashboard.jsx` and a more dynamic inline version inside `App.jsx`), indicating an unfinished refactor.
-
-**Remaining Gaps (Admin UI)**
-
-- [x] Align all admin API calls with `INTERNAL_API_ROUTES.md` and fixtures:
-	- Use `/api/users`, `/api/admin/jobs/dlq`, `/api/admin/jobs/requeue`, `/api/admin/jobs/purge`, `/api/settings`, `/api/shares`, etc.
-	- Adjust request/response shapes to match JSON fixtures in `docs/fixtures/internal`.
-- [x] Consolidate `AdminDashboard` into a single component that:
-	- Shows library statistics from `GET /api/libraries/stats`.
-	- Shows recent jobs from an internal admin jobs endpoint once implemented.
-- [x] Implement UI for:
-	- Library configuration and status (inbound/staging/production paths, scan/process/promote controls).
-	- Quarantine review and actions for albums/tracks.
-	- Shares management (create/list/delete) matching `/api/shares` contracts.
-- [x] Implement auth context that uses `/api/auth/login` and `/api/auth/refresh` tokens/roles instead of only `localStorage` flags.
-
-## Phase 4: Service Integration & Orchestration
-
-### Description
-Connect all backend services together, implement message queuing with Asynq, and ensure proper communication between services.
-
-### Checklist
-- [ ] Implement proper Asynq job processors for all required jobs
-- [ ] Connect worker jobs for scan/process/promote workflows
-- [ ] Implement job monitoring and DLQ management
-- [ ] Create pub/sub messaging between services
-- [ ] Implement cross-service authentication
-- [ ] Build service discovery and health monitoring
-- [ ] Create proper service-to-service communication protocols
-- [ ] Implement distributed tracing
-- [ ] Build service coordination for file processing
-- [ ] Create failover and redundancy mechanisms
-- [ ] Implement job scheduling and periodic tasks
-- [ ] Build event-driven architecture for media changes
-
-### Notes vs Current Implementation
-
-- Asynq client and worker wiring exist; core media jobs (scan/process/promote) are implemented and invoked by internal routes.
-- OpenSubsonic handlers directly query the internal GORM models rather than going through separate microservices, which is acceptable for the current monolith but should still follow the contracts in `TECHNICAL_SPEC.md`.
-
-**Remaining Gaps (Integration)**
-
-- [x] Add job monitoring endpoints (`/api/admin/jobs/*`) with DLQ detail that matches fixtures and is consumable by `DLQManagement`.
-- [x] Implement capacity probes and health/metrics endpoints per `CAPACITY_PROBES.md` and `HEALTH_CHECK.md`, and surface them to the admin dashboard.
-
-## Phase 5: Deployment & Environment Configuration
-
-### Description
-Complete the deployment infrastructure, environment configuration, and container orchestration setup.
-
-### Checklist
-- [x] Finalize Docker container configurations for all services
-- [x] Complete docker-compose.yml with proper service links
-- [x] Implement environment variable configuration system
-- [x] Create production-ready configuration files
-- [x] Implement secrets management for sensitive data
-- [x] Build CI/CD pipeline configuration
-- [x] Implement health checks for container orchestration
-- [x] Create backup and disaster recovery procedures
-- [x] Implement monitoring and alerting configuration
-- [x] Build deployment scripts for different environments
-- [x] Implement SSL/HTTPS configuration
-- [x] Create database backup automation
-- [x] Implement service scaling configurations
-
-## Phase 6: Final Testing & Documentation
-
-### Description
-Complete testing, documentation, and hardening to ensure production readiness.
-
-### Checklist
-- [x] Implement comprehensive unit testing for all services
-- [x] Create integration tests for service communication
-- [x] Build contract tests for API endpoints
-- [ ] Perform load testing and performance optimization
-- [ ] Implement security testing and penetration testing
-- [x] Complete documentation for all features and APIs
-- [x] Build monitoring dashboards and alerting rules
-- [ ] Perform end-to-end system testing
-- [x] Implement logging and monitoring in production
-- [x] Create deployment validation procedures
-- [ ] Perform user acceptance testing
-- [x] Complete final documentation and README files
-- [x] Validate all Phase requirements from IMPLEMENTATION_GUIDE.md
+- Auth flows:
+	- Add focused tests that cover password reset and account lockout
+		semantics end‑to‑end (internal services + `/api/auth/*` handlers),
+		aligned with `TECHNICAL_SPEC.md` and `INTERNAL_API_ROUTES.md`.
+- Error model:
+	- Ensure all internal handlers use the shared error helper in
+		`src/internal/utils` and add/extend tests that assert the JSON
+		error shape for common failure scenarios.
+- Security middleware:
+	- Verify rate‑limiting/IP throttling middleware from
+		`src/internal/middleware` is wired for public APIs in the main
+		application entrypoint.
+	- Strengthen size and MIME checks for `/api/images/avatar` (and
+		related upload endpoints) and add tests that exercise the fixtures
+		under `docs/fixtures/internal`.
+- Config & validation:
+	- Extend config validation in `src/internal/config` so startup fails
+		fast on invalid/missing FFmpeg binary or profiles, with explicit
+		tests for these conditions.
+	- Add optional validation hooks for external metadata service tokens
+		if/when those integrations are enabled.
+- Repository tests:
+	- Add real DB‑backed tests for `src/internal/services/repository.go`
+		that exercise filters, pagination, and ordering used by search and
+		playlist endpoints.
 
 ---
 
-## OpenSubsonic / Subsonic Client Support Gaps
+## Media Processing Pipeline
 
-This section calls out gaps specific to serving Subsonic/OpenSubsonic clients as described in `PRD.md` and `TECHNICAL_SPEC.md`.
-
-### What Exists
-
-- `/rest/*` routes are wired in `src/main.go` to handlers in `src/open_subsonic/handlers` with an auth middleware in `open_subsonic/middleware`.
-- Browsing (`getMusicFolders`, `getIndexes`, `getArtists`, `getArtist`, `getAlbum`, `getMusicDirectory`, `getSong`, `getGenres`) and media (`stream`, `download`, `getCoverArt`, `getAvatar`) endpoints hit real DB models and return XML via `open_subsonic/utils` helpers.
-- Error responses use `SendOpenSubsonicError` with numeric codes, and helper tests validate basic XML envelope shape and required attributes.
-
-### Still Missing or Incomplete
-
-- [ ] **Auth semantics**: Confirm and test all supported auth variants (`u`+`p`/`enc:`, `u`+`t`+`s`) as specified in the OpenSubsonic spec; add tests that prove failing/expired auth returns the right XML error codes.
-- [ ] **Search contract coverage**: Implement and test `search.view`, `search2.view`, and `search3.view` logic with proper sorting, pagination, and normalization per `TECHNICAL_SPEC.md` and fixtures under `docs/fixtures/opensubsonic`.
-- [ ] **Playlist endpoints**: Ensure `getPlaylists`, `getPlaylist`, `createPlaylist`, `updatePlaylist`, and `deletePlaylist` implement the correct semantics and XML shapes (static vs dynamic playlists, error handling) and are covered by contract tests.
-- [ ] **Streaming & transcoding**: Replace the placeholder `transcodeFile` with real FFmpeg integration (profiles, caching, range + content‑type correctness) and add tests for `maxBitRate`, `format`, and HTTP Range behavior.
-- [ ] **Cover art & avatar caching**: Verify ETag/Last‑Modified and 304 behavior for `getCoverArt`/`getAvatar` against fixtures; add tests for missing art and fallbacks.
-- [ ] **Indexing and sorting rules**: Expand normalization (articles, diacritics, punctuation) so `getIndexes` and `getArtists` behavior matches `DIRECTORY_ORGANIZATION_PLAN.md` and OpenSubsonic expectations, with explicit tests for tricky artist names.
-- [ ] **Dynamic genres/tags**: Replace the hard‑coded genre list with aggregation from song/album tags, returning accurate counts.
-- [ ] **Contract tests**: Convert `open_subsonic/contract_test.go` from placeholders into real tests that spin up an in‑memory server and validate XML responses against fixtures for success and error scenarios.
-
-### Endpoint Status Matrix (High Level)
-
-| Area        | Endpoint / Feature              | Status       | Notes |
-|------------|----------------------------------|-------------|-------|
-| System     | `ping.view`                     | Partial      | Route and handler exist; basic XML envelope tested, but no full auth/error cases or fixture-based contract tests. |
-| System     | `getLicense.view`               | Partial      | Handler stubbed; structure defined but not fully exercised by tests or fixtures. |
-| Browsing   | `getMusicFolders.view`          | Implemented  | Queries `Library` models and returns folders; needs fixture-based verification. |
-| Browsing   | `getIndexes.view`               | Partial      | Indexing and normalization implemented; needs edge-case coverage vs directory/article rules. |
-| Browsing   | `getArtists.view`               | Implemented  | Paginates unlocked artists; relies on `ParsePaginationParams`; tests missing. |
-| Browsing   | `getArtist.view`                | Implemented  | Returns albums for artist; depends on album status/filtering as per spec. |
-| Browsing   | `getAlbum.view`                 | Implemented  | Returns album + songs; path/bitrate/year fields populated; needs fixtures. |
-| Browsing   | `getMusicDirectory.view`        | Implemented  | Handles artist-or-album IDs; status OK but untested for complex trees. |
-| Browsing   | `getAlbumInfo.view`             | Partial      | Basic struct returned; fields incomplete relative to spec. |
-| Browsing   | `getGenres.view`                | Stub / Demo  | Returns static sample genres; must be replaced with real aggregation. |
-| Media      | `stream.view`                   | Partial      | Streams real files, supports Range and basic transcoding hook; FFmpeg pipeline still stubbed. |
-| Media      | `download.view`                 | Implemented  | Sends full file with ETag/Last-Modified; tests missing for error paths. |
-| Media      | `getCoverArt.view`              | Partial      | Looks up common filenames; needs better directory integration and cache tests. |
-| Media      | `getAvatar.view`                | Partial      | File-based lookup under `/melodee/user_images`; no linkage to user profiles yet. |
-| Search     | `search.view` / `search2.view` / `search3.view` | Partial | Handlers exist and are wired; behavior not yet validated against fixtures and normalization rules. |
-| Playlists  | `getPlaylists.view`             | Partial      | Handler and route exist; end-to-end contract tests and error handling not in place. |
-| Playlists  | `getPlaylist.view`              | Partial      | Structured responses expected; verify IDs, song lists, and ACLs. |
-| Playlists  | `createPlaylist.view`           | Partial      | Basic support; no fixtures or negative-tests wired. |
-| Playlists  | `updatePlaylist.view`           | Partial      | Similar to create; need full coverage for adds/removes/renames. |
-| Playlists  | `deletePlaylist.view`           | Partial      | Deletes playlist; error semantics not yet tested. |
-| Users      | `getUser.view`                  | Partial      | Handler exists; ensure mapping from internal users and roles is correct. |
-| Users      | `getUsers.view`                 | Partial      | Basic listing; needs pagination/role filtering per spec. |
-| Users      | `createUser.view`               | Planned/Stub | Ensure Subsonic-style semantics are desired; currently aligned more with internal admin APIs. |
-| Users      | `updateUser.view`               | Planned/Stub | Same as create; confirm supported fields vs OpenSubsonic spec. |
-| Users      | `deleteUser.view`               | Planned/Stub | Ensure correct error codes when deleting self/last admin. |
-
+- Wire FFmpeg transcoding into OpenSubsonic:
+	- Replace the remaining placeholder `transcodeFile` logic in
+		`src/open_subsonic/handlers/media.go` with the real
+		`media.TranscodeService`/`FFmpegProcessor` pipeline (profiles,
+		`maxBitRate`, formats, caching, idempotent outputs).
+	- Add tests and fixtures that verify transcoding behavior per
+		`MEDIA_FILE_PROCESSING.md` (including Range handling and
+		content‑type correctness).
+- Inbound / staging / production exposure:
+	- Expose inbound, staging, production, and quarantine state (and
+		basic controls) through internal APIs so the admin UI can reflect
+		pipeline status and operations.
+- Checksum & idempotency:
+	- Implement checksum calculation/validation for media files and use
+		it to enforce idempotent processing across the pipeline stages.
 
 ---
 
-## Admin Frontend Gaps (Operator Experience)
+## Admin Frontend (Operator Experience)
 
-This section focuses on gaps preventing the React/Vite admin app from being a full‑featured operator console as described in `PRD.md` and `IMPLEMENTATION_GUIDE.md`.
+- Library & pipeline views:
+	- Ensure there is a dedicated view in `src/frontend` for libraries
+		that surfaces inbound/staging/production paths, scan/process/
+		promote controls, and current pipeline status.
+- Quarantine management UI:
+	- Add screens to list quarantine items (albums/tracks), show reason
+		codes from `internal/media/quarantine.go`, and provide actions
+		(fix/ignore/requeue) mapped to the corresponding internal APIs.
+- System health & capacity:
+	- Update the admin dashboard to surface health and capacity probe
+		data (from `/healthz`, metrics, and capacity endpoints) instead of
+		hard‑coded status.
+- Playlist & search UX:
+	- Provide admin‑oriented tools for searching/browsing artists,
+		albums, and songs (using internal search APIs) and managing
+		playlists as described in `PRD.md`.
+- Auth UX completeness:
+	- Ensure the login/logout/password‑reset/lockout UX in the React
+		app exactly matches the behavior of `/api/auth/*` endpoints,
+		including error states.
 
-### What Exists
+---
 
-- Auth‑gated React app under `src/frontend` with routes and skeleton components for dashboard, DLQ, user management, settings, and shares.
-- Basic data tables and forms for users, DLQ items, and settings.
+## OpenSubsonic / Subsonic Client Support
 
-### Still Missing or Incomplete
+- Auth semantics:
+	- Confirm and implement all supported auth variants (`u`+`p`/`enc:`,
+		`u`+`t`+`s`) in `open_subsonic/middleware/auth.go` and add tests
+		that verify correct XML error codes for expired/invalid auth.
+- Search contract coverage:
+	- Complete and test `search.view`, `search2.view`, and `search3.view`
+		in `src/open_subsonic/handlers/search.go` for proper sorting,
+		pagination, and normalization, using fixtures in
+		`docs/fixtures/opensubsonic`.
+- Playlist endpoints:
+	- Finish `getPlaylists`, `getPlaylist`, `createPlaylist`,
+		`updatePlaylist`, and `deletePlaylist` in
+		`src/open_subsonic/handlers/playlist.go` so their XML shapes and
+		semantics match the OpenSubsonic spec and playlists fixtures.
+- Streaming & transcoding:
+	- Fully integrate the FFmpeg transcoding/caching pipeline into
+		`stream.view`, with tests for `maxBitRate`, `format`, Range
+		behavior, and correct headers.
+- Cover art & avatar caching:
+	- Implement/verify ETag, Last‑Modified, and 304 behavior for
+		`getCoverArt` and `getAvatar`, and add tests for missing art,
+		fallbacks, and header handling.
+- Indexing and sorting:
+	- Expand normalization and sort rules for `getIndexes` and
+		`getArtists` to match `DIRECTORY_ORGANIZATION_PLAN.md` and
+		OpenSubsonic expectations; add edge‑case tests (articles,
+		diacritics, punctuation).
+- Dynamic genres/tags:
+	- Replace any hard‑coded genre responses with aggregation from
+		song/album tags, returning accurate counts.
+- Contract tests:
+	- Implement `src/open_subsonic/contract_test.go` as real contract
+		tests that spin up an in‑memory server and validate XML responses
+		against fixtures in `docs/fixtures/opensubsonic` for both success
+		and error scenarios.
 
-- [ ] **Route & payload alignment**: Update all frontend API calls to use `/api/...` routes and JSON shapes from `INTERNAL_API_ROUTES.md` and `docs/fixtures/internal`.
-- [ ] **Library & pipeline views**: Add pages for viewing libraries (inbound/staging/production), triggering scans/process/promote operations, and inspecting pipeline status.
-- [ ] **Quarantine management**: Add UI to list quarantine items, show reason codes, and offer actions (fix/ignore/requeue) mapped to internal APIs.
-- [ ] **Shares management**: Implement full CRUD UI for `/api/shares` (name, ids, expiry, max_streaming_minutes, allow_download) instead of the current placeholder text.
-- [ ] **System health & capacity**: Surface `/healthz`, metrics, and capacity probe data in the dashboard with clear status and guidance.
-- [ ] **Playlist & search UX**: Provide admin‑oriented tools for searching/browsing artists/albums/songs and managing playlists as per `PRD.md`.
-- [ ] **Auth UX completeness**: Implement login, logout, password reset, and lockout flows in the UI that correspond to the internal auth endpoints.
+---
 
-## Key Infrastructure Gaps Identified
+## Testing & Quality
 
-1. **Broken Package References:** Many components reference non-existent packages causing compilation errors
-2. **Skeleton Code:** Large portions consist only of function signatures with no implementation
-3. **Disconnected Components:** Frontend and backend components have no actual connection
-4. **Missing Business Logic:** Core functionality like media processing exists only as placeholders
-5. **Incomplete Job Processing:** Asynq queues are defined but not implemented
-6. **Missing Configurations:** Environment variables and configuration files are incomplete
-7. **Insufficient Error Handling:** No proper error handling or validation throughout
-8. **No Service Communication:** Services don't communicate with each other properly
+- Unit testing:
+	- Increase coverage for internal services (auth, repository, media,
+		capacity, admin handlers) beyond basic compilation/placeholder
+		tests; focus especially on error paths and edge cases.
+- Integration tests:
+	- Add integration tests that cover the full request lifecycle for
+		key flows (auth, search, playlists, media processing jobs) across
+		the monolith.
+- End‑to‑end testing:
+	- Add a small E2E suite that brings up the stack (API + OpenSubsonic
+		+ admin frontend) and verifies a few representative scenarios
+		(library scan, playback via `/rest/stream.view`, basic admin
+		operations).
+- Load & security testing:
+	- Perform load tests against core endpoints and document any
+		required performance tuning.
+	- Add basic security testing (auth hardening checks, rate limit
+		verification, obvious injection/IDOR checks) and capture findings.
 
-This document provides a roadmap to transform the current skeleton implementation into a fully functional, production-ready system.
+---
+
+## Operational Readiness
+
+- Monitoring/dashboard polish:
+	- Tighten Prometheus and Grafana dashboards in `monitoring/` so they
+		expose the most important SLOs (availability, latency, error
+		rates, queue depths, capacity).
+- Runbooks & UAT:
+	- Add brief runbooks for common operational tasks (onboarding new
+		library, handling DLQ spikes, recovering from failed scans).
+	- Capture outcomes from any user acceptance testing and link them
+		back to specific defects or follow‑up work items.

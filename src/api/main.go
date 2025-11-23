@@ -12,7 +12,9 @@ import (
 
 	"melodee/internal/config"
 	"melodee/internal/database"
+	"melodee/internal/directory"
 	"melodee/internal/handlers"
+	"melodee/internal/media"
 	"melodee/internal/middleware"
 	"melodee/internal/services"
 )
@@ -74,12 +76,12 @@ func (s *APIServer) setupRoutes() {
 	metricsHandler := handlers.NewMetricsHandler()
 	s.app.Get("/metrics", metricsHandler.Metrics())
 
-	// Auth routes
+	// Auth routes (public, requires rate limiting)
 	auth := s.app.Group("/api/auth")
-	auth.Post("/login", authHandler.Login)
-	auth.Post("/refresh", authHandler.Refresh)
-	auth.Post("/request-reset", authHandler.RequestReset)
-	auth.Post("/reset", authHandler.ResetPassword)
+	auth.Post("/login", middleware.RateLimiterForAuth(), authHandler.Login)
+	auth.Post("/refresh", middleware.RateLimiterForAuth(), authHandler.Refresh)
+	auth.Post("/request-reset", middleware.RateLimiterForAuth(), authHandler.RequestReset)
+	auth.Post("/reset", middleware.RateLimiterForAuth(), authHandler.ResetPassword)
 
 	// Protected routes
 	protected := s.app.Group("/api", middleware.NewAuthMiddleware(s.authService).JWTProtected())
@@ -99,6 +101,27 @@ func (s *APIServer) setupRoutes() {
 	playlists.Get("/:id", playlistHandler.GetPlaylist)
 	playlists.Put("/:id", playlistHandler.UpdatePlaylist)
 	playlists.Delete("/:id", playlistHandler.DeletePlaylist)
+
+	// Library routes (admin only for pipeline management)
+	libraries := protected.Group("/libraries", middleware.NewAuthMiddleware(s.authService).AdminOnly())
+
+	// Create media service with directory service
+	directoryService := directory.NewDirectoryCodeGenerator(directory.DefaultDirectoryCodeConfig(), s.db) // Pass config and database
+	pathTemplateResolver := directory.NewPathTemplateResolver(directory.DefaultPathTemplateConfig()) // Use default config
+
+	// Create media service instance
+	mediaSvc := media.NewMediaService(s.db, directoryService, pathTemplateResolver)
+
+	libraryHandler := handlers.NewLibraryHandler(s.repo, mediaSvc)
+	libraries.Get("/", libraryHandler.GetLibraryStates)
+	libraries.Get("/:id", libraryHandler.GetLibraryState)
+	libraries.Get("/:id/scan", libraryHandler.TriggerLibraryScan)
+	libraries.Get("/:id/process", libraryHandler.TriggerLibraryProcess)
+	libraries.Get("/:id/move-ok", libraryHandler.TriggerLibraryMoveOK)
+	libraries.Get("/quarantine", libraryHandler.GetQuarantineItems)
+	libraries.Get("/jobs", libraryHandler.GetProcessingJobs)
+	libraries.Post("/quarantine/:id/resolve", libraryHandler.ResolveQuarantineItem)
+	libraries.Post("/quarantine/:id/requeue", libraryHandler.RequeueQuarantineItem)
 }
 
 // Start starts the API server

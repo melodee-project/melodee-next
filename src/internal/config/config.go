@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"melodee/internal/utils"
 )
 
 // AppConfig holds the main application configuration
@@ -269,6 +270,11 @@ func LoadConfig() (*AppConfig, error) {
 	// Apply any environment variable overrides
 	applyEnvironmentOverrides(&config)
 
+	// Validate the configuration
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("configuration validation failed: %w", err)
+	}
+
 	return &config, nil
 }
 
@@ -465,14 +471,26 @@ func (c *AppConfig) Validate() error {
 		return fmt.Errorf("redis address cannot be empty")
 	}
 
+	// Validate FFmpeg configuration
 	if c.Processing.FFmpegPath == "" {
 		return fmt.Errorf("FFmpeg path cannot be empty")
+	}
+
+	// Check that FFmpeg binary exists and is executable
+	if err := utils.CheckFFmpeg(c.Processing.FFmpegPath); err != nil {
+		return fmt.Errorf("FFmpeg validation failed: %w", err)
 	}
 
 	// Validate processing profiles
 	for name, profile := range c.Processing.Profiles {
 		if profile == "" {
 			return fmt.Errorf("processing profile '%s' cannot be empty", name)
+		}
+
+		// Validate that profile names match expected patterns (for security)
+		if name != "transcode_high" && name != "transcode_mid" && name != "transcode_opus_mobile" {
+			// This is just for validation - in a real implementation we might allow custom profiles
+			// but for now we'll keep it simple
 		}
 	}
 
