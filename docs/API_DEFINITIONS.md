@@ -127,6 +127,15 @@ flowchart LR
 	F --> G
 ```
 
+## Routing overview
+
+Melodee implements two distinct API servers in the same binary:
+
+- **Melodee API server** (`src/api/main.go`): Handles endpoints under `/api/...` with JWT authentication, serving admin functions and native clients.
+- **OpenSubsonic compatibility server** (`src/open_subsonic/main.go`): Handles endpoints under `/rest/...` with Subsonic-style authentication, providing compatibility with existing Subsonic clients.
+
+Both servers share the same underlying data and services but expose different protocol and model contracts.
+
 ## Related documentation
 
 - Internal admin‑focused routes (user management, libraries, jobs, etc.) live under `/api/...` and are cataloged in `docs/INTERNAL_API_ROUTES.md`.

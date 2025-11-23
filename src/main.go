@@ -286,6 +286,7 @@ func (s *Server) setupInternalRoutes() {
 	libraries := admin.Group("/libraries")
 	libraries.Get("/", libraryHandler.GetLibraryStates)
 	libraries.Get("/:id", libraryHandler.GetLibraryState)
+	libraries.Get("/stats", libraryHandler.GetLibrariesStats)
 	libraries.Post("/scan", libraryHandler.TriggerLibraryScan)
 	libraries.Post("/process", libraryHandler.TriggerLibraryProcess)
 	libraries.Post("/move-ok", libraryHandler.TriggerLibraryMoveOK)

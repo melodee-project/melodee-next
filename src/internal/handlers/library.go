@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -313,6 +314,50 @@ func (h *LibraryHandler) TriggerLibraryMoveOK(c *fiber.Ctx) error {
 		"library_id": libraryID,
 		"message": "Library move OK processing started",
 	})
+}
+
+// GetLibrariesStats handles retrieving library statistics
+func (h *LibraryHandler) GetLibrariesStats(c *fiber.Ctx) error {
+	// Get all libraries from the repository
+	var libraries []models.Library
+	if err := h.repo.DB.Find(&libraries).Error; err != nil {
+		return utils.SendInternalServerError(c, "Failed to retrieve libraries")
+	}
+
+	// Calculate aggregate statistics
+	var totalArtists, totalAlbums, totalTracks, totalSize int64
+	var lastFullScanAt *time.Time
+
+	for _, library := range libraries {
+		totalArtists += int64(library.ArtistCount)
+		totalAlbums += int64(library.AlbumCount)
+		totalTracks += int64(library.SongCount)
+		totalSize += library.SizeBytes
+
+		// Track most recent scan time
+		if lastFullScanAt == nil || library.UpdatedAt.After(*lastFullScanAt) {
+			lastFullScanAt = &library.UpdatedAt
+		}
+	}
+
+	var lastFullScanAtStr string
+	if lastFullScanAt != nil {
+		lastFullScanAtStr = lastFullScanAt.Format(time.RFC3339)
+	} else {
+		lastFullScanAtStr = time.Now().Format(time.RFC3339)
+	}
+
+	// Return the statistics
+	stats := fiber.Map{
+		"total_libraries":   len(libraries),
+		"total_artists":     totalArtists,
+		"total_albums":      totalAlbums,
+		"total_tracks":      totalTracks,
+		"total_size_bytes":  totalSize,
+		"last_full_scan_at": lastFullScanAtStr,
+	}
+
+	return c.JSON(stats)
 }
 
 // ResolveQuarantineItem handles resolving a quarantine item

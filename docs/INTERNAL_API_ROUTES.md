@@ -22,10 +22,15 @@ Authoritative list of internal REST endpoints, params, and roles. JSON by defaul
 - `DELETE /api/playlists/:id` -> `{status:"deleted"}`
 
 ## Libraries
+- `GET /api/libraries` -> list library states
+- `GET /api/libraries/:id` -> get specific library state
+- `GET /api/libraries/stats` -> aggregate stats
 - `POST /api/libraries/scan` -> enqueue scan job (fixtures)
 - `POST /api/libraries/process` -> move inbound->staging
 - `POST /api/libraries/move-ok` -> promote staging OK albums
-- `GET /api/libraries/stats` -> aggregate stats
+- `GET /api/libraries/quarantine` -> list quarantine items
+- `POST /api/libraries/quarantine/:id/resolve` -> resolve quarantine item
+- `POST /api/libraries/quarantine/:id/requeue` -> requeue quarantine item
 
 ## Images (avatars/cover art)
 - `GET /api/images/:id` -> binary with ETag/Last-Modified
@@ -33,19 +38,24 @@ Authoritative list of internal REST endpoints, params, and roles. JSON by defaul
 - Errors: 415 invalid MIME, 413 too large (fixtures pending success/invalid MIME)
 
 ## Shares (admin)
-- `GET /api/shares`
-- `POST /api/shares` -> `{name, ids, expires_at, max_streaming_minutes, allow_download}`
-- `DELETE /api/shares/:id`
+- `GET /api/shares` -> list shares with pagination
+- `POST /api/shares` -> `{name, track_ids, expires_at, max_streaming_minutes, allow_download}`
+- `PUT /api/shares/:id` -> update existing share
+- `DELETE /api/shares/:id` -> delete share
 
 ## Settings (admin)
-- `GET /api/settings`
-- `PUT /api/settings` -> update single key (fixtures)
+- `GET /api/settings` -> list all settings
+- `PUT /api/settings/:key` -> update single key (fixtures)
 
 ## Jobs/Admin (admin)
 - `GET /api/admin/jobs/dlq` -> list DLQ items `{data:[{id,queue,type,reason,payload}]}` (fixture needed)
-- `POST /api/admin/jobs/requeue` -> see fixtures
-- `POST /api/admin/jobs/purge` -> see fixtures
-- `GET /api/admin/jobs/:id` -> job detail/status
+- `POST /api/admin/jobs/requeue` -> requeue specified jobs
+- `POST /api/admin/jobs/purge` -> purge specified jobs
+
+## Capacity monitoring
+- `GET /api/admin/capacity` -> capacity status for all libraries
+- `GET /api/admin/capacity/:id` -> capacity status for specific library
+- `POST /api/admin/capacity/probe-now` -> trigger immediate capacity probe
 
 ## Search
 - `GET /api/search` -> `{data:[entities], pagination}`; supports `type=artist|album|song`, `q`, `offset`, `limit` (see pagination fixture)

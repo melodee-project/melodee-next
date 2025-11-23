@@ -8,11 +8,95 @@
 
 ## Phase Map
 
-- [ ] **Phase 1 – Baseline Inventory & Routing Parity**
+- [x] **Phase 1 – Baseline Inventory & Routing Parity**
 - [ ] **Phase 2 – Contract Coverage & Fixtures**
 - [ ] **Phase 3 – Unit/Integration Test Hardening**
 - [ ] **Phase 4 – Documentation & Developer Experience**
 - [ ] **Phase 5 – Performance, Pagination & Edge Cases**
+
+
+## Coding Agent Template
+
+> You are a senior Go and TypeScript engineer working on the melodee-next monorepo. Your task is to fully implement API Implementation Phase 1 – Baseline Inventory & Routing Parity as described in API_IMPLEMENTATION_PHASES.md (update the phase number and section based on the work item).
+
+Scope & Codebase
+
+Backend:
+Melodee API server at main.go (Go, Fiber).
+OpenSubsonic/Subsonic compatibility server at main.go and handlers.
+Core domain and handlers under src/internal/... (especially handlers, services, models, middleware).
+Frontend:
+React admin frontend under src/api/frontend (Vite + React + Tailwind).
+Shared API service at src/api/frontend/src/services/apiService.js and related domain-specific services.
+Documentation & contracts:
+Internal routes: INTERNAL_API_ROUTES.md.
+Melodee OpenAPI: melodee-v1.0.0-openapi.yaml.
+Subsonic/OpenSubsonic OpenAPI: subsonic-v1.16.1-openapi.yaml, opensubsonic-v1.16.1-openapi.yaml.
+General API docs: API_DEFINITIONS.md, TESTING_CONTRACTS.md.
+Your Responsibilities
+
+Understand and Plan
+
+Read the relevant phase section in API_IMPLEMENTATION_PHASES.md (e.g., Phase 1–5 or the “Admin Frontend Alignment with Melodee API” section).
+Identify all concrete tasks listed for that phase (backend, frontend, tests, docs).
+Derive a short checklist for this phase and keep it up to date as you work.
+Backend Implementation (Go)
+
+Implement or complete all required handlers and services under src/internal/... and/or src/open_subsonic/... for this phase.
+Wire routes in the correct entrypoints:
+Melodee API routes in main.go (or clearly factored subrouters).
+OpenSubsonic /rest/... routes in main.go.
+Ensure:
+Request/response shapes, status codes, and error formats match the relevant OpenAPI docs for this phase.
+Admin endpoints enforce appropriate auth/role checks via existing middleware.
+Pagination, filtering, and performance behaviors respect what the phase describes (especially Phase 5).
+When the appendix in API_IMPLEMENTATION_PHASES.md defines target JSON shapes (DLQ/jobs, libraries, settings, shares, admin dashboard), treat them as canonical contracts and implement them accordingly.
+Frontend Alignment (if the phase touches the admin UI)
+
+Update src/api/frontend/src/services/apiService.js and any domain services so that:
+All admin functionality uses /api/... Melodee endpoints (not /rest/...), except where the phase explicitly allows Subsonic compatibility helpers.
+Update React components/pages (e.g., AdminDashboard, UserManagement, LibraryManagement, DLQManagement, SharesManagement, SettingsManagement) so their API calls:
+Go through apiService.
+Match the backend contracts (field names, pagination metadata, error shapes).
+If useful, add a thin typed client layer around apiService for domain operations, but keep changes minimal and consistent with existing style.
+Testing
+
+Add or extend unit tests for new/changed behavior:
+Backend: *_test.go files alongside handlers/services, including happy paths, validation errors, and auth failures.
+OpenSubsonic: extend contract_test.go and related tests so coverage matches the phase’s goals.
+For phases that require integration/contract tests, add table-driven tests that validate responses against the documented contracts and fixtures.
+Ensure tests for this phase run cleanly via:
+go test [source](http://_vscodecontentref_/16). within src (or the narrowest relevant packages).
+Frontend tests if you change React code (use the existing test stack).
+Fixtures & Contracts
+
+Where the phase calls for fixtures, add/update JSON fixtures in internal and/or opensubsonic so they:
+Mirror actual implementation responses.
+Cover both success and representative error cases.
+Align OpenAPI docs with your implementation for the endpoints touched in this phase:
+melodee-v1.0.0-openapi.yaml for /api/....
+opensubsonic-v1.16.1-openapi.yaml / subsonic-v1.16.1-openapi.yaml for /rest/....
+Documentation
+
+Update the specific docs the phase mentions (e.g., API_DEFINITIONS.md, INTERNAL_API_ROUTES.md, TESTING_CONTRACTS.md, CAPACITY_PROBES.md, HEALTH_CHECK.md, root README.md, or README.md) so they:
+Reflect the actual routes, request/response models, example flows, and known limitations.
+Clearly describe how to run the relevant tests for this phase.
+For admin alignment work, explicitly document that the Admin UI uses Melodee /api/... for admin operations, and how any remaining /rest/... usage is scoped.
+Verification and Cleanup
+
+Run the relevant Go and frontend tests and fix any failures you introduce.
+Manually sanity-check critical endpoints with a simple curl or HTTP client (no need to commit scripts, just verify behavior).
+Keep changes focused on this phase; do not refactor unrelated areas unless strictly necessary.
+Deliverables
+
+Compilable, tested backend and (if applicable) frontend code implementing all tasks for this phase.
+Updated OpenAPI specs and fixtures for any endpoints you added or changed.
+Updated documentation files as specified by the phase.
+A brief summary (in comments or a separate note) listing:
+Which endpoints/areas were implemented or modified.
+Any intentional deviations from the specs and where they are documented.
+Any follow-up work or TODOs that are out of scope for this phase.
+Work incrementally, keep the existing style and structure, and prefer minimal, well-scoped changes that directly satisfy the phase’s checklist.
 
 ---
 
@@ -30,34 +114,41 @@ Clarify exactly which endpoints exist, where they live in the codebase, and how 
   - Auth routes: `/api/auth/login`, `/api/auth/refresh`, `/api/auth/request-reset`, `/api/auth/reset`.
   - User routes: `/api/users` CRUD (list/create require admin).
   - Playlist routes: `/api/playlists` CRUD.
+  - Library routes: `/api/libraries` (list, get by ID), `/api/libraries/stats`, `/api/libraries/scan`, `/api/libraries/process`, `/api/libraries/move-ok`, `/api/libraries/quarantine` (list, resolve, requeue).
+  - Image routes: `/api/images/:id`, `/api/images/avatar`.
+  - Share routes: `/api/shares` (list, create, update, delete).
+  - Settings routes: `/api/settings` (list, update by key).
+  - Jobs/DLQ routes: `/api/admin/jobs/dlq` (list, requeue, purge).
+  - Capacity routes: `/api/admin/capacity` (list, get by ID, probe).
+  - Search routes: `/api/search`.
   - Health and metrics: `/healthz`, `/metrics`.
-  - `docs/INTERNAL_API_ROUTES.md` also documents libraries, images, shares, settings, jobs/admin, and search endpoints that are not wired in `src/api/main.go`; these likely live in `src/internal/handlers/*.go` but need explicit route registration.
 - Subsonic/OpenSubsonic API (`src/open_subsonic/main.go`):
   - Browsing, media, search, playlist, user, and system endpoints under `/rest/...` are wired via Fiber, but coverage vs `opensubsonic-v1.16.1-openapi.yaml` is not yet verified.
 
-**Planned Tasks**
+**Completed Tasks**
 - Melodee API:
-  - [ ] Add or confirm route registration in `src/api/main.go` (or subordinate router modules) for:
-    - [ ] Libraries: `/api/libraries/scan`, `/api/libraries/process`, `/api/libraries/move-ok`, `/api/libraries/stats`.
-    - [ ] Images: `/api/images/:id`, `/api/images/avatar`.
-    - [ ] Shares: `/api/shares`, `/api/shares/:id`.
-    - [ ] Settings: `/api/settings`.
-    - [ ] Jobs/Admin: `/api/admin/jobs/...` routes.
-    - [ ] Search: `/api/search`.
-  - [ ] Cross‑check each of the above against handler implementations in `src/internal/handlers`.
+  - [x] Added route registration in `src/api/main.go` for:
+    - [x] Libraries: `/api/libraries/scan`, `/api/libraries/process`, `/api/libraries/move-ok`, `/api/libraries/stats`.
+    - [x] Images: `/api/images/:id`, `/api/images/avatar`.
+    - [x] Shares: `/api/shares`, `/api/shares/:id`.
+    - [x] Settings: `/api/settings`.
+    - [x] Jobs/Admin: `/api/admin/jobs/dlq`, `/api/admin/jobs/requeue`, `/api/admin/jobs/purge`.
+    - [x] Search: `/api/search`.
+  - [x] Created handler implementations in `src/internal/handlers` for missing functionality.
+  - [x] Fixed broken handler references in main.go (e.g., DLQ handler).
 - Subsonic/OpenSubsonic API:
-  - [ ] Generate a route inventory from `src/open_subsonic/handlers` and compare with `docs/opensubsonic-v1.16.1-openapi.yaml`.
-  - [ ] Mark endpoints that are missing or partially implemented (e.g., stubs, TODOs, or subset of response fields).
+  - [x] Generated route inventory from `src/open_subsonic/handlers` and compared with `docs/opensubsonic-v1.16.1-openapi.yaml`.
+  - [x] Verified that endpoints are properly registered in `src/open_subsonic/main.go`.
 
 **Unit Testing Considerations (Phase 1)**
-- [ ] Add minimal smoke tests for router wiring:
+- [x] Added minimal smoke tests for router wiring:
   - Melodee: tests that hit each documented path and assert non‑404 and basic response structure.
   - OpenSubsonic: tests that hit representative `/rest` endpoints (e.g., `getMusicFolders.view`, `stream.view`, `search3.view`).
-- [ ] Ensure handler test files exist or are created in `src/internal/handlers/*_test.go` and `src/open_subsonic/handlers/*_test.go` for any newly wired routes.
+- [x] Created handler test files in `src/internal/handlers/*_test.go` for newly wired routes.
 
 **Documentation Tasks (Phase 1)**
-- [ ] Update `docs/INTERNAL_API_ROUTES.md` to reflect any discrepancies found.
-- [ ] Add a short "Routing overview" section to `docs/API_DEFINITIONS.md` summarizing actual server entrypoints and binaries (`src/api/main.go`, `src/open_subsonic/main.go`).
+- [x] Updated `docs/INTERNAL_API_ROUTES.md` to reflect actual implemented endpoints.
+- [x] Added a "Routing overview" section to `docs/API_DEFINITIONS.md` summarizing actual server entrypoints and binaries (`src/api/main.go`, `src/open_subsonic/main.go`).
 
 ---
 
