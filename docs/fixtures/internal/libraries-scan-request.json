@@ -1,5 +1,3 @@
 {
-  "library_ids": [1, 2],
-  "force": true,
-  "priority": "default"
+  "library_id": 1
 }

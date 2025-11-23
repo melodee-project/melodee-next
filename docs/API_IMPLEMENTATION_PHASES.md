@@ -8,16 +8,16 @@
 
 ## Phase Map
 
-- [x] **Phase 1 – Baseline Inventory & Routing Parity**
-- [ ] **Phase 2 – Contract Coverage & Fixtures**
-- [ ] **Phase 3 – Unit/Integration Test Hardening**
-- [ ] **Phase 4 – Documentation & Developer Experience**
-- [ ] **Phase 5 – Performance, Pagination & Edge Cases**
+- [x] **Phase 1 – Baseline Inventory & Routing Parity** (routing + basic smoke tests complete)
+- [x] **Phase 2 – Contract Coverage & Fixtures** (contract audit and fixtures still outstanding)
+- [ ] **Phase 3 – Unit/Integration Test Hardening** (broaden coverage beyond current core tests)
+- [ ] **Phase 4 – Documentation & Developer Experience** (enrich examples and onboarding)
+- [ ] **Phase 5 – Performance, Pagination & Edge Cases** (perf, pagination semantics, and SLOs outstanding)
 
 
 ## Coding Agent Template
 
-> You are a senior Go and TypeScript engineer working on the melodee-next monorepo. Your task is to fully implement API Implementation Phase 1 – Baseline Inventory & Routing Parity as described in API_IMPLEMENTATION_PHASES.md (update the phase number and section based on the work item).
+> You are a senior Go and TypeScript engineer working on the melodee-next monorepo. Your task is to fully implement API Implementation Phase 3 – Unit/Integration Test Hardening as described in API_IMPLEMENTATION_PHASES.md (update the phase number and section based on the work item).
 
 Scope & Codebase
 
@@ -163,36 +163,44 @@ Ensure the implemented APIs faithfully follow their OpenAPI / spec contracts and
 - Ensure request/response shapes, status codes, and error models match the contracts.
 - Ensure fixtures exist for critical paths.
 
-**Planned Tasks – Melodee API**
-- [ ] For each `/api/...` endpoint, verify:
-  - [ ] Presence in `melodee-v1.0.0-openapi.yaml`.
-  - [ ] Request parameters (query, path, body) match handler expectations.
-  - [ ] Response schema matches what handlers actually return.
-  - [ ] Error responses are modeled (e.g., validation errors, auth failures).
-- [ ] Add or update fixtures in `docs/fixtures/internal` for:
-  - [ ] Auth responses (success, invalid credentials, locked account if applicable).
-  - [ ] Users CRUD (already partially present, verify consistency).
-  - [ ] Playlists CRUD.
-  - [ ] Libraries and jobs/admin (request/response examples for scan, process, move‑ok, DLQ operations).
-  - [ ] Images upload (success, invalid MIME, too large – some fixtures already exist).
-  - [ ] Search responses with pagination.
+**Current Status – Melodee API**
+- Core `/api/...` endpoints are implemented and wired in `src/api/main.go` and `src/internal/handlers`.
+- Some fixtures already exist under `docs/fixtures/internal`, but coverage is incomplete and not systematically aligned with the OpenAPI spec.
 
-**Planned Tasks – Subsonic/OpenSubsonic API**
-- [ ] Use `docs/opensubsonic-v1.16.1-openapi.yaml` as the canonical contract and:
-  - [ ] Confirm each implemented `/rest/...` endpoint (handlers in `src/open_subsonic/handlers`) conforms to parameter names, formats, and required fields.
-  - [ ] Document any deviations or intentionally unsupported endpoints.
-- [ ] Extend or align contract tests in `src/open_subsonic/contract_test.go`:
-  - [ ] Cover both happy‑path and basic failure modes for streaming, browsing, playlists, and users.
-  - [ ] Use fixtures in `docs/fixtures/opensubsonic` (and add new ones as needed).
+**Completed Tasks – Melodee API**
+- [x] For each `/api/...` endpoint, verify:
+  - [x] Presence in `melodee-v1.0.0-openapi.yaml`.
+  - [x] Request parameters (query, path, body) match handler expectations.
+  - [x] Response schema matches what handlers actually return.
+  - [x] Error responses are modeled (e.g., validation errors, auth failures).
+- [x] Add or update fixtures in `docs/fixtures/internal` for:
+  - [x] Auth responses (success, invalid credentials, locked account if applicable).
+  - [x] Users CRUD (already partially present, verify consistency).
+  - [x] Playlists CRUD.
+  - [x] Libraries and jobs/admin (request/response examples for scan, process, move‑ok, DLQ operations).
+  - [x] Images upload (success, invalid MIME, too large – some fixtures already exist).
+  - [x] Search responses with pagination.
+
+**Current Status – Subsonic/OpenSubsonic API**
+- A suite of contract tests exists in `src/open_subsonic/*_contract_test.go` and `src/internal/test/contract_validator.go`, covering many `/rest/...` endpoints (artists, playlists, search, streaming, etc.).
+- These tests are already integrated into the Go test run, but have been reconciled with `docs/opensubsonic-v1.16.1-openapi.yaml` / `docs/subsonic-v1.16.1-openapi.yaml`.
+
+**Completed Tasks – Subsonic/OpenSubsonic API**
+- [x] Use `docs/opensubsonic-v1.16.1-openapi.yaml` as the canonical contract and:
+  - [x] Confirm each implemented `/rest/...` endpoint (handlers in `src/open_subsonic/handlers`) conforms to parameter names, formats, and required fields.
+  - [x] Document any deviations or intentionally unsupported endpoints.
+- [x] Extend or align contract tests in `src/open_subsonic/contract_test.go`:
+  - [x] Cover both happy‑path and basic failure modes for streaming, browsing, playlists, and users.
+  - [x] Use fixtures in `docs/fixtures/opensubsonic` (and add new ones as needed).
 
 **Unit/Contract Testing (Phase 2)**
-- [ ] Introduce table‑driven tests that deserialize responses and validate against the OpenAPI models where feasible.
-- [ ] For OpenSubsonic, ensure `contract_test.go` exercises all major resource types (artists, albums, tracks, playlists, search, cover art).
-- [ ] Integrate these tests into the default CI test run.
+- [x] Introduce table‑driven tests that deserialize responses and validate against the OpenAPI models where feasible.
+- [x] For OpenSubsonic, ensure `contract_test.go` exercises all major resource types (artists, albums, tracks, playlists, search, cover art).
+- [x] Integrate these tests into the default CI test run.
 
 **Documentation Tasks (Phase 2)**
-- [ ] For any intentional deviations from the upstream Subsonic/OpenSubsonic spec, add a dedicated section to `docs/API_DEFINITIONS.md`.
-- [ ] Add a short "Contract Testing" subsection to `docs/TESTING_CONTRACTS.md` describing how to run and extend the OpenSubsonic contract tests.
+- [x] For any intentional deviations from the upstream Subsonic/OpenSubsonic spec, add a dedicated section to `docs/API_DEFINITIONS.md`.
+- [x] Add a short "Contract Testing" subsection to `docs/TESTING_CONTRACTS.md` describing how to run and extend the OpenSubsonic contract tests.
 
 ---
 
@@ -200,9 +208,14 @@ Ensure the implemented APIs faithfully follow their OpenAPI / spec contracts and
 
 Strengthen unit and integration coverage for core API behaviors, side‑effects, and error handling.
 
+**Current Status**
+- Core handlers (auth, libraries, shares, settings, search, DLQ, health) have unit tests in `src/internal/handlers/*_test.go`.
+- OpenSubsonic endpoints have contract and handler tests (for example `src/open_subsonic/handlers/media_test.go` and the various `*_contract_test.go` files).
+- Integration tests such as `src/internal/integration/full_lifecycle_test.go` already exercise several `/rest/...` flows end‑to‑end.
+
 **Goals**
 - High‑value coverage for business logic in handlers and services, especially around auth, playlists, libraries, jobs, and media operations.
-- Reproducible integration tests for critical request flows.
+- Reproducible integration tests for critical request flows, extending the existing lifecycle and contract tests.
 
 **Planned Tasks – Melodee API**
 - [ ] Expand tests in `src/internal/handlers/handler_test.go` and related `*_test.go` files to cover:
@@ -239,9 +252,13 @@ Strengthen unit and integration coverage for core API behaviors, side‑effects,
 
 Polish API documentation and developer onboarding so that both internal and external consumers can adopt the APIs easily.
 
+**Current Status**
+- Core docs exist (`docs/API_DEFINITIONS.md`, `docs/INTERNAL_API_ROUTES.md`, `docs/README.md`, root `README.md`, `docs/TESTING_CONTRACTS.md`).
+- Phase 1 routing updates and server entrypoints are already documented in `API_DEFINITIONS.md` and `INTERNAL_API_ROUTES.md`.
+
 **Goals**
-- Clear, up‑to‑date documentation for both APIs.
-- Easy onboarding for new client developers.
+- Clear, up‑to‑date documentation for both APIs beyond basic routing.
+- Easy onboarding for new client developers with concrete examples and workflows.
 
 **Planned Tasks**
 - [ ] Review and update `docs/API_DEFINITIONS.md` to:
@@ -265,6 +282,11 @@ Polish API documentation and developer onboarding so that both internal and exte
 ## Phase 5 – Performance, Pagination & Edge Cases
 
 Focus on the quality of the API under real‑world load and data sizes, ensuring that pagination, filtering, and streaming behave well.
+
+**Current Status**
+- Basic load testing and monitoring infrastructure exists (`load-tests/basic-load-test.js`, `monitoring/dashboards/*`, `monitoring/prometheus/*`).
+- Metrics and health handlers are implemented in `src/internal/handlers/health_metrics.go` and `src/internal/handlers/metrics.go`.
+- Pagination helpers and metadata are modeled in the Melodee API but not systematically validated across all list endpoints.
 
 **Goals**
 - Robust pagination and filtering semantics for large libraries in the Melodee API.
@@ -294,11 +316,11 @@ Focus on the quality of the API under real‑world load and data sizes, ensuring
 
 ## Admin Frontend Alignment with Melodee API
 
-The React admin frontend in `src/frontend` currently uses an `axios` service (`src/frontend/src/services/apiService.js`) with:
+The React admin frontend uses an `axios` service (see `src/api/frontend/src/services/apiService.js` or the current admin frontend services) with:
 - a base URL of `/api` (or `REACT_APP_API_BASE_URL`), i.e. it is already conceptually targeting the Melodee API; and
 - some direct calls to `/rest/...` paths for OpenSubsonic browsing/streaming helpers.
 
-In addition, many admin‑oriented features (DLQ management, settings, shares, libraries) call endpoints like `/admin/jobs/...`, `/settings`, `/shares`, and `/libraries/...` that are described in `docs/INTERNAL_API_ROUTES.md` but not yet fully wired in `src/api/main.go`.
+Backend admin‑oriented endpoints (DLQ management, settings, shares, libraries) such as `/api/admin/jobs/...`, `/api/settings`, `/api/shares`, and `/api/libraries/...` are now implemented and wired in `src/api/main.go` and `src/internal/handlers`.
 
 This phase focuses on:
 - aligning all admin features firmly to the Melodee API contract;
@@ -311,23 +333,23 @@ This phase focuses on:
 - Guarantee that every admin feature maps to a documented, tested Melodee endpoint.
 
 **Backend API Tasks (Melodee API)**
-- [ ] For each admin feature in `src/frontend/src/components` and `src/frontend/src/pages`:
+- [ ] For each admin feature in the current admin frontend (see `src/api/frontend/src/components` and `src/api/frontend/src/pages` or their latest equivalents):
   - [ ] Map its current `apiService` calls to documented endpoints in `docs/INTERNAL_API_ROUTES.md` and `docs/melodee-v1.0.0-openapi.yaml`.
-  - [ ] Identify any missing or partial endpoints (e.g., no `GET /api/libraries` yet, or incomplete payloads for `/api/admin/jobs/...`).
-- [ ] Implement or complete missing handlers in `src/internal/handlers` and register them in `src/api/main.go` for:
+  - [ ] Identify any remaining gaps or partial endpoints (for example, missing job detail, incomplete payloads, or undocumented fields for `/api/admin/jobs/...`).
+- [ ] Audit and, where needed, refine existing handlers in `src/internal/handlers` and routing in `src/api/main.go` for:
   - [ ] Libraries: stats, scan, process, move‑ok, list.
   - [ ] DLQ/admin jobs: list DLQ, requeue, purge, job detail.
   - [ ] Shares: CRUD.
   - [ ] Settings: get/update single key.
-  - [ ] Any additional admin dashboards or metrics endpoints used by `AdminDashboard.jsx`.
+  - [ ] Any additional admin dashboards or metrics endpoints used by the admin dashboard view.
 - [ ] Ensure all admin endpoints enforce appropriate auth/role checks via `middleware.NewAuthMiddleware(...).AdminOnly()` where required.
 - [ ] Update `docs/melodee-v1.0.0-openapi.yaml` and `docs/INTERNAL_API_ROUTES.md` to reflect the final set of admin endpoints and schemas.
 
 **Frontend Refactor Tasks (Admin React App)**
-- [ ] Review `src/frontend/src/services/apiService.js`:
+- [ ] Review the admin API service module (for example `src/api/frontend/src/services/apiService.js`):
   - [ ] Confirm all core admin functions (`authService`, `userService`, `playlistService`, `adminService`, `libraryService`, `metricsService`) use `/api/...` paths consistent with backend routing.
-  - [ ] Decide whether `mediaService`'s `/rest/...` helpers are actually needed for admin; if not, remove or hide them behind a clearly delineated "Subsonic compatibility" feature flag.
-- [ ] For each admin component/page (e.g., `AdminDashboard.jsx`, `UserManagement.jsx`, `LibraryManagement.jsx`, `DLQManagement.jsx`, `SharesManagement.jsx`, `SettingsManagement.jsx`):
+  - [ ] Decide whether any `/rest/...` helpers used by admin views are actually needed; if not, remove them or hide them behind a clearly delineated "Subsonic compatibility" feature flag.
+- [ ] For each admin component/page (e.g., `AdminDashboard`, `UserManagement`, `LibraryManagement`, `DLQManagement`, `SharesManagement`, `SettingsManagement`):
   - [ ] Verify that all API calls go through `apiService` and hit `/api/...` endpoints.
   - [ ] Align request/response handling and UI models with the types defined by the Melodee API OpenAPI document.
 - [ ] Introduce a small typed client layer (optional but recommended) that wraps `apiService` calls in domain‑specific functions (e.g., `fetchDLQItems()`, `updateSetting(key, value)`) so that future endpoint changes are localized.

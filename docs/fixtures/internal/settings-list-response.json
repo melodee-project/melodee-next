@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "key": "smtp.host",
+      "value": "smtp.example.com",
+      "description": "SMTP host for email",
+      "editable": true
+    },
+    {
+      "key": "jobs.max_concurrency",
+      "value": "4",
+      "description": "Max concurrent worker jobs",
+      "editable": true
+    }
+  ]
+}

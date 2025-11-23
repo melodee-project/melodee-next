@@ -1,4 +1,3 @@
 {
-  "key": "transcoding.default_profile",
-  "value": "transcode_mid"
+  "value": "smtp2.example.com"
 }

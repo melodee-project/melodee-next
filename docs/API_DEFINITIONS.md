@@ -136,6 +136,15 @@ Melodee implements two distinct API servers in the same binary:
 
 Both servers share the same underlying data and services but expose different protocol and model contracts.
 
+## Deviations from upstream Subsonic/OpenSubsonic spec
+
+Melodee intentionally deviates from the upstream Subsonic/OpenSubsonic specifications in the following ways:
+
+- **Pagination**: Melodee enforces server-side limits and provides consistent pagination metadata, unlike Subsonic which allows clients to request unlimited results.
+- **Error responses**: Melodee returns structured JSON error responses, while Subsonic uses XML with error codes.
+- **Authentication**: Extended JWT token support in addition to standard Subsonic authentication methods.
+- **Job queue management**: Additional administration endpoints for managing the job queue (DLQ, requeue, purge operations) not present in the standard Subsonic spec.
+
 ## Related documentation
 
 - Internal admin‑focused routes (user management, libraries, jobs, etc.) live under `/api/...` and are cataloged in `docs/INTERNAL_API_ROUTES.md`.

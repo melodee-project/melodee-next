@@ -1,5 +1,6 @@
 {
-  "name": "Road Trip",
-  "public": false,
-  "song_ids": [1, 2, 3]
+  "name": "My Favorite Songs",
+  "comment": "A collection of my top tracks",
+  "public": true,
+  "song_ids": [1, 5, 10, 15]
 }

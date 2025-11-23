@@ -1,0 +1,7 @@
+{
+  "name": "New Share",
+  "track_ids": ["track-1", "track-2"],
+  "expires_at": "2025-12-01T00:00:00Z",
+  "max_streaming_minutes": 600,
+  "allow_download": true
+}

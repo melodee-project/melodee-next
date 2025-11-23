@@ -24,5 +24,10 @@ Purpose: bind fixtures to automated tests to ensure API contracts remain stable.
 2) Run contract tests that assert responses match fixtures (structure, required fields).
 3) Fail CI on drift; require fixture updates + spec updates for intentional changes.
 
+## Contract Testing
+- For any intentional deviations from the upstream Subsonic/OpenSubsonic spec, check `docs/API_DEFINITIONS.md` for documented differences.
+- Run OpenSubsonic contract tests: `go test ./src/open_subsonic/... -v` to ensure compatibility.
+- Run Melodee API contract tests: `go test ./src/internal/handlers/... -v` to validate internal API contracts.
+
 ## Pending Additions
 - Add fixtures for avatar/cover upload success/invalid MIME and bind to upload tests once implemented.

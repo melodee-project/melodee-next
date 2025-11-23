@@ -1,0 +1,10 @@
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "def50200...",
+  "expires_in": 3600,
+  "user": {
+    "id": "user-123",
+    "username": "admin",
+    "is_admin": true
+  }
+}
