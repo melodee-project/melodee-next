@@ -256,11 +256,15 @@ func (s *Server) setupInternalRoutes() {
 		},
 	)
 
+	// Initialize quarantine service
+	quarantineSvc := media.NewDefaultQuarantineService(s.dbManager.GetGormDB())
+
 	// Initialize media service
 	mediaSvc := media.NewMediaService(
 		s.dbManager.GetGormDB(),
 		directorySvc,
 		pathResolver,
+		quarantineSvc,
 	)
 
 	// Initialize media processor with all required services
@@ -268,7 +272,7 @@ func (s *Server) setupInternalRoutes() {
 		media.DefaultProcessingConfig(),
 		s.dbManager.GetGormDB(),
 		pathResolver,
-		media.NewQuarantineService(s.dbManager.GetGormDB()), // Assuming this exists
+		quarantineSvc, // Use the same quarantine service instance
 		media.NewMediaFileValidator(), // Assuming this exists
 		media.NewFFmpegProcessor(&media.FFmpegConfig{
 			FFmpegPath: s.cfg.Processing.FFmpegPath,
@@ -278,7 +282,7 @@ func (s *Server) setupInternalRoutes() {
 	)
 
 	// Library management
-	libraryHandler := handlers.NewLibraryHandler(s.repo, mediaSvc, s.asynqClient)
+	libraryHandler := handlers.NewLibraryHandler(s.repo, mediaSvc, s.asynqClient, mediaSvc.QuarantineService)
 	libraries := admin.Group("/libraries")
 	libraries.Get("/", libraryHandler.GetLibraryStates)
 	libraries.Get("/:id", libraryHandler.GetLibraryState)

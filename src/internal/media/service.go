@@ -171,9 +171,10 @@ func HandleMetadataEnhance(ctx context.Context, t *asynq.Task) error {
 
 // MediaService handles media processing operations
 type MediaService struct {
-	db           *gorm.DB
-	directorySvc *directory.DirectoryCodeGenerator
-	pathResolver *directory.PathTemplateResolver
+	db              *gorm.DB
+	directorySvc    *directory.DirectoryCodeGenerator
+	pathResolver    *directory.PathTemplateResolver
+	QuarantineService *QuarantineService
 }
 
 // NewMediaService creates a new media service
@@ -181,11 +182,13 @@ func NewMediaService(
 	db *gorm.DB,
 	directorySvc *directory.DirectoryCodeGenerator,
 	pathResolver *directory.PathTemplateResolver,
+	quarantineSvc *QuarantineService,
 ) *MediaService {
 	return &MediaService{
-		db:           db,
-		directorySvc: directorySvc,
-		pathResolver: pathResolver,
+		db:              db,
+		directorySvc:    directorySvc,
+		pathResolver:    pathResolver,
+		QuarantineService: quarantineSvc,
 	}
 }
 

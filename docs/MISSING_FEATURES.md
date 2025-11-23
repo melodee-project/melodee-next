@@ -17,202 +17,78 @@ Status legend used below:
 - **DONE (remove when convenient)** – implementation and tests appear
 	complete; keep here only until you are comfortable deleting the item.
 
----
+Phase legend:
 
-## Backend Core
+- **Phase 1 – Core Backend & Media**: backend auth/error/config,
+	repository, and core media pipeline wiring.
+- **Phase 2 – OpenSubsonic Contracts**: Subsonic/OpenSubsonic endpoints,
+	streaming/transcoding, search, playlists, and contract tests.
+- **Phase 3 – Admin UX & Observability**: admin frontend, dashboards,
+	health/capacity views, and operational readiness.
+- **Phase 4 – End‑to‑End & Non‑functional**: E2E tests, load/security
+	testing, and final polish.
 
-- Auth flows **[PARTIAL]**
-	- Implementation: lockout semantics and password‑reset plumbing exist
-		in `src/internal/services/auth.go` and related models/handlers.
-	- Current gaps:
-		- `AuthService` still contains TODO‑style behavior for password
-			reset token validation.
-		- End‑to‑end tests exist for reset and lockout, but they do not yet
-			fully exercise the final production semantics described in
-			`TECHNICAL_SPEC.md`.
-	- Acceptance checklist:
-		- [ ] `ResetPassword` and related flows validate tokens and
-			expiry without placeholder errors.
-		- [ ] Tests cover successful reset, invalid/expired token, and
-			lockout interactions via `/api/auth/*`.
-		- [ ] Behavior matches `TECHNICAL_SPEC.md` and
-			`INTERNAL_API_ROUTES.md`.
+Phase checklist:
 
-- Error model **[PARTIAL]**
-	- Implementation: `utils.SendError` is used by some handlers.
-	- Current gaps:
-		- Not all handlers consistently use the shared helper for JSON
-			errors.
-		- Limited tests assert common JSON error shapes.
-	- Acceptance checklist:
-		- [ ] All public/internal HTTP handlers use a single shared helper
-			for JSON error responses.
-		- [ ] Tests assert status code + error body shape for common
-			failure cases (validation, not‑found, auth, conflict).
+- [x] **Phase 1 – Core Backend & Media**
+- [ ] **Phase 2 – OpenSubsonic Contracts**
+- [ ] **Phase 3 – Admin UX & Observability**
+- [ ] **Phase 4 – End‑to‑End & Non‑functional**
 
-- Security middleware **[PARTIAL]**
-	- Implementation:
-		- `RateLimiterForPublicAPI` and `RateLimiterForAuth` are wired in
-			`src/main.go`, `src/api/main.go`, and
-			`src/open_subsonic/main.go`.
-		- Unit tests exist in `src/internal/middleware/rate_limiter_test.go`.
-	- Current gaps:
-		- `/api/images/avatar` and related upload endpoints lack hardened
-			size/MIME checks with tests.
-		- Fixtures under `docs/fixtures/internal` are not yet exercised
-			for these uploads.
-	- Acceptance checklist:
-		- [ ] Avatar/image upload handlers enforce strict size/MIME limits
-			and reject invalid content.
-		- [ ] Tests cover large payloads, invalid MIME types, and allowed
-			cases using existing fixtures.
+## Coding Agent Template
+>You are working in the melodee-next repo on Phase 1 – Core Backend & Media as defined in MISSING_FEATURES.md.
 
-- Config & validation **[OPEN]**
-	- Implementation: FFmpeg config and `FFmpegProcessor`/
-		`TranscodeService` are wired in `src/main.go` and
-		`src/internal/media`.
-	- Current gaps:
-		- No explicit startup‑time validation that fails fast when the
-			FFmpeg binary is missing/misconfigured or when profiles are
-			invalid.
-		- No optional validation hooks for external metadata tokens.
-	- Acceptance checklist:
-		- [ ] Startup returns a clear error when FFmpeg is missing or
-			profiles are invalid, with focused unit tests.
-		- [ ] External metadata integrations (when enabled) validate
-			configured tokens/URLs on startup.
+Goal
 
-- Repository tests **[PARTIAL]**
-	- Implementation: `repository_db_test.go` and
-		`repository_pagination_test.go` cover playlists and pagination
-		(e.g., `GetPlaylistsWithUser`).
-	- Current gaps:
-		- Search‑related filters and ordering semantics are not fully
-			covered in DB‑backed tests.
-	- Acceptance checklist:
-		- [ ] DB tests exist for playlist listing with filters,
-			pagination, and ordering used by API handlers.
-		- [ ] DB tests cover search‑oriented repository queries used by
-			OpenSubsonic/search endpoints.
+Fully implement and test all items tagged for this phase so that every acceptance checklist item in that phase is satisfied, and the phase checkbox at the top of MISSING_FEATURES.md can legitimately be marked as complete.
+
+Scope
+
+Read MISSING_FEATURES.md and focus ONLY on:
+The top “Phase checklist”.
+The section ## Phase 1 – Core Backend & Media and its subsections.
+For each bullet in this phase:
+Treat its “Status” (OPEN / PARTIAL) and “Acceptance checklist” as the single source of truth for what must be implemented and tested.
+Ignore items from other phases unless strictly required as dependencies.
+Requirements
+
+For every item in this phase:
+
+Implementation
+
+Implement the missing behavior in the appropriate packages (see file hints in each bullet, e.g. src/internal/..., src/open_subsonic/..., src/frontend/...).
+Remove or replace any TODO/placeholder logic so behavior matches the intent described in the bullet and related docs (TECHNICAL_SPEC.md, MEDIA_FILE_PROCESSING.md, etc., if referenced).
+Testing
+
+Add or extend unit / integration / contract tests so that each acceptance checklist sub‑item can be demonstrated by a test.
+Prefer colocated tests (e.g. *_test.go in the same package, or React tests alongside components if applicable).
+Ensure tests are deterministic and do not rely on external services.
+Documentation & Cleanup
+
+When a bullet is fully satisfied, update MISSING_FEATURES.md:
+Option A: remove that bullet entirely, OR
+Option B: change its status tag to DONE (remove when convenient) and briefly note which tests cover it.
+Only mark the phase checklist entry [x] Phase 1 – Core Backend & Media after all bullets in that phase are either removed or clearly marked DONE.
+Constraints
+
+Do NOT modify requirements, only their implementation and tests.
+Keep changes minimal and idiomatic to the existing style (Go, React, config).
+Do not start work on other phases.
+Deliverables
+
+Code + tests implementing all remaining items for Phase 1 – Core Backend & Media.
+Updated MISSING_FEATURES.md reflecting completed items and, if applicable, the phase checkbox marked as done.
+A short summary listing:
+Each bullet in this phase,
+Files changed,
+Tests added/updated (with test names) that prove it is complete.
 
 ---
 
-## Media Processing Pipeline
 
-- Wire FFmpeg transcoding into OpenSubsonic **[PARTIAL]**
-	- Implementation:
-		- `FFmpegProcessor`/`TranscodeService` are wired in `src/main.go`
-			and injected into `open_subsonic/handlers.MediaHandler`.
-		- `MediaHandler.Stream` uses `maxBitRate` and `format` parameters
-			and delegates to `transcodeFile`, which calls
-			`TranscodeService.TranscodeWithCache`.
-		- Range handling and content‑type inference are implemented in
-			`handleRangeRequest`/`getContentType`.
-	- Current gaps:
-		- Some paths still use hard‑coded storage locations and
-			"demo"‑style behavior.
-		- No focused tests validate transcoding and Range behavior against
-			`MEDIA_FILE_PROCESSING.md`.
-	- Acceptance checklist:
-		- [ ] `Stream` and related code use configured storage paths and
-			finalized pipeline behavior (no demo placeholders).
-		- [ ] Tests cover `maxBitRate`, `format`, caching/idempotency,
-			Range requests, and content‑type correctness.
+## Phase 2 – OpenSubsonic Contracts
 
-- Inbound / staging / production exposure **[PARTIAL]**
-	- Implementation: internal media/directory code models pipeline
-		states; admin APIs and `LibraryManagement.jsx` expose some
-		controls and status.
-	- Current gaps:
-		- Not all pipeline states (inbound, staging, production,
-			quarantine) are exposed in a single coherent internal API
-			surface tailored for the admin UI.
-	- Acceptance checklist:
-		- [ ] Internal APIs enumerate pipeline states and basic controls in
-			a way that lets the admin UI reflect current status and actions
-			for each library.
-		- [ ] Admin UI consumes those APIs and clearly surfaces each
-			stage.
-
-- Checksum & idempotency **[OPEN]**
-	- Implementation: transcoding cache provides idempotent outputs for
-		transcodes.
-	- Current gaps:
-		- No checksum calculation/validation for source media files across
-			pipeline stages.
-	- Acceptance checklist:
-		- [ ] A stable checksum (e.g., SHA‑256) is computed for each media
-			file and stored.
-		- [ ] Pipeline steps use the checksum to avoid duplicate work and
-			to guarantee idempotent processing.
-
----
-
-## Admin Frontend (Operator Experience)
-
-- Library & pipeline views **[PARTIAL]**
-	- Implementation:
-		- `LibraryManagement.jsx`, `AdminDashboard.jsx`, and
-			`libraryService` provide library stats and controls (scan,
-			process, move OK albums).
-	- Current gaps:
-		- Not all pipeline paths (inbound/staging/production/quarantine)
-			are surfaced with the level of detail envisioned in
-			`MEDIA_FILE_PROCESSING.md`.
-	- Acceptance checklist:
-		- [ ] Dedicated library view surfaces paths, controls, and status
-			for inbound/staging/production/quarantine per library.
-		- [ ] UI reflects underlying internal API state accurately.
-
-- Quarantine management UI **[OPEN]**
-	- Implementation: backend quarantine logic exists in
-		`internal/media/quarantine.go`.
-	- Current gaps:
-		- No React screens or services for listing quarantine items,
-			showing reason codes, or performing fix/ignore/requeue actions.
-	- Acceptance checklist:
-		- [ ] UI page(s) list quarantined albums/tracks with reason codes.
-		- [ ] Actions (fix/ignore/requeue) are wired to internal APIs and
-			reflected in the pipeline state.
-
-- System health & capacity **[PARTIAL]**
-	- Implementation: backend exposes health and capacity metrics via
-		`internal/handlers/health_metrics.go` and `internal/metrics`.
-	- Current gaps:
-		- Admin UI does not yet show `/healthz`, capacity probe output,
-			or key SLO metrics directly.
-	- Acceptance checklist:
-		- [ ] Admin dashboard surfaces core health status, capacity
-			percentages, and key error/latency metrics.
-		- [ ] Dashboard no longer relies on hard‑coded status labels.
-
-- Playlist & search UX **[PARTIAL]**
-	- Implementation: playlist and search APIs are exposed via
-		`apiService`; backend playlist/search endpoints exist.
-	- Current gaps:
-		- No dedicated admin‑oriented UI for advanced search/browse flows
-			and playlist management as described in `PRD.md`.
-	- Acceptance checklist:
-		- [ ] Admin tools allow searching/browsing artists, albums, and
-			songs using internal search APIs.
-		- [ ] Admins can create/update/delete playlists with a UX that
-			matches PRD expectations.
-
-- Auth UX completeness **[PARTIAL]**
-	- Implementation: `AuthContext.jsx`, `LoginPage.jsx`, and related
-		components implement login/logout/password‑reset flows.
-	- Current gaps:
-		- Lockout states and detailed error mappings from `/api/auth/*`
-			are not fully surfaced in the UI.
-	- Acceptance checklist:
-		- [ ] UI shows appropriate messages for invalid credentials,
-			lockout (including expiry), and password‑reset errors.
-		- [ ] UX behavior matches the backend error model and
-			`/api/auth/*` semantics.
-
----
-
-## OpenSubsonic / Subsonic Client Support
+### OpenSubsonic / Subsonic Client Support
 
 - Auth semantics **[PARTIAL]**
 	- Implementation: `open_subsonic/middleware/auth.go` supports
@@ -304,7 +180,71 @@ Status legend used below:
 
 ---
 
-## Testing & Quality
+## Phase 3 – Admin UX & Observability
+
+### Admin Frontend (Operator Experience)
+
+- Library & pipeline views **[PARTIAL]**
+	- Implementation:
+		- `LibraryManagement.jsx`, `AdminDashboard.jsx`, and
+			`libraryService` provide library stats and controls (scan,
+			process, move OK albums).
+	- Current gaps:
+		- Not all pipeline paths (inbound/staging/production/quarantine)
+			are surfaced with the level of detail envisioned in
+			`MEDIA_FILE_PROCESSING.md`.
+	- Acceptance checklist:
+		- [ ] Dedicated library view surfaces paths, controls, and status
+			for inbound/staging/production/quarantine per library.
+		- [ ] UI reflects underlying internal API state accurately.
+
+- Quarantine management UI **[OPEN]**
+	- Implementation: backend quarantine logic exists in
+		`internal/media/quarantine.go`.
+	- Current gaps:
+		- No React screens or services for listing quarantine items,
+			showing reason codes, or performing fix/ignore/requeue actions.
+	- Acceptance checklist:
+		- [ ] UI page(s) list quarantined albums/tracks with reason codes.
+		- [ ] Actions (fix/ignore/requeue) are wired to internal APIs and
+			reflected in the pipeline state.
+
+- System health & capacity **[PARTIAL]**
+	- Implementation: backend exposes health and capacity metrics via
+		`internal/handlers/health_metrics.go` and `internal/metrics`.
+	- Current gaps:
+		- Admin UI does not yet show `/healthz`, capacity probe output,
+			or key SLO metrics directly.
+	- Acceptance checklist:
+		- [ ] Admin dashboard surfaces core health status, capacity
+			percentages, and key error/latency metrics.
+		- [ ] Dashboard no longer relies on hard‑coded status labels.
+
+- Playlist & search UX **[PARTIAL]**
+	- Implementation: playlist and search APIs are exposed via
+		`apiService`; backend playlist/search endpoints exist.
+	- Current gaps:
+		- No dedicated admin‑oriented UI for advanced search/browse flows
+			and playlist management as described in `PRD.md`.
+	- Acceptance checklist:
+		- [ ] Admin tools allow searching/browsing artists, albums, and
+			songs using internal search APIs.
+		- [ ] Admins can create/update/delete playlists with a UX that
+			matches PRD expectations.
+
+- Auth UX completeness **[PARTIAL]**
+	- Implementation: `AuthContext.jsx`, `LoginPage.jsx`, and related
+		components implement login/logout/password‑reset flows.
+	- Current gaps:
+		- Lockout states and detailed error mappings from `/api/auth/*`
+			are not fully surfaced in the UI.
+	- Acceptance checklist:
+		- [ ] UI shows appropriate messages for invalid credentials,
+			lockout (including expiry), and password‑reset errors.
+		- [ ] UX behavior matches the backend error model and
+			`/api/auth/*` semantics.
+
+### Testing & Quality
 
 - Unit testing **[PARTIAL]**
 	- Implementation: substantial unit tests exist for services, media,
@@ -347,7 +287,9 @@ Status legend used below:
 
 ---
 
-## Operational Readiness
+## Phase 4 – End‑to‑End & Non‑functional
+
+### Operational Readiness
 
 - Monitoring/dashboard polish **[PARTIAL]**
 	- Implementation: Prometheus and Grafana configs/dashboards exist in

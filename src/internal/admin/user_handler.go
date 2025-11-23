@@ -72,9 +72,7 @@ func (h *UserAdminHandler) GetUsers(c *fiber.Ctx) error {
 	// Check if user is admin
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok || !currentUser.IsAdmin {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Admin access required",
-		})
+		return utils.SendForbiddenError(c, "Admin access required")
 	}
 
 	// Parse query parameters
@@ -89,18 +87,14 @@ func (h *UserAdminHandler) GetUsers(c *fiber.Ctx) error {
 	// Get total count
 	var total int64
 	if err := h.db.Model(&models.User{}).Count(&total).Error; err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to count users",
-		})
+		return utils.SendInternalServerError(c, "Failed to count users")
 	}
 
 	// Get users with pagination
 	var dbUsers []models.User
 	offset := (page - 1) * size
 	if err := h.db.Offset(offset).Limit(size).Find(&dbUsers).Error; err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to retrieve users",
-		})
+		return utils.SendInternalServerError(c, "Failed to retrieve users")
 	}
 
 	// Convert to response format
@@ -134,28 +128,20 @@ func (h *UserAdminHandler) GetUser(c *fiber.Ctx) error {
 	// Check if user is admin
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok || !currentUser.IsAdmin {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Admin access required",
-		})
+		return utils.SendForbiddenError(c, "Admin access required")
 	}
 
 	userID, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid user ID",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid user ID")
 	}
 
 	var dbUser models.User
 	if err := h.db.First(&dbUser, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return c.Status(http.StatusNotFound).JSON(fiber.Map{
-				"error": "User not found",
-			})
+			return utils.SendNotFoundError(c, "User")
 		}
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to retrieve user",
-		})
+		return utils.SendInternalServerError(c, "Failed to retrieve user")
 	}
 
 	user := User{
@@ -176,51 +162,36 @@ func (h *UserAdminHandler) CreateUser(c *fiber.Ctx) error {
 	// Check if user is admin
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok || !currentUser.IsAdmin {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Admin access required",
-		})
+		return utils.SendForbiddenError(c, "Admin access required")
 	}
 
 	var req CreateUserRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	// Validate required fields
 	if req.Username == "" || req.Password == "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Username and password are required",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Username and password are required")
 	}
 
 	// Validate password strength
 	if err := h.authService.ValidatePassword(req.Password); err != nil {
-		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{
-			"error":   "Password validation failed",
-			"details": err.Error(),
-		})
+		return utils.SendValidationError(c, "password", err.Error())
 	}
 
 	// Check if username already exists
 	var existingUser models.User
 	if err := h.db.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
-		return c.Status(http.StatusConflict).JSON(fiber.Map{
-			"error": "Username already exists",
-		})
+		return utils.SendError(c, http.StatusConflict, "Username already exists")
 	} else if err != gorm.ErrRecordNotFound {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to check existing user",
-		})
+		return utils.SendInternalServerError(c, "Failed to check existing user")
 	}
 
 	// Hash password
 	passwordHash, err := h.authService.HashPassword(req.Password)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to hash password",
-		})
+		return utils.SendInternalServerError(c, "Failed to hash password")
 	}
 
 	// Create new user
@@ -233,9 +204,7 @@ func (h *UserAdminHandler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	if err := h.db.Create(&dbUser).Error; err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create user",
-		})
+		return utils.SendInternalServerError(c, "Failed to create user")
 	}
 
 	// Return created user
@@ -257,35 +226,25 @@ func (h *UserAdminHandler) UpdateUser(c *fiber.Ctx) error {
 	// Check if user is admin
 	currentUser, ok := middleware.GetUserFromContext(c)
 	if !ok || !currentUser.IsAdmin {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
-			"error": "Admin access required",
-		})
+		return utils.SendForbiddenError(c, "Admin access required")
 	}
 
 	userID, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid user ID",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid user ID")
 	}
 
 	var dbUser models.User
 	if err := h.db.First(&dbUser, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return c.Status(http.StatusNotFound).JSON(fiber.Map{
-				"error": "User not found",
-			})
+			return utils.SendNotFoundError(c, "User")
 		}
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to retrieve user",
-		})
+		return utils.SendInternalServerError(c, "Failed to retrieve user")
 	}
 
 	var req UpdateUserRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
 	}
 
 	// Update fields if provided

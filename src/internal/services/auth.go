@@ -189,24 +189,37 @@ func (a *AuthService) recordFailedLogin(user *models.User) error {
 	return nil
 }
 
-// ResetUserPassword resets a user's password with proper validation
-func (a *AuthService) ResetUserPassword(resetToken, newPassword string) error {
-	// Validate new password
+// ResetUserPassword resets a user's password by an admin user (does not require token validation)
+func (a *AuthService) ResetUserPassword(userID int64, newPassword string) error {
+	// Validate new password against security requirements
 	if err := a.ValidatePassword(newPassword); err != nil {
-		return fmt.Errorf("new password does not meet requirements: %w", err)
+		return fmt.Errorf("password validation failed: %w", err)
 	}
 
 	// Hash the new password
-	// hashedPassword, err := a.HashPassword(newPassword)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to hash new password: %w", err)
-	// }
+	hashedPassword, err := a.HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash new password: %w", err)
+	}
 
-	// In a real implementation, we'd verify the reset token and update the user's password
-	// For this implementation, we'll just return an error indicating it requires a real implementation
-	// with secure password reset tokens stored in DB and validated against expiration
+	// Find the user by ID
+	var user models.User
+	if err := a.db.First(&user, userID).Error; err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
 
-	return fmt.Errorf("password reset functionality requires full implementation with token validation")
+	// Update the user's password
+	user.PasswordHash = hashedPassword
+
+	// Clear any existing reset tokens since the password is being reset
+	user.PasswordResetToken = nil
+	user.PasswordResetExpiry = nil
+
+	if err := a.db.Save(&user).Error; err != nil {
+		return fmt.Errorf("failed to update user password: %w", err)
+	}
+
+	return nil
 }
 
 // RotateAPIKey regenerates a user's API key and invalidates the old one

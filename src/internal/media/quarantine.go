@@ -43,11 +43,19 @@ type QuarantineService struct {
 	quarantineDir string
 }
 
-// NewQuarantineService creates a new quarantine service
+// NewQuarantineService creates a new quarantine service with custom directory
 func NewQuarantineService(db *gorm.DB, quarantineDir string) *QuarantineService {
 	return &QuarantineService{
 		db:            db,
 		quarantineDir: quarantineDir,
+	}
+}
+
+// NewDefaultQuarantineService creates a new quarantine service with default directory
+func NewDefaultQuarantineService(db *gorm.DB) *QuarantineService {
+	return &QuarantineService{
+		db:            db,
+		quarantineDir: "/melodee/quarantine", // Default quarantine directory
 	}
 }
 

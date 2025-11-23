@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 	"melodee/internal/media"
 	"melodee/internal/models"
 	"melodee/internal/services"
@@ -13,17 +14,19 @@ import (
 
 // LibraryHandler handles library-related requests
 type LibraryHandler struct {
-	repo        *services.Repository
-	mediaSvc    *media.MediaService
-	asynqClient *asynq.Client
+	repo            *services.Repository
+	mediaSvc        *media.MediaService
+	asynqClient     *asynq.Client
+	quarantineSvc   *media.QuarantineService
 }
 
 // NewLibraryHandler creates a new library handler
-func NewLibraryHandler(repo *services.Repository, mediaSvc *media.MediaService, asynqClient *asynq.Client) *LibraryHandler {
+func NewLibraryHandler(repo *services.Repository, mediaSvc *media.MediaService, asynqClient *asynq.Client, quarantineSvc *media.QuarantineService) *LibraryHandler {
 	return &LibraryHandler{
-		repo:        repo,
-		mediaSvc:    mediaSvc,
-		asynqClient: asynqClient,
+		repo:          repo,
+		mediaSvc:      mediaSvc,
+		asynqClient:   asynqClient,
+		quarantineSvc: quarantineSvc,
 	}
 }
 
@@ -173,13 +176,54 @@ func (h *LibraryHandler) GetLibraryState(c *fiber.Ctx) error {
 
 // GetQuarantineItems handles retrieving quarantine items
 func (h *LibraryHandler) GetQuarantineItems(c *fiber.Ctx) error {
-	// In a real implementation, you would query your quarantine table
-	// For now, return an empty list
-	items := []QuarantineItem{}
-	
+	// Get pagination parameters
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 50)
+
+	// Validate limits
+	if limit > 100 {
+		limit = 100 // Maximum limit for safety
+	}
+	if limit < 1 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+
+	// Get reason filter if provided
+	var reasonFilter *media.QuarantineReason
+	reasonParam := c.Query("reason")
+	if reasonParam != "" {
+		reason := media.QuarantineReason(reasonParam)
+		reasonFilter = &reason
+	}
+
+	// Get quarantine records from the service
+	records, totalCount, err := h.quarantineSvc.ListQuarantinedFiles(limit, offset, reasonFilter)
+	if err != nil {
+		return utils.SendInternalServerError(c, "Failed to retrieve quarantine items: "+err.Error())
+	}
+
+	// Convert to response format
+	items := make([]QuarantineItem, len(records))
+	for i, record := range records {
+		items[i] = QuarantineItem{
+			ID:          record.ID,
+			FilePath:    record.FilePath,
+			Reason:      string(record.Reason),
+			Message:     record.Message,
+			LibraryID:   record.LibraryID,
+			CreatedAt:   record.CreatedAt.Format("2006-01-02 15:04:05"),
+			Resolved:    false, // In a real implementation, this would depend on actual status
+		}
+	}
+
 	return c.JSON(fiber.Map{
 		"data": items,
 		"count": len(items),
+		"total": totalCount,
+		"page": page,
+		"limit": limit,
 	})
 }
 
@@ -278,14 +322,24 @@ func (h *LibraryHandler) ResolveQuarantineItem(c *fiber.Ctx) error {
 		return utils.SendError(c, http.StatusBadRequest, "Invalid item ID")
 	}
 
-	// In a real implementation, you would resolve the quarantine item
-	// Typically this would involve moving the file to appropriate location and updating its status
+	// Check if the quarantine record exists
+	var record media.QuarantineRecord
+	if err := h.repo.DB.First(&record, itemID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.SendNotFoundError(c, "Quarantine record")
+		}
+		return utils.SendInternalServerError(c, "Failed to verify quarantine record: "+err.Error())
+	}
 
-	// For now, return success
+	// Delete from quarantine (permanent removal)
+	if err := h.quarantineSvc.DeleteFromQuarantine(int64(itemID)); err != nil {
+		return utils.SendInternalServerError(c, "Failed to resolve quarantine item: "+err.Error())
+	}
+
 	return c.JSON(fiber.Map{
 		"status": "resolved",
 		"item_id": itemID,
-		"message": "Quarantine item resolved successfully",
+		"message": "Quarantine item removed successfully",
 	})
 }
 
@@ -296,8 +350,20 @@ func (h *LibraryHandler) RequeueQuarantineItem(c *fiber.Ctx) error {
 		return utils.SendError(c, http.StatusBadRequest, "Invalid item ID")
 	}
 
-	// In a real implementation, you would requeue the item
-	// For now, return success
+	// Validate that the quarantine record exists
+	var record media.QuarantineRecord
+	if err := h.repo.DB.First(&record, itemID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.SendNotFoundError(c, "Quarantine record")
+		}
+		return utils.SendInternalServerError(c, "Failed to verify quarantine record: "+err.Error())
+	}
+
+	// Restore the file to its original location for reprocessing
+	if err := h.quarantineSvc.RestoreFromQuarantine(int64(itemID), ""); err != nil {
+		return utils.SendInternalServerError(c, "Failed to restore quarantined file: "+err.Error())
+	}
+
 	return c.JSON(fiber.Map{
 		"status": "requeued",
 		"item_id": itemID,

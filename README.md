@@ -163,6 +163,59 @@ The API and Web services both run migrations on startup via `internal/database`:
 
 Check `docs/DATABASE_SCHEMA.md` for schema details and partitioning strategy.
 
+### Bootstrapping the first admin user
+
+Melodee does not expose a public "self-registration" endpoint. All user and admin management happens through authenticated admin APIs, which means you need at least one admin account in the database before you can log in to the UI.
+
+For homelab and fresh installs, there is a helper script in `scripts/add-admin-user.sh` that inserts an admin user directly into the Postgres database.
+
+**Requirements**
+
+- Postgres is reachable and already initialized with the Melodee schema (migrations run).
+- The `melodee_users` table is empty or at least does not contain the username you are about to create.
+- Go is installed (the script uses a tiny Go helper to generate a bcrypt password hash).
+
+**Environment variables**
+
+The script uses the same DB-related environment variables as the backend, with sensible defaults:
+
+- `MELODEE_DB_HOST` (default `localhost`)
+- `MELODEE_DB_PORT` (default `5432`)
+- `MELODEE_DB_USER` (default `melodee_user`)
+- `MELODEE_DB_NAME` (default `melodee`)
+- `MELODEE_DB_PASSWORD` (**required**)
+
+**Usage**
+
+From the repo root:
+
+```bash
+chmod +x scripts/add-admin-user.sh   # first time only
+
+export MELODEE_DB_PASSWORD='your-db-password'
+# optionally override host/user/db/port if they differ from defaults
+# export MELODEE_DB_HOST=127.0.0.1
+# export MELODEE_DB_USER=melodee
+# export MELODEE_DB_NAME=melodee_dev
+
+./scripts/add-admin-user.sh <username> <email> <password>
+```
+
+Example:
+
+```bash
+./scripts/add-admin-user.sh admin admin@example.com 'YourS3cureP@ssw0rd'
+```
+
+Behind the scenes the script:
+
+- Generates a bcrypt hash for the provided password using `scripts/cmd/bcrypt-hash/`.
+- Connects to Postgres via `psql`.
+- Ensures the username does not already exist.
+- Inserts a row into `melodee_users` with `is_admin = TRUE`.
+
+After running it, you can log in to the UI/API using that username/password, and the JWTs issued by the backend will carry `is_admin: true`, granting access to admin-only routes.
+
 ### Running services
 
 In development you can run each service independently from `src/`:

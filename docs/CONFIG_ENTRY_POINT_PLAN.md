@@ -805,6 +805,8 @@ logging:
 
 Secret guidance: prefer env vars injected by secret manager; avoid committing secrets to config files. Mount service-specific YAML with non-secret defaults only.
 
+For guidance on bootstrapping the very first admin user in a new deployment (when no users exist yet), see the "Bootstrapping the first admin user" section in the root `README.md`. That section documents the `scripts/add-admin-user.sh` helper script, which is the recommended operator-facing way to create an initial admin account against the configured database.
+
 ### Application Start and Shutdown
 
 ```go

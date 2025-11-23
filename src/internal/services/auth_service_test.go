@@ -289,6 +289,65 @@ func TestAuthService_ResetPassword(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid or expired reset token")
 }
 
+func TestAuthService_ResetUserPassword(t *testing.T) {
+	// Create a test database instance
+	db, tearDown := test.GetTestDB(t)
+	defer tearDown()
+
+	authService := NewAuthService(db, "test-secret-key-change-in-production")
+
+	// Create test user
+	password := "ValidPass123!"
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	assert.NoError(t, err)
+
+	// Create a user with existing password reset tokens to test they get cleared
+	resetToken := "existing-reset-token"
+	hashedResetToken, err := bcrypt.GenerateFromPassword([]byte(resetToken), bcrypt.DefaultCost)
+	assert.NoError(t, err)
+
+	resetExpiry := time.Now().Add(1 * time.Hour)
+
+	user := &models.User{
+		Username:            "testuser",
+		Email:               "test@example.com",
+		PasswordHash:        string(hashedPassword),
+		PasswordResetToken:  &hashedResetToken,
+		PasswordResetExpiry: &resetExpiry,
+		APIKey:              uuid.New(),
+	}
+
+	err = db.Create(user).Error
+	assert.NoError(t, err)
+
+	// Test valid password reset by admin
+	newPassword := "NewValidPass456!"
+	err = authService.ResetUserPassword(user.ID, newPassword)
+	assert.NoError(t, err)
+
+	// Verify password was updated and reset tokens cleared
+	var updatedUser models.User
+	err = db.First(&updatedUser, user.ID).Error
+	assert.NoError(t, err)
+	assert.NotEqual(t, user.PasswordHash, updatedUser.PasswordHash) // Password should be changed
+	assert.Nil(t, updatedUser.PasswordResetToken)                  // Token should be cleared
+	assert.Nil(t, updatedUser.PasswordResetExpiry)                 // Expiry should be cleared
+
+	// Verify new password works for login
+	_, _, err = authService.Login("testuser", newPassword)
+	assert.NoError(t, err)
+
+	// Test with invalid user ID
+	err = authService.ResetUserPassword(99999, newPassword)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "user not found")
+
+	// Test with invalid password
+	err = authService.ResetUserPassword(user.ID, "short1!")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "password validation failed")
+}
+
 func TestAuthService_LockUser(t *testing.T) {
 	// Create a test database instance
 	db, tearDown := test.GetTestDB(t)
@@ -302,7 +361,7 @@ func TestAuthService_LockUser(t *testing.T) {
 		Email:    "test@example.com",
 		APIKey:   uuid.New(),
 	}
-	
+
 	err := db.Create(user).Error
 	assert.NoError(t, err)
 
