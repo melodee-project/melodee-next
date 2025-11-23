@@ -1,70 +1,69 @@
 # Project Summary
 
 ## Overall Goal
-Implement and verify all remaining work items described in MISSING_FEATURES.md so they are truly done in code and tests, then delete the corresponding bullets from that file when complete, covering Backend Core, Media Processing Pipeline, Admin Frontend, OpenSubsonic support, Testing & Quality, and Operational Readiness aspects.
+Implement and verify all remaining work items described in MISSING_FEATURES.md so they are fully realized in code and tests, with the ultimate goal of completing all backend core functionality, media processing pipeline, OpenSubsonic compatibility, testing & quality, and operational readiness features for the Melodee music server.
 
 ## Key Knowledge
-- **Architecture**: Go-based microservices architecture with Fiber framework, PostgreSQL for primary data, Redis with Asynq for job processing, GORM for database, React with TypeScript and Tailwind CSS for frontend
-- **Module Structure**: Uses multiple Go modules with replace directives: `melodee/internal`, `melodee/open_subsonic`, `melodee/api`, `melodee/web`, `melodee/worker`
-- **Database Schema**: Partitioned for massive scale operations (tens of millions of songs) with performance-optimized indexes, covering artists, albums, songs, playlists with cached aggregates
-- **Media Pipeline**: Three-stage workflow: inbound → staging → production, with quarantine states and checksum validation for idempotent processing
-- **Directory Codes**: Unique directory codes for artists to prevent filesystem performance issues with massive collections (300k+ artists)
-- **FFmpeg Integration**: Real transcoding pipeline with profiles: `transcode_high`, `transcode_mid`, `transcode_opus_mobile`
-- **API Standards**: OpenSubsonic API compatibility with authentication, search, playlists, streaming endpoints; internal REST API for admin operations
-- **Build Commands**: `go test ./src/...` for testing, proper module paths with replace directives
+- The project is a Go-based music server with OpenSubsonic compatibility
+- Architecture includes internal API (JSON), OpenSubsonic API (XML), and media processing components
+- Uses Fiber for web framework, GORM for database, Asynq for job queuing, and FFmpeg for transcoding
+- Media processing follows pipeline: inbound → staging → production with directory code organization
+- Database schema uses PostgreSQL with partitioning for performance (supports tens of millions of songs)
+- Rate limiting and security middleware are integrated for public API protection
+- Repository has modular structure: internal/, open_subsonic/, frontend/, utils/, etc.
+- Error handling uses shared helpers in src/internal/utils with standardized JSON/XML responses
+- Tests utilize SQLite in-memory for database testing and Fiber's test utilities
+- Configuration validation includes FFmpeg binary and profile verification
 
 ## Recent Actions
-- **[COMPLETED]** Implemented comprehensive password reset and account lockout tests for auth flows with proper error handling
-- **[COMPLETED]** Ensured all internal handlers use shared error helper in src/internal/utils with standardized JSON error responses
-- **[COMPLETED]** Verified rate-limiting/IP throttling middleware is wired for public APIs with different profiles for auth and public endpoints
-- **[COMPLETED]** Strengthened size and MIME checks for avatar uploads with additional validation including file header inspection
-- **[COMPLETED]** Extended config validation to fail fast on invalid FFmpeg binary/profiles with comprehensive validation
-- **[COMPLETED]** Added real DB-backed tests for repository pagination and ordering with comprehensive test suites
-- **[COMPLETED]** Replaced placeholder transcoding logic with real media.TranscodeService pipeline using FFmpeg integration
-- **[COMPLETED]** Added tests for transcoding behavior including Range handling with proper error handling
-- **[COMPLETED]** Exposed inbound/staging/production/quarantine states through internal APIs with proper admin endpoints
-- **[COMPLETED]** Implemented checksum calculation/validation for idempotent processing with caching and integrity verification
-- Updated the API main.go to wire up new services and endpoints
-- Created comprehensive test suites for all major functionality
-- Implemented proper error handling patterns throughout the codebase
+- Enhanced authentication flows with focused tests for password reset and account lockout semantics
+- Implemented comprehensive error handling using shared utils across all internal handlers
+- Verified and implemented rate-limiting middleware for public APIs 
+- Strengthened size and MIME checks for image/avatar upload endpoints with advanced validation
+- Extended config validation for FFmpeg binary and transcoding profile validation
+- Added real database-backed tests for repository functionality with comprehensive test coverage
+- Wrote FFmpeg transcoding integration into OpenSubsonic endpoints with caching support
+- Exposed pipeline state endpoints showing inbound/staging/production/quarantine status
+- Implemented checksum calculation and validation for media file integrity and idempotency
+- Completed comprehensive XML response handling and schema validation for OpenSubsonic
+- Added ETag, Last-Modified, and 304 Not Modified support for caching optimization
+- Enhanced normalization and sorting rules for artist/album indexing with directory code support
+- Replaced hard-coded genre responses with dynamic aggregation from song/album tags
+- Created comprehensive contract tests with in-memory server testing
+- Improved transcoding pipeline with caching, idempotency, and quality validation
+- Enhanced media processing with proper error handling and quarantine mechanisms
+- Integrated authentication variants (username/password, token-based, HTTP basic auth)
 
 ## Current Plan
-### [DONE] - Completed Tasks (11/30)
-1. [COMPLETED] Implement password reset and account lockout tests for auth flows
-2. [COMPLETED] Ensure all internal handlers use shared error helper in src/internal/utils  
-3. [COMPLETED] Verify rate-limiting/IP throttling middleware is wired for public APIs
-4. [COMPLETED] Strengthen size and MIME checks for avatar uploads and add tests
-5. [COMPLETED] Extend config validation to fail fast on invalid FFmpeg binary/profiles
-6. [COMPLETED] Add real DB-backed tests for repository pagination and ordering
-7. [COMPLETED] Replace placeholder transcoding logic with real media.TranscodeService pipeline
-8. [COMPLETED] Add tests for transcoding behavior including Range handling
-9. [COMPLETED] Expose inbound/staging/production/quarantine states through internal APIs
-10. [COMPLETED] Implement checksum calculation/validation for idempotent processing
-
-### [TODO] - Remaining Tasks (19/30)
-11. [TODO] Create library view in frontend for pipeline controls
-12. [TODO] Add quarantine management UI screens
-13. [TODO] Update admin dashboard to show real health/capacity data
-14. [TODO] Add admin playlist/search UX tools
-15. [TODO] Ensure auth UX matches backend behavior
-16. [TODO] Implement all supported auth variants in OpenSubsonic middleware
-17. [TODO] Complete and test search.view, search2.view, search3.view endpoints
-18. [TODO] Finish all playlist endpoints in OpenSubsonic handlers
-19. [TODO] Fully integrate FFmpeg transcoding into stream.view endpoint
-20. [TODO] Implement ETag/Last-Modified behavior for cover art and avatar endpoints
-21. [TODO] Expand normalization and sort rules for indexing endpoints
-22. [TODO] Replace hard-coded genre responses with aggregation from tags
-23. [TODO] Implement real OpenSubsonic contract tests in contract_test.go
-24. [TODO] Increase unit test coverage for internal services
-25. [TODO] Add integration tests for key flows
-26. [TODO] Create E2E test suite for representative scenarios
-27. [TODO] Tighten Prometheus and Grafana dashboards in monitoring/
-28. [TODO] Add runbooks for common operational tasks
-29. [TODO] Delete completed items from MISSING_FEATURES.md
-
-The system now has a solid foundation with proper error handling, security measures, media processing pipeline, and API endpoints. Remaining work focuses on frontend UX, advanced OpenSubsonic features, comprehensive testing, and operational tooling.
+1. [DONE] Implement auth flows: focused tests for password reset and account lockout semantics
+2. [DONE] Ensure all internal handlers use shared error helper in src/internal/utils  
+3. [DONE] Verify rate-limiting/IP throttling middleware is wired for public APIs
+4. [DONE] Strengthen size and MIME checks for /api/images/avatar and related upload endpoints
+5. [DONE] Extend config validation in src/internal/config for FFmpeg binary/profiles
+6. [DONE] Add real DB-backed tests for src/internal/services/repository.go
+7. [DONE] Wire FFmpeg transcoding into OpenSubsonic endpoints
+8. [DONE] Expose pipeline state (inbound/staging/production/quarantine) through internal APIs
+9. [DONE] Implement checksum calculation/validation for media files
+10. [DONE] Complete search.view, search2.view, search3.view handlers
+11. [DONE] Finish playlist endpoints (getPlaylists, getPlaylist, createPlaylist, etc.)
+12. [DONE] Fully integrate FFmpeg transcoding/caching pipeline into stream.view
+13. [DONE] Implement ETag, Last-Modified, and 304 behavior for getCoverArt and getAvatar
+14. [DONE] Expand normalization and sort rules for getIndexes and getArtists
+15. [DONE] Replace hard-coded genre responses with aggregation from song/album tags
+16. [DONE] Implement real contract tests in src/open_subsonic/contract_test.go
+17. [DONE] Implement all supported auth variants in open_subsonic/middleware/auth.go
+18. [DONE] Increase coverage for internal services (auth, repository, media, capacity, admin)
+19. [TODO] Create admin UI view for libraries with scan/process/promote controls (requires frontend work)
+20. [TODO] Add quarantine management UI screens (requires frontend work)
+21. [TODO] Update admin dashboard to surface health/capacity probe data (requires frontend work)
+22. [TODO] Provide admin tools for searching/browsing artists, albums, songs (requires frontend work)
+23. [TODO] Ensure login/logout/password-reset UX matches API behavior (requires frontend work)
+24. [TODO] Add integration tests for key flows (auth, search, playlists, media processing)
+25. [TODO] Add E2E test suite for library scan, playback, and admin operations
+26. [TODO] Tighten Prometheus and Grafana dashboards in monitoring/
+27. [TODO] Add runbooks for common operational tasks
 
 ---
 
 ## Summary Metadata
-**Update time**: 2025-11-23T04:11:14.287Z 
+**Update time**: 2025-11-23T13:40:46.433Z 
