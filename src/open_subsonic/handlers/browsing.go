@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"sort"
@@ -473,50 +474,43 @@ func (h *BrowsingHandler) GetSong(c *fiber.Ctx) error {
 
 // GetGenres returns all genres
 func (h *BrowsingHandler) GetGenres(c *fiber.Ctx) error {
-	// Aggregate genres from all albums and songs in the database
+	// Aggregate genres from all songs in the database (primary source)
+	genreMap := make(map[string]int)
 
-	// Count genres from albums
-	albumGenreMap := make(map[string]int)
-	var albums []models.Album
-	if err := h.db.Find(&albums).Error; err != nil {
-		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve albums")
+	// Query songs to extract genres from tags
+	var songs []models.Song
+	if err := h.db.Select("tags").Find(&songs).Error; err != nil {
+		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve songs for genre aggregation")
 	}
 
-	for _, album := range albums {
-		// Count genres from album metadata
-		for _, genre := range album.Genres {
-			if genre != "" {
-				albumGenreMap[genre]++ // Increment count for this genre
+	// Extract genres from all song tags and count occurrences
+	for _, song := range songs {
+		genre := extractGenreFromTags(song.Tags)
+		if genre != "" {
+			// Normalize the genre name for consistent counting
+			normalizedGenre := normalizeGenreName(genre)
+			if normalizedGenre != "" {
+				genreMap[normalizedGenre]++
 			}
 		}
 	}
 
-	// Count genres from songs as well
-	songGenreMap := make(map[string]int)
-	var songs []models.Song
-	if err := h.db.Find(&songs).Error; err != nil {
-		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve songs")
-	}
-
-	for _, song := range songs {
-		// Extract genre from song tags and add to the genre map
-		genre := extractGenreFromTags(song.Tags)
-		if genre != "" {
-			songGenreMap[genre]++
+	// Also check albums for genres if they have them
+	var albums []models.Album
+	if err := h.db.Find(&albums).Error; err != nil {
+		// Don't return error, just continue with song-based genres
+		fmt.Printf("Warning: Could not retrieve albums for genre aggregation: %v\n", err)
+	} else {
+		for _, album := range albums {
+			for _, genre := range album.Genres {
+				if genre != "" {
+					normalizedGenre := normalizeGenreName(genre)
+					if normalizedGenre != "" {
+						genreMap[normalizedGenre]++
+					}
+				}
+			}
 		}
-	}
-
-	// Combine all genres and their counts
-	allGenres := make(map[string]int)
-
-	// Add album genres to the combined map
-	for genre, count := range albumGenreMap {
-		allGenres[genre] += count
-	}
-
-	// Add song genres to the combined map (though currently empty unless song.Tags contains genre data)
-	for genre, count := range songGenreMap {
-		allGenres[genre] += count
 	}
 
 	// Create response
@@ -533,16 +527,16 @@ func (h *BrowsingHandler) GetGenres(c *fiber.Ctx) error {
 	}
 	var sortedGenres []genreCount
 
-	for name, count := range allGenres {
+	for name, count := range genreMap {
 		sortedGenres = append(sortedGenres, genreCount{Name: name, Count: count})
 	}
 
-	// Sort by name (case-insensitive)
+	// Sort by name alphabetically (case-insensitive)
 	sort.Slice(sortedGenres, func(i, j int) bool {
 		return strings.ToLower(sortedGenres[i].Name) < strings.ToLower(sortedGenres[j].Name)
 	})
 
-	// Add to response
+	// Add to response with proper counts
 	for _, gc := range sortedGenres {
 		genres.Genres = append(genres.Genres, Genre{
 			Name:  gc.Name,
@@ -552,6 +546,30 @@ func (h *BrowsingHandler) GetGenres(c *fiber.Ctx) error {
 
 	response.Genres = &genres
 	return utils.SendResponse(c, response)
+}
+
+// normalizeGenreName normalizes genre names to ensure consistent counting
+func normalizeGenreName(genre string) string {
+	if genre == "" {
+		return ""
+	}
+
+	// Trim whitespace
+	genre = strings.TrimSpace(genre)
+
+	// Handle common variations and clean up the genre name
+	// For example: "Rock/Pop" might be treated as separate genres in some systems
+	// For now, we'll keep compound genres as they are but normalize whitespace
+
+	// Replace multiple spaces with single space
+	for strings.Contains(genre, "  ") {
+		genre = strings.ReplaceAll(genre, "  ", " ")
+	}
+
+	// Remove any trailing/leading spaces again after cleaning
+	genre = strings.TrimSpace(genre)
+
+	return genre
 }
 
 // Helper functions
@@ -681,30 +699,58 @@ func getSuffix(filename string) string {
 // extractGenreFromTags extracts genre from song tags
 func extractGenreFromTags(tags []byte) string {
 	// The tags field is a JSONB field in the database
-	// In our implementation, genres would be stored as part of the JSON structure
-	// For now, this is a placeholder that would parse the JSON tags to extract genre information
-	// In a real implementation, this would parse the JSONB field to extract genre
-
 	if tags == nil || len(tags) == 0 {
 		return ""
 	}
 
-	// Placeholder implementation - in a real system, we'd unmarshal the JSON
-	// and look for a "genre" field
-	// This is application-specific logic that would depend on how the tags are structured
+	// Parse the JSONB field to extract genre
+	var tagData map[string]interface{}
+	if err := json.Unmarshal(tags, &tagData); err != nil {
+		return ""
+	}
 
-	// For example, if genre is stored as "genre" field in the tags JSON:
-	// var tagData map[string]interface{}
-	// if err := json.Unmarshal(tags, &tagData); err != nil {
-	//     return ""
-	// }
-	// if genreVal, ok := tagData["genre"]; ok {
-	//     if genreStr, ok := genreVal.(string); ok {
-	//         return genreStr
-	//     }
-	// }
+	// Look for various possible genre field names in the JSON
+	possibleKeys := []string{"genre", "Genre", "GENRE", "music_genre", "style", "category", "tags", "GenreID3v1"}
 
-	// For now, return empty string
+	for _, key := range possibleKeys {
+		if genreVal, ok := tagData[key]; ok {
+			if genreStr, ok := genreVal.(string); ok {
+				return genreStr
+			}
+			// Handle case where genre is an array
+			if genreArr, ok := genreVal.([]interface{}); ok && len(genreArr) > 0 {
+				if genreStr, ok := genreArr[0].(string); ok {
+					return genreStr
+				}
+			}
+			// Handle numeric genre IDs (common in ID3 tags)
+			if genreNum, ok := genreVal.(float64); ok {
+				return fmt.Sprintf("%.0f", genreNum) // Convert number to string
+			}
+		}
+	}
+
+	// If no genre found in top-level, check embedded objects
+	if genreObj, ok := tagData["common"]; ok {
+		if genreCommon, ok := genreObj.(map[string]interface{}); ok {
+			if genreVal, ok := genreCommon["genre"]; ok {
+				if genreStr, ok := genreVal.(string); ok {
+					return genreStr
+				}
+			}
+		}
+	}
+
 	return ""
+}
+
+// ExtractGenreFromTagsForTesting exports the function for testing
+func ExtractGenreFromTagsForTesting(tags []byte) string {
+	return extractGenreFromTags(tags)
+}
+
+// NormalizeGenreNameForTesting exports the function for testing
+func NormalizeGenreNameForTesting(genre string) string {
+	return normalizeGenreName(genre)
 }
 
