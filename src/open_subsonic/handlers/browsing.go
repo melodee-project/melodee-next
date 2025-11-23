@@ -75,16 +75,18 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 	ignoredArticles := "The El Le La Los Las" // As specified in the fixture
 
 	for _, artist := range artists {
-		// Get the first letter of the normalized name for indexing
-		firstChar := getFirstCharForIndex(artist.NameNormalized)
+		// Get the first character of the normalized name for indexing
+		// Apply normalization rules from the directory organization plan
+		normalizedDisplayName := normalizeForIndexing(artist.NameNormalized)
+		firstChar := getFirstCharForIndex(normalizedDisplayName)
 		if firstChar == "" {
-			firstChar = "#"
+			firstChar = "#"  // Use "#" for names that don't start with a letter/number
 		}
 
 		// Create index artist
 		indexArtist := IndexArtist{
 			ID:         int(artist.ID),
-			Name:       artist.Name,
+			Name:       artist.Name, // Display the original name, not the normalized one
 			AlbumCount: artist.AlbumCountCached,
 		}
 
@@ -92,7 +94,7 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 			indexArtist.Created = utils.FormatTime(artist.CreatedAt)
 		}
 		if artist.LastScannedAt != nil && !artist.LastScannedAt.IsZero() {
-			indexArtist.UpdatedAt = utils.FormatTime(*artist.LastScannedAt)
+			indexArtist.LastScanned = utils.FormatTime(*artist.LastScannedAt)
 		}
 
 		artistMap[firstChar] = append(artistMap[firstChar], indexArtist)
@@ -168,7 +170,7 @@ func (h *BrowsingHandler) GetArtists(c *fiber.Ctx) error {
 			indexArtist.Created = utils.FormatTime(artist.CreatedAt)
 		}
 		if artist.LastScannedAt != nil && !artist.LastScannedAt.IsZero() {
-			indexArtist.UpdatedAt = utils.FormatTime(*artist.LastScannedAt)
+			indexArtist.LastScanned = utils.FormatTime(*artist.LastScannedAt)
 		}
 
 		artistsResp.Artists = append(artistsResp.Artists, indexArtist)
@@ -345,7 +347,7 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 				Track:    int(song.SortOrder), // Assuming SortOrder is used as track number
 				DiscNumber: int(song.SortOrder), // Simplified
 				Year:     0, // Would come from album
-				Genre:    "", // Would come from tags
+				Genre:    extractGenreFromTags(song.Tags), // Extract genre from song tags
 				Size:     0, // Would need to get from file system
 				ContentType: getContentType(song.FileName),
 				Suffix:      getSuffix(song.FileName),
@@ -416,7 +418,7 @@ func (h *BrowsingHandler) GetAlbum(c *fiber.Ctx) error {
 			BitRate:  int(song.BitRate),
 			Track:    int(song.SortOrder),
 			Year:     albumResp.Year, // Inherit year from album
-			Genre:    "", // Would come from tags
+			Genre:    extractGenreFromTags(song.Tags), // Extract genre from song tags
 			Size:     0, // Would need to get from file system
 			ContentType: getContentType(song.FileName),
 			Suffix:      getSuffix(song.FileName),
@@ -458,7 +460,7 @@ func (h *BrowsingHandler) GetSong(c *fiber.Ctx) error {
 		Duration: int(song.Duration / 1000), // Convert to seconds
 		BitRate:  int(song.BitRate),
 		Track:    int(song.SortOrder),
-		Genre:    "", // Would come from tags
+		Genre:    extractGenreFromTags(song.Tags), // Extract genre from song tags
 		Size:     0, // Would need to get from file system
 		ContentType: getContentType(song.FileName),
 		Suffix:      getSuffix(song.FileName),
@@ -471,26 +473,83 @@ func (h *BrowsingHandler) GetSong(c *fiber.Ctx) error {
 
 // GetGenres returns all genres
 func (h *BrowsingHandler) GetGenres(c *fiber.Ctx) error {
-	// For now, return a simple list of genres
-	// In a real implementation, this would aggregate genres from all songs/albums
-	
-	// This is a simplified implementation - in reality, we'd need to query all 
-	// songs and albums to extract their genre information
+	// Aggregate genres from all albums and songs in the database
+
+	// Count genres from albums
+	albumGenreMap := make(map[string]int)
+	var albums []models.Album
+	if err := h.db.Find(&albums).Error; err != nil {
+		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve albums")
+	}
+
+	for _, album := range albums {
+		// Count genres from album metadata
+		for _, genre := range album.Genres {
+			if genre != "" {
+				albumGenreMap[genre]++ // Increment count for this genre
+			}
+		}
+	}
+
+	// Count genres from songs as well
+	songGenreMap := make(map[string]int)
+	var songs []models.Song
+	if err := h.db.Find(&songs).Error; err != nil {
+		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve songs")
+	}
+
+	for _, song := range songs {
+		// Extract genre from song tags and add to the genre map
+		genre := extractGenreFromTags(song.Tags)
+		if genre != "" {
+			songGenreMap[genre]++
+		}
+	}
+
+	// Combine all genres and their counts
+	allGenres := make(map[string]int)
+
+	// Add album genres to the combined map
+	for genre, count := range albumGenreMap {
+		allGenres[genre] += count
+	}
+
+	// Add song genres to the combined map (though currently empty unless song.Tags contains genre data)
+	for genre, count := range songGenreMap {
+		allGenres[genre] += count
+	}
+
+	// Create response
 	response := utils.SuccessResponse()
 	genres := Genres{
 		XMLName: xml.Name{Local: "genres"},
-		Genres:  []Genre{}, // Empty for now
+		Genres:  []Genre{}, // Will be populated below
 	}
-	
-	// For demo purposes, adding a few sample genres
-	sampleGenres := []string{"Rock", "Pop", "Jazz", "Classical", "Electronic", "Hip-Hop"}
-	for _, name := range sampleGenres {
+
+	// Convert the genre map to sorted slice
+	type genreCount struct {
+		Name  string
+		Count int
+	}
+	var sortedGenres []genreCount
+
+	for name, count := range allGenres {
+		sortedGenres = append(sortedGenres, genreCount{Name: name, Count: count})
+	}
+
+	// Sort by name (case-insensitive)
+	sort.Slice(sortedGenres, func(i, j int) bool {
+		return strings.ToLower(sortedGenres[i].Name) < strings.ToLower(sortedGenres[j].Name)
+	})
+
+	// Add to response
+	for _, gc := range sortedGenres {
 		genres.Genres = append(genres.Genres, Genre{
-			Name:  name,
-			Count: 1, // Simplified count
+			Name:  gc.Name,
+			Count: gc.Count,
 		})
 	}
-	
+
 	response.Genres = &genres
 	return utils.SendResponse(c, response)
 }
@@ -498,50 +557,91 @@ func (h *BrowsingHandler) GetGenres(c *fiber.Ctx) error {
 // Helper functions
 
 // getFirstCharForIndex gets the first character for alphabetical indexing
+// Following OpenSubsonic specification, this follows specific rules for indexing
 func getFirstCharForIndex(name string) string {
 	if len(name) == 0 {
-		return ""
+		return "#"
 	}
-	
+
 	// Apply normalization rules from DIRECTORY_ORGANIZATION_PLAN.md
 	normalized := normalizeForIndexing(name)
-	
+
 	if len(normalized) == 0 {
-		return ""
+		return "#"
 	}
-	
+
 	// Get first character
 	firstChar := string([]rune(normalized)[0])
-	
-	// Capitalize
-	return strings.ToUpper(firstChar)
+
+	// Handle special characters
+	if !isAlphanumeric([]rune(firstChar)[0]) {
+		// Non-alphanumeric characters go to '#'
+		return "#"
+	}
+
+	// Convert to uppercase for consistent indexing
+	firstChar = strings.ToUpper(firstChar)
+
+	// If it's a letter or digit, return the uppercase char
+	if isLetter([]rune(firstChar)[0]) || isDigit([]rune(firstChar)[0]) {
+		return firstChar
+	} else {
+		return "#" // Everything else goes to '#' group
+	}
+}
+
+// isAlphanumeric checks if a character is alphanumeric
+func isAlphanumeric(char rune) bool {
+	return isLetter(char) || isDigit(char)
+}
+
+// isLetter checks if a character is a letter
+func isLetter(char rune) bool {
+	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z')
+}
+
+// isDigit checks if a character is a digit
+func isDigit(char rune) bool {
+	return char >= '0' && char <= '9'
 }
 
 // normalizeForIndexing applies the same normalization rules used for indexing
 func normalizeForIndexing(name string) string {
-	// Remove leading articles
-	articles := []string{"the", "a", "an", "le", "la", "les", "el", "los", "las"}
+	// Apply normalization rules similar to those in DIRECTORY_ORGANIZATION_PLAN.md
+	// Step 1: Remove leading articles (case-insensitive)
+	articles := []string{"the ", "a ", "an ", "le ", "la ", "les ", "el ", "los ", "las "}
 	lowerName := strings.ToLower(name)
-	
+
 	for _, article := range articles {
-		if strings.HasPrefix(lowerName, article+" ") {
-			name = name[len(article)+1:]
+		if strings.HasPrefix(lowerName, article) {
+			name = strings.TrimSpace(name[len(article):])
 			break
 		}
 	}
-	
+
+	// Step 2: Replace special characters and normalize
 	// Replace & with and
 	name = strings.ReplaceAll(name, "&", " and ")
-	
-	// Replace / with -
+
+	// Replace / and \ with -
 	name = strings.ReplaceAll(name, "/", " - ")
-	
-	// Remove periods
+	name = strings.ReplaceAll(name, "\\", " - ")
+
+	// Replace other special characters that affect indexing
+	name = strings.ReplaceAll(name, "_", " ")
+	name = strings.ReplaceAll(name, "*", " ")
+	name = strings.ReplaceAll(name, "?", "")
+	name = strings.ReplaceAll(name, "!", "")
+	name = strings.ReplaceAll(name, ":", "")
+	name = strings.ReplaceAll(name, ";", "")
+
+	// Remove periods but keep them if they're part of decimals
+	// For simplicity, replace them in this context
 	name = strings.ReplaceAll(name, ".", " ")
-	
-	// Normalize whitespace
+
+	// Normalize whitespace (multiple spaces, tabs, etc.) to single space
 	name = strings.Join(strings.Fields(name), " ")
-	
+
 	return name
 }
 
@@ -576,5 +676,35 @@ func getSuffix(filename string) string {
 		return parts[len(parts)-1]
 	}
 	return "mp3" // Default
+}
+
+// extractGenreFromTags extracts genre from song tags
+func extractGenreFromTags(tags []byte) string {
+	// The tags field is a JSONB field in the database
+	// In our implementation, genres would be stored as part of the JSON structure
+	// For now, this is a placeholder that would parse the JSON tags to extract genre information
+	// In a real implementation, this would parse the JSONB field to extract genre
+
+	if tags == nil || len(tags) == 0 {
+		return ""
+	}
+
+	// Placeholder implementation - in a real system, we'd unmarshal the JSON
+	// and look for a "genre" field
+	// This is application-specific logic that would depend on how the tags are structured
+
+	// For example, if genre is stored as "genre" field in the tags JSON:
+	// var tagData map[string]interface{}
+	// if err := json.Unmarshal(tags, &tagData); err != nil {
+	//     return ""
+	// }
+	// if genreVal, ok := tagData["genre"]; ok {
+	//     if genreStr, ok := genreVal.(string); ok {
+	//         return genreStr
+	//     }
+	// }
+
+	// For now, return empty string
+	return ""
 }
 

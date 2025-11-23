@@ -19,13 +19,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/gorm"
 
+	"melodee/internal/capacity"
 	"melodee/internal/config"
 	"melodee/internal/database"
+	"melodee/internal/directory"
 	"melodee/internal/handlers"
+	"melodee/internal/media"
 	"melodee/internal/middleware"
 	"melodee/internal/services"
-	"melodee/open_subsonic/handlers"
-	"melodee/open_subsonic/middleware"
+	open_subsonic_handlers "melodee/open_subsonic/handlers"
+	open_subsonic_middleware "melodee/open_subsonic/middleware"
 )
 
 // Server represents the main application server that handles both internal and OpenSubsonic APIs
@@ -229,6 +232,63 @@ func (s *Server) setupInternalRoutes() {
 	admin.Get("/capacity/:id", healthMetricsHandler.CapacityStatusForLibrary)
 	admin.Post("/capacity/probe-now", healthMetricsHandler.ProbeCapacityNow)
 
+	// Initialize directory services for media processing
+	directorySvc := directory.NewDirectoryCodeGenerator(&directory.DirectoryCodeConfig{
+		FormatPattern: "consonant_vowel",
+		MaxLength:     10,
+		MinLength:     2,
+		UseSuffixes:   true,
+		SuffixPattern: "-%d",
+	})
+
+	pathResolver := directory.NewPathTemplateResolver(&directory.PathTemplateConfig{
+		DefaultTemplate: "{library}/{artist_dir_code}/{artist}/{year} - {album}",
+	})
+
+	// Initialize checksum service for media processing
+	checksumSvc := media.NewChecksumService(
+		s.dbManager.GetGormDB(),
+		&media.ChecksumConfig{
+			Algorithm:     "SHA256",
+			EnableCaching: true,
+			CacheTTL:      24 * time.Hour,
+			StoreLocation: "DB",
+		},
+	)
+
+	// Initialize media service
+	mediaSvc := media.NewMediaService(
+		s.dbManager.GetGormDB(),
+		directorySvc,
+		pathResolver,
+	)
+
+	// Initialize media processor with all required services
+	mediaProcessor := media.NewMediaProcessor(
+		media.DefaultProcessingConfig(),
+		s.dbManager.GetGormDB(),
+		pathResolver,
+		media.NewQuarantineService(s.dbManager.GetGormDB()), // Assuming this exists
+		media.NewMediaFileValidator(), // Assuming this exists
+		media.NewFFmpegProcessor(&media.FFmpegConfig{
+			FFmpegPath: s.cfg.Processing.FFmpegPath,
+			Profiles:   make(map[string]media.FFmpegProfile),
+		}), // FFmpeg processor
+		checksumSvc,
+	)
+
+	// Library management
+	libraryHandler := handlers.NewLibraryHandler(s.repo, mediaSvc, s.asynqClient)
+	libraries := admin.Group("/libraries")
+	libraries.Get("/", libraryHandler.GetLibraryStates)
+	libraries.Get("/:id", libraryHandler.GetLibraryState)
+	libraries.Post("/scan", libraryHandler.TriggerLibraryScan)
+	libraries.Post("/process", libraryHandler.TriggerLibraryProcess)
+	libraries.Post("/move-ok", libraryHandler.TriggerLibraryMoveOK)
+	libraries.Get("/quarantine", libraryHandler.GetQuarantineItems)
+	libraries.Post("/quarantine/:id/resolve", libraryHandler.ResolveQuarantineItem)
+	libraries.Post("/quarantine/:id/requeue", libraryHandler.RequeueQuarantineItem)
+
 	// Settings management
 	settingsHandler := handlers.NewSettingsHandler(s.repo)
 	admin.Get("/settings", settingsHandler.GetSettings)
@@ -260,9 +320,28 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	// OpenSubsonic authentication middleware 
 	openSubsonicAuth := open_subsonic_middleware.NewOpenSubsonicAuthMiddleware(s.dbManager.GetGormDB(), s.cfg.JWT.Secret)
 
+	// Initialize FFmpeg processor
+	ffmpegConfig := &media.FFmpegConfig{
+		FFmpegPath: s.cfg.Processing.FFmpegPath,
+		Profiles:   make(map[string]media.FFmpegProfile),
+	}
+	for name, cmd := range s.cfg.Processing.Profiles {
+		ffmpegConfig.Profiles[name] = media.FFmpegProfile{
+			Command: cmd,
+		}
+	}
+	ffmpegProcessor := media.NewFFmpegProcessor(ffmpegConfig)
+
+	// Initialize transcode service with caching
+	transcodeService := media.NewTranscodeService(
+		ffmpegProcessor,
+		s.cfg.Processing.TranscodeCache.CacheDir,
+		s.cfg.Processing.TranscodeCache.MaxSize*1024*1024, // Convert MB to bytes
+	)
+
 	// Create handlers for OpenSubsonic endpoints
 	browsingHandler := open_subsonic_handlers.NewBrowsingHandler(s.repo)
-	mediaHandler := open_subsonic_handlers.NewMediaHandler(s.repo, s.cfg.Processing.Conversion)
+	mediaHandler := open_subsonic_handlers.NewMediaHandler(s.repo, s.cfg, transcodeService)
 	searchHandler := open_subsonic_handlers.NewSearchHandler(s.repo)
 	playlistHandler := open_subsonic_handlers.NewPlaylistHandler(s.repo)
 	userHandler := open_subsonic_handlers.NewUserHandler(s.repo)

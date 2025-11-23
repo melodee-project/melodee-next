@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"melodee/internal/models"
 )
 
 // OpenSubsonicResponse represents the common OpenSubsonic response wrapper
@@ -154,13 +155,10 @@ func NormalizeString(s string) string {
 }
 
 // GetUserFromContext retrieves the authenticated user from the context
-func GetUserFromContext(c *fiber.Ctx) (*interface{}, bool) {
-	// Placeholder implementation - in reality, this would return the proper user model type
-	user, ok := c.Locals("user").(*interface{})
+func GetUserFromContext(c *fiber.Ctx) (*models.User, bool) {
+	user, ok := c.Locals("user").(*models.User)
 	return user, ok
 }
-
-// These types need to be defined or imported - creating placeholder types here
 type MusicFolders struct {
 	XMLName xml.Name     `xml:"musicFolders"`
 	Folders []MusicFolder `xml:"musicFolder"`
@@ -189,6 +187,7 @@ type IndexArtist struct {
 	AlbumCount int    `xml:"albumCount,attr"`
 	CoverArt   string `xml:"coverArt,attr,omitempty"`
 	Created    string `xml:"created,attr,omitempty"`
+	LastScanned string `xml:"lastScanned,attr,omitempty"`  // OpenSubsonic uses lastScanned field
 	Starred    string `xml:"starred,attr,omitempty"`
 }
 

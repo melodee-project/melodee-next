@@ -482,16 +482,60 @@ func (c *AppConfig) Validate() error {
 	}
 
 	// Validate processing profiles
+	if c.Processing.Profiles == nil {
+		c.Processing.Profiles = make(map[string]string)
+	}
+
+	// Required profiles that must be present
+	requiredProfiles := []string{"transcode_high", "transcode_mid", "transcode_opus_mobile"}
+	for _, requiredProfile := range requiredProfiles {
+		if _, exists := c.Processing.Profiles[requiredProfile]; !exists {
+			return fmt.Errorf("required FFmpeg profile '%s' is missing", requiredProfile)
+		}
+	}
+
+	// Validate each profile
 	for name, profile := range c.Processing.Profiles {
 		if profile == "" {
 			return fmt.Errorf("processing profile '%s' cannot be empty", name)
 		}
 
-		// Validate that profile names match expected patterns (for security)
-		if name != "transcode_high" && name != "transcode_mid" && name != "transcode_opus_mobile" {
-			// This is just for validation - in a real implementation we might allow custom profiles
-			// but for now we'll keep it simple
+		// Validate profile name (alphanumeric + underscore/hyphen for security)
+		if !isValidProfileName(name) {
+			return fmt.Errorf("invalid profile name '%s': only alphanumeric characters, underscores, and hyphens allowed", name)
 		}
+
+		// Validate profile content (basic security check to prevent command injection)
+		if !isValidProfileContent(profile) {
+			return fmt.Errorf("invalid profile content for '%s': contains potentially dangerous commands", name)
+		}
+
+		// Validate transcoding cache configuration
+		if c.Processing.TranscodeCache.Enabled {
+			if c.Processing.TranscodeCache.MaxSize <= 0 {
+				return fmt.Errorf("transcode cache max_size must be greater than 0 when enabled")
+			}
+			if c.Processing.TranscodeCache.MaxFiles <= 0 {
+				return fmt.Errorf("transcode cache max_files must be greater than 0 when enabled")
+			}
+			if c.Processing.TranscodeCache.MaxAge <= 0 {
+				return fmt.Errorf("transcode cache max_age must be greater than 0 when enabled")
+			}
+			if c.Processing.TranscodeCache.CacheDir == "" {
+				return fmt.Errorf("transcode cache directory cannot be empty when enabled")
+			}
+		}
+	}
+
+	// Validate processing configuration
+	if c.Processing.MaxConcurrent <= 0 {
+		return fmt.Errorf("max_concurrent processing must be greater than 0")
+	}
+	if c.Processing.MaxBitrate <= 0 {
+		return fmt.Errorf("max_bitrate must be greater than 0")
+	}
+	if c.Processing.DefaultFormat == "" {
+		return fmt.Errorf("default_format cannot be empty")
 	}
 
 	// Validate capacity thresholds
@@ -503,4 +547,47 @@ func (c *AppConfig) Validate() error {
 	}
 
 	return nil
+}
+
+// isValidProfileName validates that the profile name contains only safe characters
+func isValidProfileName(name string) bool {
+	// Allow alphanumeric characters, underscores, and hyphens
+	for _, r := range name {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+// isValidProfileContent validates that the profile content doesn't contain dangerous commands
+func isValidProfileContent(content string) bool {
+	// Check for potentially dangerous commands or characters
+	dangerousPatterns := []string{
+		";",      // Command separator
+		"&",      // Background execution
+		"|",      // Pipe
+		"`",      // Command substitution
+		"$( ",    // Command substitution
+		"$(",     // Command substitution
+		"eval",   // Eval command
+		"exec",   // Exec command
+		"bash",   // Shell execution
+		"sh",     // Shell execution
+		"python", // Python execution
+		"perl",   // Perl execution
+		"ruby",   // Ruby execution
+		"lua",    // Lua execution
+		"<",      // Input redirection
+		">",      // Output redirection
+		"\\0",    // Null byte
+	}
+
+	for _, pattern := range dangerousPatterns {
+		if strings.Contains(content, pattern) {
+			return false
+		}
+	}
+
+	return true
 }

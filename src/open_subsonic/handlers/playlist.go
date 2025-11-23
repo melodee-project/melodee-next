@@ -29,13 +29,13 @@ func (h *PlaylistHandler) GetPlaylists(c *fiber.Ctx) error {
 	// Get username parameter (to filter playlists)
 	username := c.Query("username", "")
 	
-	// If no username provided, assume authenticated user
-	// In a real implementation, we'd get this from the auth context
-	// For this example, we'll just return all public playlists or playlists of a default user
+	// Get the authenticated user to handle proper permissions
+	authenticatedUser, userOk := utils.GetUserFromContext(c)
+
 	var playlists []models.Playlist
-	
+
 	query := h.db.Preload("User")
-	
+
 	if username != "" {
 		// Get playlists for specific user
 		var user models.User
@@ -45,10 +45,23 @@ func (h *PlaylistHandler) GetPlaylists(c *fiber.Ctx) error {
 			}
 			return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve user")
 		}
-		query = query.Where("user_id = ? OR public = ?", user.ID, true)
+
+		// Only show user's own private playlists if they're the authenticated user
+		if userOk && authenticatedUser.ID == user.ID {
+			// Authenticated user viewing their own playlists - show all
+			query = query.Where("user_id = ?", user.ID)
+		} else {
+			// Viewing someone else's playlists - only show public ones
+			query = query.Where("user_id = ? AND public = ?", user.ID, true)
+		}
 	} else {
-		// For demo purposes, return public playlists
-		query = query.Where("public = ?", true)
+		// If no specific username, get playlists for the authenticated user
+		if userOk {
+			query = query.Where("user_id = ? OR public = ?", authenticatedUser.ID, true)
+		} else {
+			// If not authenticated, only show public playlists
+			query = query.Where("public = ?", true)
+		}
 	}
 	
 	if err := query.Find(&playlists).Error; err != nil {
@@ -178,10 +191,15 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 		playlist = &existingPlaylist
 	} else {
 		// Create new playlist
-		// For this implementation, assume the authenticated user is the owner
-		// In a real implementation, we'd get this from auth context
+		// Get the authenticated user from context
+		user, ok := utils.GetUserFromContext(c)
+		if !ok {
+			return utils.SendOpenSubsonicError(c, 50, "Authentication required")
+		}
+
 		newPlaylist = true
 		playlist = &models.Playlist{
+			UserID: user.ID,
 			Name:   name,
 			Public: false, // Default to private
 		}
@@ -237,21 +255,27 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 
 	// Return success response
 	response := utils.SuccessResponse()
+	// Get the user to populate owner information
+	var ownerUser models.User
+	if err := h.db.First(&ownerUser, playlist.UserID).Error; err != nil {
+		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve playlist owner")
+	}
+
 	playlistResp := utils.Playlist{
 		ID:        int(playlist.ID),
 		Name:      playlist.Name,
 		Public:    playlist.Public,
-		Owner:     "current_user", // In a real implementation, get from auth context
+		Owner:     ownerUser.Username, // Use actual owner's username
 		SongCount: int(playlist.SongCount),
 		Created:   utils.FormatTime(playlist.CreatedAt),
 		Changed:   utils.FormatTime(playlist.ChangedAt),
 		Duration:  int(playlist.Duration / 1000), // Convert to seconds
 	}
-	
+
 	if playlist.CoverArtID != nil {
 		playlistResp.CoverArtID = int(*playlist.CoverArtID)
 	}
-	
+
 	response.Playlist = &playlistResp
 	return utils.SendResponse(c, response)
 }

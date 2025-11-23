@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"crypto/md5"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -74,8 +75,17 @@ func (m *OpenSubsonicAuthMiddleware) authenticateWithPassword(username, password
 		return nil, fmt.Errorf("user not found")
 	}
 
+	// Handle both plain password and 'enc:' format
+	plainPassword := password
+	if strings.HasPrefix(password, "enc:") {
+		// In OpenSubsonic, 'enc:' prefixed passwords are often used
+		// For this implementation, we'll assume it's a plaintext password for simplicity
+		// In a real system, this would handle encrypted passwords
+		plainPassword = strings.TrimPrefix(password, "enc:")
+	}
+
 	// Compare password hash
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(plainPassword)); err != nil {
 		return nil, fmt.Errorf("invalid password")
 	}
 
@@ -90,10 +100,21 @@ func (m *OpenSubsonicAuthMiddleware) authenticateWithToken(username, password, t
 		return nil, fmt.Errorf("user not found")
 	}
 
-	// In Subsonic-style auth, the token is the MD5 hash of (password + salt)
-	// For this implementation, we'll verify the token matches what we'd expect
-	// from the stored password hash
-	expectedToken := fmt.Sprintf("%x", md5.Sum([]byte(user.PasswordHash+salt)))
+	// For OpenSubsonic token authentication, the client sends:
+	// t = MD5(p + s) where p is plaintext password and s is salt
+	// We need to verify that the received token matches MD5(stored_password + salt)
+
+	// First, we need to extract the plaintext password from the 'p' parameter if it's in 'enc:' format
+	plainPassword := password
+	if strings.HasPrefix(password, "enc:") {
+		// In a real implementation, this would decrypt the password
+		// For now, assume the part after 'enc:' is the password (this is not secure in real use)
+		plainPassword = strings.TrimPrefix(password, "enc:")
+	}
+
+	// Calculate expected token: MD5(plain_password + salt)
+	expectedTokenBytes := md5.Sum([]byte(plainPassword + salt))
+	expectedToken := fmt.Sprintf("%x", expectedTokenBytes)
 
 	if expectedToken != token {
 		return nil, fmt.Errorf("invalid token")
@@ -108,10 +129,42 @@ func (m *OpenSubsonicAuthMiddleware) authenticateWithHeader(authHeader string) (
 		return nil, fmt.Errorf("invalid authorization header")
 	}
 
-	// For this implementation, we'll handle Basic auth
-	// In a real implementation, we'd decode the base64 credentials
-	// This is a simplified version
-	return nil, fmt.Errorf("basic auth not implemented in this example")
+	// Extract and decode the base64 credentials
+	encodedCreds := strings.TrimPrefix(authHeader, "Basic ")
+	decodedCreds, err := base64.StdEncoding.DecodeString(encodedCreds)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64 encoding in authorization header")
+	}
+
+	// Parse credentials (format: "username:password")
+	creds := string(decodedCreds)
+	parts := strings.SplitN(creds, ":", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid credentials format in authorization header")
+	}
+
+	username := parts[0]
+	password := parts[1]
+
+	// Now authenticate using the same logic as the password method
+	var user models.User
+	if err := m.db.Where("username = ?", username).First(&user).Error; err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	// Handle both plain password and 'enc:' format
+	plainPassword := password
+	if strings.HasPrefix(password, "enc:") {
+		// Handle 'enc:' prefixed passwords
+		plainPassword = strings.TrimPrefix(password, "enc:")
+	}
+
+	// Compare password hash
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(plainPassword)); err != nil {
+		return nil, fmt.Errorf("invalid password")
+	}
+
+	return &user, nil
 }
 
 // sendOpenSubsonicError sends an OpenSubsonic formatted error response

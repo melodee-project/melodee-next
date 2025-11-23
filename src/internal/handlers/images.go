@@ -45,10 +45,16 @@ func (h *ImageHandler) UploadAvatar(c *fiber.Ctx) error {
 		return utils.SendError(c, http.StatusRequestEntityTooLarge, fmt.Sprintf("File size too large, maximum %d bytes allowed", maxSize))
 	}
 
-	// Validate file extension
+	// Validate file extension to prevent double extension attacks
 	extension := strings.ToLower(filepath.Ext(file.Filename))
 	if extension != ".jpg" && extension != ".jpeg" && extension != ".png" {
 		return utils.SendError(c, http.StatusUnsupportedMediaType, "Invalid file type, only JPEG and PNG are allowed")
+	}
+
+	// Get the original filename without path for security
+	filename := filepath.Base(file.Filename)
+	if filename == "" || strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		return utils.SendError(c, http.StatusBadRequest, "Invalid filename")
 	}
 
 	// Open the uploaded file
@@ -82,9 +88,29 @@ func (h *ImageHandler) UploadAvatar(c *fiber.Ctx) error {
 		return utils.SendInternalServerError(c, "Failed to reset file pointer")
 	}
 
-	// Validate file dimensions (optional, but can prevent extremely large images)
-	// This could be done using the image package, but for now we'll just return the validation response
-	// In a real implementation, we might want to check dimensions to prevent very large images
+	// Validate image dimensions to prevent large memory allocation attacks
+	imageConfig, _, err := image.DecodeConfig(src)
+	if err != nil {
+		return utils.SendError(c, http.StatusUnsupportedMediaType, "Could not decode image file.")
+	}
+
+	// Limit dimensions to prevent memory denial of service
+	maxWidth := 2000  // pixels
+	maxHeight := 2000 // pixels
+	if imageConfig.Width > maxWidth || imageConfig.Height > maxHeight {
+		return utils.SendError(c, http.StatusRequestEntityTooLarge, fmt.Sprintf("Image dimensions too large. Maximum allowed: %dx%d pixels", maxWidth, maxHeight))
+	}
+
+	// Additional security check: ensure the file is not too large in dimensions
+	if imageConfig.Width*imageConfig.Height > 5000000 { // 5 megapixels max
+		return utils.SendError(c, http.StatusRequestEntityTooLarge, "Image resolution too high. Maximum allowed: 5 megapixels")
+	}
+
+	// Reset file pointer again after reading dimensions
+	_, err = src.Seek(0, io.SeekStart)
+	if err != nil {
+		return utils.SendInternalServerError(c, "Failed to reset file pointer")
+	}
 
 	// Generate a unique ID for the image
 	imageID := uuid.New().String()
@@ -96,9 +122,12 @@ func (h *ImageHandler) UploadAvatar(c *fiber.Ctx) error {
 	// Create a response with the image details
 	response := fiber.Map{
 		"id":   imageID,
+		"name": filename, // Include safe filename
 		"etag": fmt.Sprintf("%s-%d", imageID, file.Size), // Simple ETag generation
 		"size": file.Size,
 		"type": actualMIMEType,
+		"width": imageConfig.Width,
+		"height": imageConfig.Height,
 	}
 
 	return c.JSON(response)
