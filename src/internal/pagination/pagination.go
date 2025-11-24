@@ -2,7 +2,6 @@ package pagination
 
 import (
 	"math"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )

@@ -323,6 +323,97 @@ func (m *MigrationManager) createIndexes() error {
 	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_songs_artist_id_hash ON melodee_songs USING hash (artist_id);`).Error; err != nil {
 		return fmt.Errorf("failed to create songs artist_id hash index: %w", err)
 	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_songs_name_normalized_gin ON melodee_songs USING gin(name_normalized gin_trgm_ops);`).Error; err != nil {
+		return fmt.Errorf("failed to create songs name_normalized gin index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_songs_api_key ON melodee_songs(api_key);`).Error; err != nil {
+		return fmt.Errorf("failed to create songs api_key index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_songs_relative_path ON melodee_songs(relative_path);`).Error; err != nil {
+		return fmt.Errorf("failed to create songs relative_path index: %w", err)
+	}
+
+	// User performance indexes (for user management)
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`).Error; err != nil {
+		return fmt.Errorf("failed to create users username index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_users_api_key ON users(api_key);`).Error; err != nil {
+		return fmt.Errorf("failed to create users api_key index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`).Error; err != nil {
+		return fmt.Errorf("failed to create users email index: %w", err)
+	}
+
+	// Playlist performance indexes
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON playlists(user_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create playlists user_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_playlists_api_key ON playlists(api_key);`).Error; err != nil {
+		return fmt.Errorf("failed to create playlists api_key index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_playlists_public_where ON playlists(public) WHERE public = true;`).Error; err != nil {
+		return fmt.Errorf("failed to create playlists public index: %w", err)
+	}
+
+	// Playlist songs indexes
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist_pos ON playlist_songs(playlist_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create playlist_songs playlist_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_playlist_songs_song_id ON playlist_songs(song_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create playlist_songs song_id index: %w", err)
+	}
+
+	// Library performance indexes
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_libraries_path ON libraries(path);`).Error; err != nil {
+		return fmt.Errorf("failed to create libraries path index: %w", err)
+	}
+
+	// Search history indexes
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_search_histories_user_id ON search_histories(user_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create search_histories user_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_search_histories_search_term_gin ON search_histories USING gin(search_term gin_trgm_ops);`).Error; err != nil {
+		return fmt.Errorf("failed to create search_histories search_term gin index: %w", err)
+	}
+
+	// Shares indexes
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_shares_user_id ON shares(user_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create shares user_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_shares_expires_at ON shares(expires_at);`).Error; err != nil {
+		return fmt.Errorf("failed to create shares expires_at index: %w", err)
+	}
+
+	// User song/album/artist interaction indexes
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_songs_user_id ON user_songs(user_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create user_songs user_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_songs_song_id ON user_songs(song_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create user_songs song_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_albums_user_id ON user_albums(user_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create user_albums user_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_albums_album_id ON user_albums(album_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create user_albums album_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_artists_user_id ON user_artists(user_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create user_artists user_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_artists_artist_id ON user_artists(artist_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create user_artists artist_id index: %w", err)
+	}
+
+	// Capacity status indexes
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_capacity_status_library_id ON capacity_status(library_id);`).Error; err != nil {
+		return fmt.Errorf("failed to create capacity_status library_id index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_capacity_status_path ON capacity_status(path);`).Error; err != nil {
+		return fmt.Errorf("failed to create capacity_status path index: %w", err)
+	}
+
+	// Artist indexes (for partitioned table, these need to be on each partition)
+	// These are handled in the partitioned table creation section above
 
 	return nil
 }

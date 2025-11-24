@@ -269,9 +269,29 @@ curl "https://your-melodee-instance.com/api/search?q=artist&type=artist" \
 curl "https://your-melodee-instance.com/rest/stream.view?u=username&p=enc:password&id=123&v=1.16.1&c=melodee"
 ```
 
+### Admin API Usage
+The Admin UI uses the Melodee API (`/api/...`) for all administrative operations; OpenSubsonic (`/rest/...`) is reserved for compatibility with external clients.
+
 ## Related documentation
 
 - Internal admin‑focused routes (user management, libraries, jobs, etc.) live under `/api/...` and are cataloged in `docs/INTERNAL_API_ROUTES.md`.
+
+## Known limitations
+
+### Pagination and scalability
+- Melodee API enforces server-side limits with a maximum page size of 200 for list endpoints
+- Pagination uses offset/limit for most endpoints; cursor-based pagination is not implemented
+- Search endpoints enforce maximum 500 results per request to prevent performance issues with large datasets
+- Very large offset values (over 100,000) may result in slower queries due to offset-based pagination
+
+### Performance
+- Rate limiting applies to expensive operations: search endpoints are limited to 30 requests per 10 minutes
+- OpenSubsonic API endpoints maintain compatibility with existing clients but may not perform as well as Melodee API on very large libraries
+- Some legacy OpenSubsonic endpoints do not include pagination metadata which may cause performance issues with large result sets in some client applications
+
+### Admin functionality
+- The `/api/admin/jobs/:id` endpoint provides job detail view but results field may be nil for processed jobs
+- DLQ management endpoints are optimized for moderate DLQ sizes; very large queues may result in slower performance
 - Service binaries and runtime configuration documented in `docs/SERVICE_ARCHITECTURE.md`.
 - Baseline Subsonic spec lives in `docs/subsonic-openapi.yaml`; OpenSubsonic extensions (additional endpoints, auth mechanisms, form‑post variants) live in `docs/opensubsonic-openapi.yaml` and should be regenerated whenever upstream publishes a new JSON spec.
 - Fixtures for request/response samples reside in `docs/fixtures/` and can be referenced from either API depending on the context.

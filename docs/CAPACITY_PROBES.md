@@ -20,7 +20,16 @@ Purpose: define how production library capacity is checked and how failures are 
 
 ## Prometheus Metrics
 - `melodee_capacity_percent{path}`: Percentage of capacity used for each storage path
+- `melodee_db_query_duration_seconds_bucket`: Database query performance histograms (histogram)
+- `http_request_duration_seconds_bucket{handler, le}`: HTTP request duration metrics (histogram)
+- `http_requests_total{method, handler, status}`: Total HTTP requests counter
+- `melodee_dlq_size`: Size of dead letter queue
+- `melodee_queue_size`: Size of job queues
 - Exposed via `/metrics` endpoint on both Melodee API and OpenSubsonic servers
 - Used for alerting in `monitoring/prometheus/alerts.yml`:
   - `CapacityWarning`: Triggered when `melodee_capacity_percent > 80` for 5m
   - `CapacityCritical`: Triggered when `melodee_capacity_percent > 90` for 2m
+  - `HighAPIErrorRate`: Triggered when more than 10% of Melodee API requests return 5xx errors
+  - `SlowAPIResponse`: Triggered when 95th percentile of Melodee API requests exceed 5 seconds
+  - `HighOpenSubsonicErrorRate`: Triggered when more than 10% of OpenSubsonic API requests return 5xx errors
+  - `SlowOpenSubsonicResponse`: Triggered when 95th percentile of OpenSubsonic API requests exceed 5 seconds

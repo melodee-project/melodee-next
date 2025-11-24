@@ -32,3 +32,9 @@ Metrics Labels:
 - Request duration: `http_request_duration_seconds_bucket{handler, le}` histogram
 - Error rate: Percentage of requests with 5xx status codes
 - Available for both Melodee API (`/api/.*` handlers) and OpenSubsonic API (`/rest/.*` handlers)
+
+## Performance and Capacity Metrics
+- Database query performance: `melodee_db_query_duration_seconds_bucket` histogram
+- Capacity monitoring: `melodee_capacity_percent{path}` gauge
+- Job queue metrics: `melodee_dlq_size` and `melodee_queue_size` gauges
+- Memory and CPU usage: standard Go runtime and node metrics

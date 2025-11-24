@@ -1,8 +1,6 @@
 package capacity
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -28,42 +26,28 @@ type CapacityProbe struct {
 	logger    interface{} // Placeholder for logger
 }
 
-// CapacityConfig holds configuration for capacity monitoring
-type CapacityConfig struct {
-	Interval          time.Duration `mapstructure:"interval"`           // Default: 10 minutes
-	ProbeCommand      string        `mapstructure:"probe_command"`      // Default: "df --output=pcent /melodee/storage"
-	WarningThreshold  float64       `mapstructure:"warning_threshold"`  // Default: 80%
-	AlertThreshold    float64       `mapstructure:"alert_threshold"`    // Default: 90%
-	GraceIntervals    int           `mapstructure:"grace_intervals"`    // Default: 1 interval
-	FailureMaxIntervals int         `mapstructure:"failure_max_intervals"` // Default: 2 intervals
-}
-
-// DefaultCapacityConfig returns the default capacity configuration
-func DefaultCapacityConfig() *CapacityConfig {
-	return &CapacityConfig{
-		Interval:          10 * time.Minute,
-		ProbeCommand:      "df --output=pcent /melodee/storage",
-		WarningThreshold:  80.0,
-		AlertThreshold:    90.0,
-		GraceIntervals:    1,
-		FailureMaxIntervals: 2,
-	}
-}
 
 // NewCapacityProbe creates a new capacity probe instance
 func NewCapacityProbe(
-	config *config.CapacityConfig,
+	cfg *config.CapacityConfig,
 	db *gorm.DB,
 	client *asynq.Client,
 	scheduler *asynq.Scheduler,
 	logger interface{},
 ) *CapacityProbe {
-	if config == nil {
-		config = DefaultCapacityConfig()
+	if cfg == nil {
+		cfg = &config.CapacityConfig{
+			Enabled:        true,
+			Interval:       10 * time.Minute,
+			WarningThreshold: 80.0,
+			AlertThreshold:  90.0,
+			Libraries:      []string{"/storage"},
+			ProbeCommand:   "df --output=pcent /storage",
+		}
 	}
 
 	cp := &CapacityProbe{
-		config:    config,
+		config:    cfg,
 		db:        db,
 		client:    client,
 		scheduler: scheduler,
@@ -228,7 +212,9 @@ func (cp *CapacityProbe) updateCapacityStatus(library *models.Library, result *C
 		}
 		
 		// Check if we're past the grace period for errors
-		if capacityStatus.ErrorCount > cp.config.FailureMaxIntervals {
+		// Default to 2 failure intervals if not explicitly set
+		failureMaxIntervals := 2
+		if capacityStatus.ErrorCount > failureMaxIntervals {
 			status = "unknown"
 		} else {
 			// During grace period, status remains as last known state

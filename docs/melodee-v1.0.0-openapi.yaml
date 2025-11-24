@@ -545,6 +545,149 @@ components:
       required:
         - meta
         - data
+    DLQItem:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the job
+        queue:
+          type: string
+          description: Name of the queue
+        type:
+          type: string
+          description: Type of job
+        reason:
+          type: string
+          description: Reason for job being in DLQ
+        payload:
+          type: string
+          description: Job payload
+        created_at:
+          type: string
+          format: date-time
+          description: Job creation time
+        retry_count:
+          type: integer
+          format: int32
+          description: Number of retry attempts
+      required:
+        - id
+        - queue
+        - type
+        - reason
+        - payload
+        - created_at
+        - retry_count
+    DLQResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DLQItem'
+        pagination:
+          $ref: '#/components/schemas/PaginationMetadata'
+      required:
+        - data
+        - pagination
+    JobDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the job
+        queue:
+          type: string
+          description: Name of the queue
+        type:
+          type: string
+          description: Type of job
+        status:
+          type: string
+          description: Status of the job
+        payload:
+          type: string
+          description: Job payload
+        result:
+          type: object
+          description: Result of the job (may be null)
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          description: Job creation time
+        updated_at:
+          type: string
+          format: date-time
+          description: Job update time
+      required:
+        - id
+        - queue
+        - type
+        - status
+        - payload
+        - result
+        - created_at
+        - updated_at
+    DLQRequeueRequest:
+      type: object
+      properties:
+        job_ids:
+          type: array
+          items:
+            type: string
+          description: List of job IDs to requeue
+      required:
+        - job_ids
+    DLQRequeueResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Status of the operation
+        requeued:
+          type: integer
+          format: int32
+          description: Number of jobs requeued
+        failed_ids:
+          type: array
+          items:
+            type: string
+          description: List of job IDs that failed to requeue
+      required:
+        - status
+        - requeued
+        - failed_ids
+    DLQPurgeRequest:
+      type: object
+      properties:
+        job_ids:
+          type: array
+          items:
+            type: string
+          description: List of job IDs to purge
+      required:
+        - job_ids
+    DLQPurgeResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Status of the operation
+        purged:
+          type: integer
+          format: int32
+          description: Number of jobs purged
+        failed_ids:
+          type: array
+          items:
+            type: string
+          description: List of job IDs that failed to purge
+      required:
+        - status
+        - purged
+        - failed_ids
 security:
   - bearerAuth: []
 paths:
@@ -634,6 +777,159 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/dlq:
+    get:
+      operationId: getDLQ
+      tags:
+        - Admin
+      summary: Get items in the dead letter queue
+      parameters:
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Dead letter queue items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/requeue:
+    post:
+      operationId: requeueDLQItems
+      tags:
+        - Admin
+      summary: Requeue items from the dead letter queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DLQRequeueRequest'
+      responses:
+        '200':
+          description: DLQ items requeued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQRequeueResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/purge:
+    post:
+      operationId: purgeDLQItems
+      tags:
+        - Admin
+      summary: Purge items from the dead letter queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DLQPurgeRequest'
+      responses:
+        '200':
+          description: DLQ items purged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQPurgeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/{id}:
+    get:
+      operationId: getJobById
+      tags:
+        - Admin
+      summary: Get detailed information about a specific job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The job ID
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDetail'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Album not found
           content:
@@ -696,6 +992,159 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: User locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/dlq:
+    get:
+      operationId: getDLQ
+      tags:
+        - Admin
+      summary: Get items in the dead letter queue
+      parameters:
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Dead letter queue items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/requeue:
+    post:
+      operationId: requeueDLQItems
+      tags:
+        - Admin
+      summary: Requeue items from the dead letter queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DLQRequeueRequest'
+      responses:
+        '200':
+          description: DLQ items requeued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQRequeueResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/purge:
+    post:
+      operationId: purgeDLQItems
+      tags:
+        - Admin
+      summary: Purge items from the dead letter queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DLQPurgeRequest'
+      responses:
+        '200':
+          description: DLQ items purged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQPurgeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/{id}:
+    get:
+      operationId: getJobById
+      tags:
+        - Admin
+      summary: Get detailed information about a specific job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The job ID
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDetail'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Job not found
           content:
             application/json:
               schema:
@@ -785,6 +1234,159 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: User locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/dlq:
+    get:
+      operationId: getDLQ
+      tags:
+        - Admin
+      summary: Get items in the dead letter queue
+      parameters:
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Dead letter queue items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/requeue:
+    post:
+      operationId: requeueDLQItems
+      tags:
+        - Admin
+      summary: Requeue items from the dead letter queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DLQRequeueRequest'
+      responses:
+        '200':
+          description: DLQ items requeued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQRequeueResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/purge:
+    post:
+      operationId: purgeDLQItems
+      tags:
+        - Admin
+      summary: Purge items from the dead letter queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DLQPurgeRequest'
+      responses:
+        '200':
+          description: DLQ items purged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQPurgeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/{id}:
+    get:
+      operationId: getJobById
+      tags:
+        - Admin
+      summary: Get detailed information about a specific job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The job ID
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDetail'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Job not found
           content:
             application/json:
               schema:
@@ -1511,6 +2113,159 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: User locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/dlq:
+    get:
+      operationId: getDLQ
+      tags:
+        - Admin
+      summary: Get items in the dead letter queue
+      parameters:
+        - in: query
+          name: page
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Dead letter queue items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/requeue:
+    post:
+      operationId: requeueDLQItems
+      tags:
+        - Admin
+      summary: Requeue items from the dead letter queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DLQRequeueRequest'
+      responses:
+        '200':
+          description: DLQ items requeued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQRequeueResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/purge:
+    post:
+      operationId: purgeDLQItems
+      tags:
+        - Admin
+      summary: Purge items from the dead letter queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DLQPurgeRequest'
+      responses:
+        '200':
+          description: DLQ items purged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQPurgeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/jobs/{id}:
+    get:
+      operationId: getJobById
+      tags:
+        - Admin
+      summary: Get detailed information about a specific job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The job ID
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDetail'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Job not found
           content:
             application/json:
               schema:

@@ -9,36 +9,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// RateLimiterConfig holds the configuration for rate limiting
-type RateLimiterConfig struct {
-	// General API limits
-	GeneralLimit    int           // Requests per window for general API endpoints
-	GeneralWindow   time.Duration // Time window for general API endpoints
-	
-	// Auth-specific limits
-	AuthLimit     int           // Requests per window for auth endpoints
-	AuthWindow    time.Duration // Time window for auth endpoints
-	
-	// Search-specific limits
-	SearchLimit   int           // Requests per window for search endpoints
-	SearchWindow  time.Duration // Time window for search endpoints
-	
-	// Per-user rate limiting (default false for IP-based)
-	PerUser       bool          // Whether to apply limits per user or per IP
-}
-
-// DefaultRateLimiterConfig returns the default rate limiter configuration
-func DefaultRateLimiterConfig() RateLimiterConfig {
-	return RateLimiterConfig{
-		GeneralLimit:  100,        // 100 requests per 15 minutes
-		GeneralWindow: 15 * time.Minute,
-		AuthLimit:     10,         // 10 requests per 5 minutes (to prevent brute force)
-		AuthWindow:    5 * time.Minute,
-		SearchLimit:   50,         // 50 search requests per 10 minutes
-		SearchWindow:  10 * time.Minute,
-		PerUser:       false,      // Default to IP-based limiting
-	}
-}
 
 // NewRateLimiter creates a new rate limiter middleware with the provided configuration
 func NewRateLimiter(config RateLimiterConfig) fiber.Handler {
@@ -95,6 +65,21 @@ func NewCustomRateLimiter(limit int, window time.Duration, message string) fiber
 				"error": "Rate limit exceeded",
 				"message": message,
 				"retry_after": window.Seconds(),
+			})
+		},
+	})
+}
+
+// NewExpensiveEndpointRateLimiter creates a rate limiter specifically for expensive operations like search, large data exports, etc.
+func NewExpensiveEndpointRateLimiter() fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        30, // 30 requests per 10 minutes for expensive operations
+		Expiration: 10 * time.Minute,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Rate limit exceeded",
+				"message": "Too many requests to expensive operations. Please try again later.",
+				"retry_after": 600, // 10 minutes
 			})
 		},
 	})

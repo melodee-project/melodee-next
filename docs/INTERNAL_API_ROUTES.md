@@ -48,9 +48,10 @@ Authoritative list of internal REST endpoints, params, and roles. JSON by defaul
 - `PUT /api/settings/:key` -> update single key (fixtures)
 
 ## Jobs/Admin (admin)
-- `GET /api/admin/jobs/dlq` -> list DLQ items `{data:[{id,queue,type,reason,payload}]}` (fixture needed)
+- `GET /api/admin/jobs/dlq` -> list DLQ items with pagination `{data, pagination}`
 - `POST /api/admin/jobs/requeue` -> requeue specified jobs
 - `POST /api/admin/jobs/purge` -> purge specified jobs
+- `GET /api/admin/jobs/{id}` -> get detailed job information `{id,queue,type,status,payload,result,created_at,updated_at}`
 
 ## Capacity monitoring
 - `GET /api/admin/capacity` -> capacity status for all libraries

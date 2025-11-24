@@ -19,6 +19,11 @@ func NewRepository(db *gorm.DB) *Repository {
 	}
 }
 
+// GetDB returns the underlying gorm.DB instance
+func (r *Repository) GetDB() *gorm.DB {
+	return r.db
+}
+
 // User operations
 func (r *Repository) CreateUser(user *models.User) error {
 	return r.db.Create(user).Error

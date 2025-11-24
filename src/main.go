@@ -221,10 +221,11 @@ func (s *Server) setupInternalRoutes() {
 	admin.Use(authMiddleware.AdminOnly())
 
 	// DLQ management
-	dlqHandler := handlers.NewDLQHandler(s.asynqInspector)
+	dlqHandler := handlers.NewDLQHandler(s.asynqInspector, s.asynqClient)
 	admin.Get("/jobs/dlq", dlqHandler.GetDLQItems)
 	admin.Post("/jobs/dlq/requeue", dlqHandler.RequeueDLQItems)
 	admin.Post("/jobs/dlq/purge", dlqHandler.PurgeDLQItems)
+	admin.Get("/jobs/:id", dlqHandler.GetJobById)
 
 	// Capacity monitoring and health
 	healthMetricsHandler := handlers.NewHealthMetricsHandler(s.dbManager.GetGormDB(), s.cfg, s.capacityProbe, s.asynqInspector)
@@ -314,7 +315,7 @@ func (s *Server) setupInternalRoutes() {
 
 	// Search
 	searchHandler := handlers.NewSearchHandler(s.repo)
-	protected.Get("/search", searchHandler.Search)
+	protected.Get("/search", middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search)
 }
 
 // setupOpenSubsonicRoutes configures OpenSubsonic API routes
@@ -370,9 +371,9 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	rest.Get("/getAvatar.view", openSubsonicAuth.Authenticate, mediaHandler.GetAvatar)
 
 	// Searching endpoints
-	rest.Get("/search.view", openSubsonicAuth.Authenticate, searchHandler.Search)
-	rest.Get("/search2.view", openSubsonicAuth.Authenticate, searchHandler.Search2)
-	rest.Get("/search3.view", openSubsonicAuth.Authenticate, searchHandler.Search3)
+	rest.Get("/search.view", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search)
+	rest.Get("/search2.view", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search2)
+	rest.Get("/search3.view", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search3)
 
 	// Playlist endpoints
 	rest.Get("/getPlaylists.view", openSubsonicAuth.Authenticate, playlistHandler.GetPlaylists)
