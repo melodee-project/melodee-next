@@ -280,6 +280,28 @@ The frontend service layer clearly separates admin functionality from compatibil
 
 - Internal admin‑focused routes (user management, libraries, jobs, etc.) live under `/api/...` and are cataloged in `docs/INTERNAL_API_ROUTES.md`.
 
+## OpenSubsonic limits
+
+The OpenSubsonic API implements server-side limits where allowed by the specification to prevent performance issues and resource exhaustion:
+
+### Pagination limits
+- **getIndexes.view**: Results are limited to maximum 5,000 artists indexed to prevent response overflow
+- **getArtists.view**: Maximum 500 results per request, maximum offset of 10,000 to avoid performance degradation
+- **getAlbum.view**: Albums limited to maximum 5,000 songs to prevent extremely large responses
+- **search.view/search2.view**: Maximum 100 results per type (artists, albums, songs), maximum 300 total results per request
+- **search3.view**: Maximum 50 results per type, maximum 150 total results per request for enhanced performance
+
+### Query parameter limits
+- **offset**: Maximum value of 10,000 for most endpoints (to prevent deep pagination performance issues)
+- **size/limit**: Maximum page size of 500 for most operations, 100 for search operations
+- **query length**: Maximum 255 characters for search queries to prevent abuse
+- **complex queries**: Search operations are limited to single-term queries for performance
+
+### Rate limiting
+- **General API**: 100 requests per 15 minutes per IP address
+- **Search endpoints**: Stricter rate limiting of 30 requests per 10 minutes due to computational cost
+- **Authentication**: 10 requests per 5 minutes to prevent brute-force attacks
+
 ## Known limitations
 
 ### Pagination and scalability

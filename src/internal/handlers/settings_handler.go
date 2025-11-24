@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 	"melodee/internal/models"
+	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
 )
@@ -33,9 +34,27 @@ type Setting struct {
 
 // GetSettings retrieves all application settings
 func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
+	// Get pagination parameters
+	page, pageSize := pagination.GetPaginationParams(c, 1, 50)
+	offset := pagination.CalculateOffset(page, pageSize)
+
 	// Query all settings from the database
 	var settings []models.Setting
-	if err := h.repo.GetDB().Find(&settings).Error; err != nil {
+	var total int64
+
+	// Count total settings
+	err := h.repo.GetDB().Model(&models.Setting{}).Count(&total).Error
+	if err != nil {
+		return utils.SendInternalServerError(c, "Failed to count settings")
+	}
+
+	// Fetch settings with pagination
+	err = h.repo.GetDB().
+		Offset(offset).
+		Limit(pageSize).
+		Order("key ASC").
+		Find(&settings).Error
+	if err != nil {
 		return utils.SendInternalServerError(c, "Failed to retrieve settings")
 	}
 
@@ -50,8 +69,12 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 		}
 	}
 
+	// Calculate pagination metadata according to OpenAPI spec
+	paginationMeta := pagination.Calculate(total, page, pageSize)
+
 	return c.JSON(fiber.Map{
 		"data": responseSettings,
+		"pagination": paginationMeta,
 	})
 }
 
@@ -85,7 +108,7 @@ func (h *SettingsHandler) UpdateSetting(c *fiber.Ctx) error {
 				return utils.SendInternalServerError(c, "Failed to create setting")
 			}
 
-			// Return the created setting
+			// Return the created setting in the specified contract format
 			settingResponse := Setting{
 				Key:         newSetting.Key,
 				Value:       newSetting.Value,
@@ -109,7 +132,7 @@ func (h *SettingsHandler) UpdateSetting(c *fiber.Ctx) error {
 			return utils.SendInternalServerError(c, "Failed to update setting")
 		}
 
-		// Return the updated setting
+		// Return the updated setting in the specified contract format
 		settingResponse := Setting{
 			Key:         existingSetting.Key,
 			Value:       existingSetting.Value,

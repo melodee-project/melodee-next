@@ -73,7 +73,7 @@ groups:
 
   # API performance alerts - Melodee API (/api namespace)
   - alert: HighAPIErrorRate
-    expr: 100 * sum(rate(http_requests_total{status=~"5..", handler=~"/api/.*"}[5m])) / sum(rate(http_requests_total{handler=~"/api/.*"}[5m])) > 10
+    expr: 100 * sum(rate(api_requests_total{status=~"5..", route=~"/api.*"}[5m])) / sum(rate(api_requests_total{route=~"/api.*"}[5m])) > 10
     for: 2m
     labels:
       severity: warning
@@ -82,7 +82,7 @@ groups:
       description: "More than 10% of Melodee API requests are returning 5xx errors over the last 5 minutes."
 
   - alert: SlowAPIResponse
-    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{handler=~"/api/.*"}[5m])) > 5
+    expr: histogram_quantile(0.95, rate(api_request_duration_seconds_bucket{route=~"/api.*"}[5m])) > 5
     for: 2m
     labels:
       severity: warning
@@ -92,7 +92,7 @@ groups:
 
   # OpenSubsonic API performance alerts (/rest namespace)
   - alert: HighOpenSubsonicErrorRate
-    expr: 100 * sum(rate(http_requests_total{status=~"5..", handler=~"/rest/.*"}[5m])) / sum(rate(http_requests_total{handler=~"/rest/.*"}[5m])) > 10
+    expr: 100 * sum(rate(api_requests_total{status=~"5..", route=~"/rest.*"}[5m])) / sum(rate(api_requests_total{route=~"/rest.*"}[5m])) > 10
     for: 2m
     labels:
       severity: warning
@@ -101,7 +101,7 @@ groups:
       description: "More than 10% of OpenSubsonic API requests are returning 5xx errors over the last 5 minutes."
 
   - alert: SlowOpenSubsonicResponse
-    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{handler=~"/rest/.*"}[5m])) > 5
+    expr: histogram_quantile(0.95, rate(api_request_duration_seconds_bucket{route=~"/rest.*"}[5m])) > 5
     for: 2m
     labels:
       severity: warning
@@ -111,7 +111,7 @@ groups:
 
   # Combined API performance alerts
   - alert: HighCombinedAPIErrorRate
-    expr: 100 * sum(rate(http_requests_total{status=~"5..", handler=~"/(api|rest)/.*"}[5m])) / sum(rate(http_requests_total{handler=~"/(api|rest)/.*"}[5m])) > 5
+    expr: 100 * sum(rate(api_requests_total{status=~"5..", route=~"/(api|rest).*"}[5m])) / sum(rate(api_requests_total{route=~"/(api|rest).*"}[5m])) > 5
     for: 2m
     labels:
       severity: warning
@@ -120,7 +120,7 @@ groups:
       description: "More than 5% of all API requests (both Melodee and OpenSubsonic) are returning 5xx errors over the last 5 minutes."
 
   - alert: SlowCombinedAPIResponse
-    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{handler=~"/(api|rest)/.*"}[5m])) > 3
+    expr: histogram_quantile(0.95, rate(api_request_duration_seconds_bucket{route=~"/(api|rest).*"}[5m])) > 3
     for: 2m
     labels:
       severity: warning

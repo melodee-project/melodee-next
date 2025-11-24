@@ -121,8 +121,9 @@ func getHTTPStatusForErrorCode(code int) int {
 // ParsePaginationParams parses OpenSubsonic pagination parameters
 func ParsePaginationParams(c *fiber.Ctx) (offset int, size int) {
 	offset = c.QueryInt("offset", 0)
-	
-	// Default size is 50 per spec, max is 500
+
+	// Default size is 50 per spec, max is 500 for most operations
+	// But some operations have stricter limits
 	defaultSize := 50
 	maxSize := 500
 	size = c.QueryInt("size", defaultSize)
@@ -132,8 +133,53 @@ func ParsePaginationParams(c *fiber.Ctx) (offset int, size int) {
 	if size > maxSize {
 		size = maxSize
 	}
-	
+
 	return offset, size
+}
+
+// ParseSearchPaginationParams applies stricter limits for search operations
+func ParseSearchPaginationParams(c *fiber.Ctx) (offset int, size int) {
+	offset = c.QueryInt("offset", 0)
+
+	// Search operations have stricter limits to prevent resource exhaustion
+	defaultSize := 20
+	maxSize := 100  // More restrictive limit for search operations
+	size = c.QueryInt("size", defaultSize)
+	if size <= 0 {
+		size = defaultSize
+	}
+	if size > maxSize {
+		size = maxSize
+	}
+
+	return offset, size
+}
+
+// ParseMaxOffset ensures that offset values don't get too large to prevent performance issues
+func ParseMaxOffset(c *fiber.Ctx, maxOffset int) (offset int) {
+	offset = c.QueryInt("offset", 0)
+
+	// Ensure offset doesn't exceed maximum allowed value
+	if offset > maxOffset {
+		return maxOffset
+	}
+	if offset < 0 {
+		return 0
+	}
+
+	return offset
+}
+
+// ParseMaxLimit parses a limit parameter with a maximum ceiling
+func ParseMaxLimit(c *fiber.Ctx, defaultLimit, maxLimit int) int {
+	limit := c.QueryInt("limit", defaultLimit)
+	if limit <= 0 {
+		return defaultLimit
+	}
+	if limit > maxLimit {
+		return maxLimit
+	}
+	return limit
 }
 
 // FormatTime formats time as ISO8601 UTC string for OpenSubsonic responses

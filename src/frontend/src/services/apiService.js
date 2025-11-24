@@ -141,14 +141,45 @@ export const metricsService = {
   getHealth: () => apiService.get('/healthz'),
 };
 
-// Media-related API endpoints
+// Media-related API endpoints (OpenSubsonic compatibility helpers)
+// These are flagged as compatibility features for third-party client support
 export const mediaService = {
-  // For OpenSubsonic API access - this would use a different base URL typically
-  getMusicFolders: () => apiService.get('/rest/getMusicFolders.view?u=admin&p=enc:xxx&t=xxx&s=xxx'),
-  getArtists: () => apiService.get('/rest/getArtists.view?u=admin&p=enc:xxx&t=xxx&s=xxx'),
-  getAlbum: (id) => apiService.get(`/rest/getAlbum.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`),
-  stream: (id) => `${process.env.REACT_APP_API_BASE_URL || ''}/rest/stream.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`,
-  getCoverArt: (id) => `${process.env.REACT_APP_API_BASE_URL || ''}/rest/getCoverArt.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`,
+  // Check if OpenSubsonic compatibility features are enabled in config
+  isOpenSubsonicEnabled: () => process.env.REACT_APP_OPEN_SUBSONIC_ENABLED === 'true',
+
+  // For OpenSubsonic API access - only use for compatibility features
+  // These endpoints support existing Subsonic/OpenSubsonic clients and should be
+  // used exclusively for compatibility purposes, not for core admin functionality
+  getMusicFolders: () => {
+    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+      return Promise.reject(new Error('OpenSubsonic features are disabled'));
+    }
+    return apiService.get('/rest/getMusicFolders.view?u=admin&p=enc:xxx&t=xxx&s=xxx');
+  },
+  getArtists: () => {
+    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+      return Promise.reject(new Error('OpenSubsonic features are disabled'));
+    }
+    return apiService.get('/rest/getArtists.view?u=admin&p=enc:xxx&t=xxx&s=xxx');
+  },
+  getAlbum: (id) => {
+    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+      return Promise.reject(new Error('OpenSubsonic features are disabled'));
+    }
+    return apiService.get(`/rest/getAlbum.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`);
+  },
+  stream: (id) => {
+    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+      throw new Error('OpenSubsonic features are disabled');
+    }
+    return `${process.env.REACT_APP_API_BASE_URL || ''}/rest/stream.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`;
+  },
+  getCoverArt: (id) => {
+    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+      throw new Error('OpenSubsonic features are disabled');
+    }
+    return `${process.env.REACT_APP_API_BASE_URL || ''}/rest/getCoverArt.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`;
+  },
 };
 
 export default apiService;

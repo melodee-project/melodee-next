@@ -45,6 +45,10 @@ func NewOpenSubsonicServer(cfg *config.AppConfig, dbManager *database.DatabaseMa
 	server.app.Use(recover.New())
 	server.app.Use(logger.New())
 	server.app.Use(cors.New())
+
+	// Request metrics middleware
+	server.app.Use(internal_middleware.MetricsMiddleware())
+
 	server.app.Use(internal_middleware.RateLimiterForPublicAPI())
 
 	// Setup routes

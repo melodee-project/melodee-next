@@ -46,6 +46,7 @@ For implementation sequencing, see `IMPLEMENTATION_GUIDE.md`.
 ### 2.3 APIs & Contracts
 - `API_DEFINITIONS.md`  High-level API groupings
 - `INTERNAL_API_ROUTES.md`  Canonical internal REST endpoints and contracts
+- `FRONTEND_README.md` ‒ Admin frontend environment variables and configuration
 - `melodee-v1.0.0-openapi.yaml`  Melodee OpenAPI definition
 - `opensubsonic-v1.16.1-openapi.yaml`  Upstream OpenSubsonic spec
 - `subsonic-v1.16.1-openapi.yaml`  Upstream Subsonic spec

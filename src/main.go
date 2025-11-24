@@ -140,6 +140,10 @@ func (s *Server) setupMiddleware() {
 	s.app.Use(logger.New())
 	s.app.Use(helmet.New())
 
+	// Request metrics middleware - apply to all routes
+	metricsMiddleware := middleware.MetricsMiddleware()
+	s.app.Use(metricsMiddleware)
+
 	// Rate limiting middleware - apply to all routes
 	rateLimiter := middleware.RateLimiterForPublicAPI()
 	s.app.Use(rateLimiter)
@@ -312,6 +316,30 @@ func (s *Server) setupInternalRoutes() {
 	images := protected.Group("/images")
 	images.Post("/avatar", imageHandler.UploadAvatar)
 	images.Get("/:id", imageHandler.GetImage)
+
+	// V1 API endpoints (with pagination)
+	albumsV1Handler := handlers.NewAlbumsV1Handler(s.repo)
+	albumsV1 := protected.Group("/v1/Albums")
+	albumsV1.Get("/", albumsV1Handler.GetAlbums)
+	albumsV1.Get("/:id", albumsV1Handler.GetAlbum)
+	albumsV1.Get("/recent", albumsV1Handler.GetRecentAlbums)
+	albumsV1.Get("/:id/songs", albumsV1Handler.GetAlbumSongs)
+
+	artistsV1Handler := handlers.NewArtistsV1Handler(s.repo)
+	artistsV1 := protected.Group("/v1/Artists")
+	artistsV1.Get("/", artistsV1Handler.GetArtists)
+	artistsV1.Get("/:id", artistsV1Handler.GetArtist)
+	artistsV1.Get("/recent", artistsV1Handler.GetRecentArtists)
+	artistsV1.Get("/:id/albums", artistsV1Handler.GetArtistAlbums)
+	artistsV1.Get("/:id/songs", artistsV1Handler.GetArtistSongs)
+
+	songsV1Handler := handlers.NewSongsV1Handler(s.repo)
+	songsV1 := protected.Group("/v1/Songs")
+	songsV1.Get("/", songsV1Handler.GetSongs)
+	songsV1.Get("/:id", songsV1Handler.GetSong)
+	songsV1.Get("/recent", songsV1Handler.GetRecentSongs)
+	songsV1.Post("/starred/:id/:isStarred", songsV1Handler.ToggleSongStarred)
+	songsV1.Post("/setrating/:id/:rating", songsV1Handler.SetSongRating)
 
 	// Search
 	searchHandler := handlers.NewSearchHandler(s.repo)

@@ -52,6 +52,9 @@ func NewAPIServer(cfg *config.AppConfig, dbManager *database.DatabaseManager) *A
 	server.app.Use(logger.New())
 	server.app.Use(cors.New())
 
+	// Request metrics middleware
+	server.app.Use(middleware.MetricsMiddleware())
+
 	// Setup routes
 	server.setupRoutes()
 

@@ -28,6 +28,7 @@ Purpose: bind fixtures to automated tests to ensure API contracts remain stable.
 - For any intentional deviations from the upstream Subsonic/OpenSubsonic spec, check `docs/API_DEFINITIONS.md` for documented differences.
 - Run OpenSubsonic contract tests: `go test ./src/open_subsonic/... -v` to ensure compatibility.
 - Run Melodee API contract tests: `go test ./src/internal/handlers/... -v` to validate internal API contracts.
+- Run large dataset contract tests: `go test ./src/open_subsonic/large_dataset_contract_test.go -v` to validate behavior under realistic load conditions.
 
 ## Unit vs Contract Tests
 - **Unit tests** (`*_test.go` files): Focus on individual handler functions and service logic in isolation. Examples: `src/internal/handlers/user_test.go`, `src/internal/handlers/auth_test.go`.
@@ -64,6 +65,11 @@ Purpose: bind fixtures to automated tests to ensure API contracts remain stable.
 - `src/open_subsonic/handlers/browsing_test.go` - Music browsing operations
 - `src/open_subsonic/handlers/media_test.go` - Streaming, cover art, and media operations
 - `src/open_subsonic/handlers/playlist_test.go` - Playlist operations for compatibility API
+
+## Large Dataset Testing
+- Large dataset contract tests verify that OpenSubsonic endpoints remain stable and performant with realistic data volumes.
+- Tests create synthetic datasets with thousands of artists, albums, and songs to validate pagination, search, and browsing operations.
+- Run with: `go test ./src/open_subsonic/large_dataset_contract_test.go -v -bench=.` for performance benchmarks with large datasets.
 
 ## Pending Additions
 - Add fixtures for avatar/cover upload success/invalid MIME and bind to upload tests once implemented.

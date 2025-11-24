@@ -30,8 +30,8 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter query")
 	}
 
-	// Get pagination parameters
-	offset, size := utils.ParsePaginationParams(c)
+	// Get pagination parameters with stricter limits for search operations
+	offset, size := utils.ParseSearchPaginationParams(c)
 
 	// Get results for each type
 	artists, err := h.searchArtists(query, offset, size)
@@ -77,8 +77,8 @@ func (h *SearchHandler) Search2(c *fiber.Ctx) error {
 		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter query")
 	}
 
-	// Get pagination parameters
-	offset, size := utils.ParsePaginationParams(c)
+	// Get pagination parameters with stricter limits for search operations
+	offset, size := utils.ParseSearchPaginationParams(c)
 
 	// Get results for each type
 	artists, err := h.searchArtists(query, offset, size)
@@ -124,8 +124,8 @@ func (h *SearchHandler) Search3(c *fiber.Ctx) error {
 		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter query")
 	}
 
-	// Get pagination parameters
-	offset, size := utils.ParsePaginationParams(c)
+	// Get pagination parameters with stricter limits for search operations
+	offset, size := utils.ParseSearchPaginationParams(c)
 
 	// Enforce maximum size limit for performance
 	maxSize := 50 // Limit for each type to avoid too many results

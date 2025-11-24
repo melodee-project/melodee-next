@@ -72,21 +72,7 @@ func (w *fiberResponseWriter) WriteHeader(statusCode int) {
 
 // RegisterCustomMetrics registers custom application metrics
 func RegisterCustomMetrics() {
-	// This is where we would register custom metrics related to the application
-	// For example, request counters, database connection metrics, etc.
-	
-	// Create a counter for API requests
-	requestCount := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "api_requests_total",
-			Help: "Total number of API requests",
-		},
-		[]string{"method", "endpoint", "status"},
-	)
-	
-	// Register the counter
-	prometheus.MustRegister(requestCount)
-	
-	// Example of how to use it in handlers:
-	// requestCount.WithLabelValues("GET", "/api/users", "200").Inc()
+	// This function is kept for compatibility but metrics are now registered
+	// automatically through the promauto package in the middleware
+	// No need to register metrics here since they're already registered in the middleware package
 }
