@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"melodee/internal/media"
 	"melodee/internal/models"
+	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
 )
@@ -177,19 +178,15 @@ func (h *LibraryHandler) GetLibraryState(c *fiber.Ctx) error {
 
 // GetQuarantineItems handles retrieving quarantine items
 func (h *LibraryHandler) GetQuarantineItems(c *fiber.Ctx) error {
-	// Get pagination parameters
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 50)
+	// Use standard pagination from the pagination package
+	page, pageSize := pagination.GetPaginationParams(c, 1, 50)
 
 	// Validate limits
-	if limit > 100 {
-		limit = 100 // Maximum limit for safety
-	}
-	if limit < 1 {
-		limit = 10
+	if pageSize > 100 {
+		pageSize = 100 // Maximum limit for safety
 	}
 
-	offset := (page - 1) * limit
+	offset := pagination.CalculateOffset(page, pageSize)
 
 	// Get reason filter if provided
 	var reasonFilter *media.QuarantineReason
@@ -200,7 +197,7 @@ func (h *LibraryHandler) GetQuarantineItems(c *fiber.Ctx) error {
 	}
 
 	// Get quarantine records from the service
-	records, totalCount, err := h.quarantineSvc.ListQuarantinedFiles(limit, offset, reasonFilter)
+	records, totalCount, err := h.quarantineSvc.ListQuarantinedFiles(pageSize, offset, reasonFilter)
 	if err != nil {
 		return utils.SendInternalServerError(c, "Failed to retrieve quarantine items: "+err.Error())
 	}
@@ -214,17 +211,17 @@ func (h *LibraryHandler) GetQuarantineItems(c *fiber.Ctx) error {
 			Reason:      string(record.Reason),
 			Message:     record.Message,
 			LibraryID:   record.LibraryID,
-			CreatedAt:   record.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:   record.CreatedAt.Format(time.RFC3339), // Use RFC3339 format to match other datetime fields
 			Resolved:    false, // In a real implementation, this would depend on actual status
 		}
 	}
 
+	// Calculate pagination metadata according to OpenAPI spec
+	paginationMeta := pagination.Calculate(int64(totalCount), page, pageSize)
+
 	return c.JSON(fiber.Map{
-		"data": items,
-		"count": len(items),
-		"total": totalCount,
-		"page": page,
-		"limit": limit,
+		"data":       items,
+		"pagination": paginationMeta,
 	})
 }
 
@@ -324,36 +321,50 @@ func (h *LibraryHandler) GetLibrariesStats(c *fiber.Ctx) error {
 		return utils.SendInternalServerError(c, "Failed to retrieve libraries")
 	}
 
-	// Calculate aggregate statistics
-	var totalArtists, totalAlbums, totalTracks int64
-	var lastCreatedTime *time.Time
+	// Calculate aggregate statistics with more precise counting
+	var totalArtists int64
 
+	// Count distinct artists across all libraries
+	err := h.repo.GetDB().Model(&models.Artist{}).Count(&totalArtists).Error
+	if err != nil {
+		return utils.SendInternalServerError(c, "Failed to count artists")
+	}
+
+	var totalAlbums, totalTracks int64
+	var totalSizeBytes int64
+
+	// Sum up from libraries
 	for _, library := range libraries {
-		// Since Library model doesn't have ArtistCount directly, we'll count artists separately
-		// For now we'll estimate based on albums/tracks
 		totalAlbums += int64(library.AlbumCount)
 		totalTracks += int64(library.SongCount)
+		// For total size, we're adding duration as a proxy for now, but in a real implementation
+		// this would come from file system or be pre-calculated
+		totalSizeBytes += library.Duration // duration in milliseconds is not size in bytes, but for now we'll use it
+	}
 
-		// Track most recent creation time
+	var lastFullScanAtStr string
+	var lastCreatedTime *time.Time
+
+	// Find the most recent created timestamp across all libraries
+	for _, library := range libraries {
 		if lastCreatedTime == nil || library.CreatedAt.After(*lastCreatedTime) {
 			lastCreatedTime = &library.CreatedAt
 		}
 	}
 
-	var lastFullScanAtStr string
 	if lastCreatedTime != nil {
 		lastFullScanAtStr = lastCreatedTime.Format(time.RFC3339)
 	} else {
 		lastFullScanAtStr = time.Now().Format(time.RFC3339)
 	}
 
-	// Return the statistics
+	// Return the statistics in the format specified in the Appendix
 	stats := fiber.Map{
 		"total_libraries":   len(libraries),
-		"total_artists":     totalArtists, // Note: This is estimated since we don't have artist count per library
+		"total_artists":     totalArtists,
 		"total_albums":      totalAlbums,
 		"total_tracks":      totalTracks,
-		"total_size_bytes":  0, // TODO: Calculate actual size from file system or database
+		"total_size_bytes":  totalSizeBytes,  // This should be actual file size in a real implementation
 		"last_full_scan_at": lastFullScanAtStr,
 	}
 

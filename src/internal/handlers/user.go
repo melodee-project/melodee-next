@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"melodee/internal/middleware"
@@ -36,7 +35,6 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 
 	// Get pagination parameters
 	page, pageSize := pagination.GetPaginationParams(c, 1, 10)
-	offset := pagination.CalculateOffset(page, pageSize)
 
 	// In a real implementation, we would fetch users with pagination
 	// For now, we'll return an empty list

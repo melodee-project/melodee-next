@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,9 +28,16 @@ func (h *MetricsHandler) Metrics() fiber.Handler {
 		writer := &fiberResponseWriter{c: c}
 		
 		// Create a basic http.Request
+		uri := c.Request().URI()
+		urlStr := string(uri.RequestURI())
+		httpReqURL, err := url.ParseRequestURI(urlStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse request URI: %w", err)
+		}
+
 		req := &http.Request{
 			Method: c.Method(),
-			URL:    &c.Request().URI().Addr,
+			URL:    httpReqURL,
 			Header: make(http.Header),
 		}
 		

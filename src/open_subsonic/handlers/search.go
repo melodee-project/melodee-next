@@ -127,6 +127,12 @@ func (h *SearchHandler) Search3(c *fiber.Ctx) error {
 	// Get pagination parameters
 	offset, size := utils.ParsePaginationParams(c)
 
+	// Enforce maximum size limit for performance
+	maxSize := 50 // Limit for each type to avoid too many results
+	if size > maxSize {
+		size = maxSize
+	}
+
 	// Get results for each type
 	artists, err := h.searchArtists(query, offset, size)
 	if err != nil {
@@ -168,12 +174,18 @@ func (h *SearchHandler) Search3(c *fiber.Ctx) error {
 // searchArtists performs a search for artists matching the query
 func (h *SearchHandler) searchArtists(query string, offset, size int) ([]utils.IndexArtist, error) {
 	var artists []models.Artist
-	
+
+	// Enforce maximum size limit for performance
+	if size > 100 {
+		size = 100
+	}
+
 	// Build query with name normalization and full text search
 	normalizedQuery := normalizeSearchQuery(query)
-	
-	queryStmt := h.db.Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%")
-	
+
+	// Use more efficient query that only selects required fields
+	queryStmt := h.db.Select("id, name, album_count_cached, created_at, last_scanned_at").Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%").Order("name_normalized ASC")
+
 	// Apply pagination
 	err := queryStmt.Offset(offset).Limit(size).Find(&artists).Error
 	if err != nil {
@@ -188,14 +200,14 @@ func (h *SearchHandler) searchArtists(query string, offset, size int) ([]utils.I
 			Name:       artist.Name,
 			AlbumCount: int(artist.AlbumCountCached),
 		}
-		
+
 		if !artist.CreatedAt.IsZero() {
 			indexArtist.Created = utils.FormatTime(artist.CreatedAt)
 		}
 		if artist.LastScannedAt != nil && !artist.LastScannedAt.IsZero() {
 			indexArtist.Starred = utils.FormatTime(*artist.LastScannedAt)
 		}
-		
+
 		result = append(result, indexArtist)
 	}
 
@@ -204,15 +216,31 @@ func (h *SearchHandler) searchArtists(query string, offset, size int) ([]utils.I
 
 // searchAlbums performs a search for albums matching the query
 func (h *SearchHandler) searchAlbums(query string, offset, size int) ([]utils.SearchAlbum, error) {
-	var albums []models.Album
-	
+	// Enforce maximum size limit for performance
+	if size > 100 {
+		size = 100
+	}
+
+	// Use a custom struct to hold the join results
+	type AlbumWithArtist struct {
+		models.Album
+		ArtistName string `gorm:"column:artist_name"`
+	}
+
+	var albums []AlbumWithArtist
+
 	// Build query with name normalization
 	normalizedQuery := normalizeSearchQuery(query)
-	
-	queryStmt := h.db.Preload("Artist").Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%")
-	
+
+	// Use more efficient query that only selects required fields and joins
+	queryStmt := h.db.Table("melodee_albums as albums").
+		Select("albums.id, albums.name, albums.artist_id, albums.release_date, albums.created_at, albums.duration_cached, albums.song_count_cached, artists.name as artist_name").
+		Joins("LEFT JOIN melodee_artists as artists ON albums.artist_id = artists.id").
+		Where("albums.name_normalized ILIKE ?", "%"+normalizedQuery+"%").
+		Order("albums.name_normalized ASC")
+
 	// Apply pagination
-	err := queryStmt.Offset(offset).Limit(size).Find(&albums).Error
+	err := queryStmt.Offset(offset).Limit(size).Scan(&albums).Error
 	if err != nil {
 		return nil, err
 	}
@@ -223,10 +251,10 @@ func (h *SearchHandler) searchAlbums(query string, offset, size int) ([]utils.Se
 		searchAlbum := utils.SearchAlbum{
 			ID:       int(album.ID),
 			Name:     album.Name,
-			Artist:   album.Artist.Name,
+			Artist:   album.ArtistName, // Use the joined artist name
 			ArtistID: int(album.ArtistID),
 		}
-		
+
 		if album.ReleaseDate != nil {
 			searchAlbum.Year = album.ReleaseDate.Year()
 		}
@@ -248,15 +276,33 @@ func (h *SearchHandler) searchAlbums(query string, offset, size int) ([]utils.Se
 
 // searchSongs performs a search for songs matching the query
 func (h *SearchHandler) searchSongs(query string, offset, size int) ([]utils.Child, error) {
-	var songs []models.Song
-	
+	// Enforce maximum size limit for performance
+	if size > 100 {
+		size = 100
+	}
+
+	// Use a custom struct to hold the join results
+	type SongWithDetails struct {
+		models.Song
+		AlbumName  string `gorm:"column:album_name"`
+		ArtistName string `gorm:"column:artist_name"`
+	}
+
+	var songs []SongWithDetails
+
 	// Build query with name normalization
 	normalizedQuery := normalizeSearchQuery(query)
-	
-	queryStmt := h.db.Preload("Album").Preload("Artist").Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%")
-	
+
+	// Use more efficient query that only selects required fields and joins
+	queryStmt := h.db.Table("melodee_songs as songs").
+		Select("songs.id, songs.name, songs.album_id, songs.artist_id, songs.duration, songs.bit_rate, songs.sort_order, songs.created_at, songs.relative_path, songs.file_name, albums.name as album_name, artists.name as artist_name").
+		Joins("LEFT JOIN melodee_albums as albums ON songs.album_id = albums.id").
+		Joins("LEFT JOIN melodee_artists as artists ON songs.artist_id = artists.id").
+		Where("songs.name_normalized ILIKE ?", "%"+normalizedQuery+"%").
+		Order("songs.name_normalized ASC")
+
 	// Apply pagination
-	err := queryStmt.Offset(offset).Limit(size).Find(&songs).Error
+	err := queryStmt.Offset(offset).Limit(size).Scan(&songs).Error
 	if err != nil {
 		return nil, err
 	}
@@ -265,24 +311,24 @@ func (h *SearchHandler) searchSongs(query string, offset, size int) ([]utils.Chi
 	result := make([]utils.Child, 0, len(songs))
 	for _, song := range songs {
 		child := utils.Child{
-			ID:       int(song.ID),
-			Parent:   int(song.AlbumID),
-			IsDir:    false,
-			Title:    song.Name,
-			Album:    song.Album.Name,
-			Artist:   song.Artist.Name,
-			CoverArt: getCoverArtID("album", song.AlbumID), // Placeholder
-			Created:  utils.FormatTime(song.CreatedAt),
-			Duration: int(song.Duration / 1000), // Convert to seconds
-			BitRate:  int(song.BitRate),
-			Track:    int(song.SortOrder),
-			Genre:    "", // Would come from tags
-			Size:     0, // Would come from file system
+			ID:          int(song.ID),
+			Parent:      int(song.AlbumID),
+			IsDir:       false,
+			Title:       song.Name,
+			Album:       song.AlbumName, // Use the joined album name
+			Artist:      song.ArtistName, // Use the joined artist name
+			CoverArt:    getCoverArtID("album", song.AlbumID), // Placeholder
+			Created:     utils.FormatTime(song.CreatedAt),
+			Duration:    int(song.Duration / 1000), // Convert to seconds
+			BitRate:     int(song.BitRate),
+			Track:       int(song.SortOrder),
+			Genre:       "", // Would come from tags
+			Size:        0, // Would come from file system
 			ContentType: getContentType(song.FileName),
 			Suffix:      getSuffix(song.FileName),
 			Path:        song.RelativePath,
 		}
-		
+
 		result = append(result, child)
 	}
 

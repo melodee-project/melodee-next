@@ -384,6 +384,51 @@ func (m *MigrationManager) createIndexes() error {
 		return fmt.Errorf("failed to create shares expires_at index: %w", err)
 	}
 
+	// Additional indexes for performance optimization (Phase 5)
+	// Playlist songs: for faster lookup of songs in playlists
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist_position ON playlist_songs(playlist_id, position);`).Error; err != nil {
+		return fmt.Errorf("failed to create playlist_songs_playlist_position index: %w", err)
+	}
+
+	// User interactions: for faster lookup of user interactions with content
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_songs_user_rating ON user_songs(user_id, rating);`).Error; err != nil {
+		return fmt.Errorf("failed to create user_songs_user_rating index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_songs_last_played ON user_songs(last_played_at);`).Error; err != nil {
+		return fmt.Errorf("failed to create user_songs_last_played index: %w", err)
+	}
+
+	// Albums: for faster lookup by status and artist
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_albums_artist_status ON melodee_albums(artist_id, album_status);`).Error; err != nil {
+		return fmt.Errorf("failed to create albums_artist_status index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_albums_created_at ON melodee_albums(created_at);`).Error; err != nil {
+		return fmt.Errorf("failed to create albums_created_at index: %w", err)
+	}
+
+	// Songs: for faster lookup by album and common attributes
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_songs_album_created ON melodee_songs(album_id, created_at);`).Error; err != nil {
+		return fmt.Errorf("failed to create songs_album_created index: %w", err)
+	}
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_songs_artist_created ON melodee_songs(artist_id, created_at);`).Error; err != nil {
+		return fmt.Errorf("failed to create songs_artist_created index: %w", err)
+	}
+
+	// Settings: for faster lookup of specific settings
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_settings_key ON settings(key);`).Error; err != nil {
+		return fmt.Errorf("failed to create settings_key index: %w", err)
+	}
+
+	// Artists: for performance
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_artists_created_at ON melodee_artists(created_at);`).Error; err != nil {
+		return fmt.Errorf("failed to create artists_created_at index: %w", err)
+	}
+
+	// Capacity status: for monitoring
+	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_capacity_status_updated_at ON capacity_status(updated_at);`).Error; err != nil {
+		return fmt.Errorf("failed to create capacity_status_updated_at index: %w", err)
+	}
+
 	// User song/album/artist interaction indexes
 	if err := m.db.Exec(`CREATE INDEX IF NOT EXISTS idx_user_songs_user_id ON user_songs(user_id);`).Error; err != nil {
 		return fmt.Errorf("failed to create user_songs user_id index: %w", err)

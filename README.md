@@ -334,6 +334,19 @@ npm test
 
 ---
 
+## Frontend Environment Variables
+
+The admin frontend can be configured with the following environment variables:
+
+- `REACT_APP_API_BASE_URL`: Base URL for API requests (defaults to `/api` for relative paths)
+
+Example `.env` file for development:
+```
+REACT_APP_API_BASE_URL=http://localhost:8080/api
+```
+
+---
+
 ## API Usage
 
 Melodee provides two primary APIs for different use cases:

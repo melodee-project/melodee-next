@@ -66,8 +66,9 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 	lastModified := time.Now().UTC()
 
 	// Query artists, organizing by first letter according to normalization rules
+	// Use more efficient query that only selects required fields
 	var artists []models.Artist
-	if err := h.db.Where("is_locked = ?", false).Find(&artists).Error; err != nil {
+	if err := h.db.Select("id, name, name_normalized, album_count_cached, created_at, last_scanned_at").Where("is_locked = ?", false).Order("name_normalized ASC").Find(&artists).Error; err != nil {
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve artists")
 	}
 
@@ -141,10 +142,16 @@ func (h *BrowsingHandler) GetArtists(c *fiber.Ctx) error {
 	// Get pagination parameters
 	offset, size := utils.ParsePaginationParams(c)
 
-	// Query artists with pagination
+	// Enforce maximum size limit for performance
+	if size > 500 {
+		size = 500
+	}
+
+	// Query artists with pagination using more efficient select
 	var artists []models.Artist
-	if err := h.db.Where("is_locked = ?", false).
+	if err := h.db.Select("id, name, album_count_cached, created_at, last_scanned_at").Where("is_locked = ?", false).
 		Offset(offset).Limit(size).
+		Order("name_normalized ASC"). // Add explicit ordering for consistent pagination
 		Find(&artists).Error; err != nil {
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve artists")
 	}
@@ -159,7 +166,7 @@ func (h *BrowsingHandler) GetArtists(c *fiber.Ctx) error {
 		XMLName: xml.Name{Local: "artists"},
 		Artists: make([]utils.IndexArtist, 0, len(artists)),
 	}
-	
+
 	for _, artist := range artists {
 		indexArtist := utils.IndexArtist{
 			ID:         int(artist.ID),

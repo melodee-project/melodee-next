@@ -13,7 +13,6 @@ import (
 
 	"melodee/internal/capacity"
 	"melodee/internal/config"
-	"melodee/internal/services"
 )
 
 // HealthMetricsHandler handles health check and metrics endpoints

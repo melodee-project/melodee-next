@@ -7,14 +7,12 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"melodee/internal/models"
 	"melodee/internal/services"
 	"melodee/internal/utils"
 )

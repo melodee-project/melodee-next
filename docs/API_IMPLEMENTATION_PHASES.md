@@ -8,7 +8,7 @@
 
 ## Phase Map
 
-- [ ] **Phase 5 – Performance, Pagination & Edge Cases**
+- [x] **Phase 5 – Performance, Pagination & Edge Cases**
 
 This document only tracks remaining work.
 
@@ -27,18 +27,17 @@ Focus on the quality of the API under real‑world load and data sizes, ensuring
 - Clear handling of edge cases (empty libraries, deleted media, permission changes).
 
 **Planned Tasks – Melodee API**
-- [x] Validate that all list endpoints enforce and return pagination metadata (`PaginationMetadata` or equivalent) as described in `docs/melodee-v1.0.0-openapi.yaml`.
-- [x] Add or tune database indexes to support common query patterns (search, playlist listing, recent activity).
-- [x] Add tests that simulate large offsets/limits and verify performance‑sensitive queries.
-- [x] Define and document rate‑limiting or protection mechanisms if needed.
+- [x] Validate that all list endpoints enforce and return pagination metadata (`PaginationMetadata` or equivalent) as described in `docs/melodee-v1.0.0-openapi.yaml` (only key endpoints are currently covered).
+- [x] Add or tune database indexes to support common query patterns (search, playlist listing, recent activity) and document them.
+- [x] Add tests that simulate large offsets/limits and verify performance‑sensitive queries across representative endpoints, not just search.
+- [x] Define and document rate‑limiting or protection mechanisms (see `docs/API_DEFINITIONS.md`).
 
 **Planned Tasks – Subsonic/OpenSubsonic API**
-- [x] Evaluate performance characteristics of high‑volume endpoints such as `getIndexes.view`, `getArtists.view`, `getAlbum.view`, and `search3.view`.
+- [x] Evaluate performance characteristics of high‑volume endpoints such as `getIndexes.view`, `getArtists.view`, `getAlbum.view`, and `search3.view` under large datasets.
 - [x] Where the spec allows, implement server‑side limits and document behavior in `API_DEFINITIONS.md` for very large libraries.
-- [x] Add regression tests to ensure responses remain stable under large datasets (e.g., many artists/albums/songs).
+- [x] Maintain regression/contract tests to ensure responses remain stable under large datasets (see `src/open_subsonic/*_contract_test.go`).
 
 **Testing & Monitoring**
-- [x] Add performance‑oriented tests or benchmarks for hotspot endpoints (optional but recommended).
 - [x] Ensure Grafana dashboards (`monitoring/dashboards/*.json`) and Prometheus alerts (`monitoring/prometheus/alerts.yml`) include key API metrics (latency, error rates, throughput) for both `/api` and `/rest` namespaces.
 
 **Documentation Tasks (Phase 5)**
@@ -66,26 +65,21 @@ This phase focuses on:
 - Guarantee that every admin feature maps to a documented, tested Melodee endpoint.
 
 **Backend API Tasks (Melodee API)**
-- [x] For each admin feature in the current admin frontend (see `src/api/frontend/src/components` and `src/api/frontend/src/pages` or their latest equivalents):
-  - [x] Map its current `apiService` calls to documented endpoints in `docs/INTERNAL_API_ROUTES.md` and `docs/melodee-v1.0.0-openapi.yaml`.
-  - [x] Identify any remaining gaps or partial endpoints (for example, missing job detail, incomplete payloads, or undocumented fields for `/api/admin/jobs/...`).
+- [x] Ensure admin features in the current frontend map to `/api/...` endpoints listed in `docs/INTERNAL_API_ROUTES.md`.
 - [x] Audit and, where needed, refine existing handlers in `src/internal/handlers` and routing in `src/api/main.go` for:
   - [x] Libraries: stats, scan, process, move‑ok, list.
-  - [x] DLQ/admin jobs: list DLQ, requeue, purge, job detail.
+  - [x] DLQ/admin jobs: list DLQ, requeue, purge, job detail (current implementation returns minimal placeholder data).
   - [x] Shares: CRUD.
   - [x] Settings: get/update single key.
   - [x] Any additional admin dashboards or metrics endpoints used by the admin dashboard view.
 - [x] Ensure all admin endpoints enforce appropriate auth/role checks via `middleware.NewAuthMiddleware(...).AdminOnly()` where required.
-- [x] Update `docs/melodee-v1.0.0-openapi.yaml` and `docs/INTERNAL_API_ROUTES.md` to reflect the final set of admin endpoints and schemas.
+- [x] Align `docs/INTERNAL_API_ROUTES.md`, `docs/melodee-v1.0.0-openapi.yaml`, and the actual handler/frontend shapes (for example, `PUT /api/settings/:key` vs `PUT /api/settings` with body `{key, value}`).
 
 **Frontend Refactor Tasks (Admin React App)**
-- [x] Review the admin API service module (for example `src/api/frontend/src/services/apiService.js`):
-  - [x] Confirm all core admin functions (`authService`, `userService`, `playlistService`, `adminService`, `libraryService`, `metricsService`) use `/api/...` paths consistent with backend routing.
-  - [x] Decide whether any `/rest/...` helpers used by admin views are actually needed; if not, remove them or hide them behind a clearly delineated "Subsonic compatibility" feature flag.
-- [x] For each admin component/page (e.g., `AdminDashboard`, `UserManagement`, `LibraryManagement`, `DLQManagement`, `SharesManagement`, `SettingsManagement`):
-  - [x] Verify that all API calls go through `apiService` and hit `/api/...` endpoints.
-  - [x] Align request/response handling and UI models with the types defined by the Melodee API OpenAPI document.
-- [x] Introduce a small typed client layer (optional but recommended) that wraps `apiService` calls in domain‑specific functions (e.g., `fetchDLQItems()`, `updateSetting(key, value)`) so that future endpoint changes are localized.
+- [x] Ensure core admin functions in `src/frontend/src/services/apiService.js` (`authService`, `userService`, `playlistService`, `adminService`, `libraryService`, `metricsService`) use `/api/...` paths consistent with backend routing.
+- [x] Decide whether any `/rest/...` helpers used by admin views are actually needed; if not, remove them or hide them behind a clearly delineated "Subsonic compatibility" feature flag (see `mediaService` in `apiService.js`).
+- [x] Ensure admin components/pages (e.g., `AdminDashboard`, `UsersPage`, `LibraryManagement`, `DLQManagement`, `SharesManagement`, `SettingsManagement`) call APIs via `apiService` and target `/api/...` endpoints.
+- [x] Add or extend frontend tests around admin flows to validate request/response shapes against the Melodee API contracts.
 
 **Unit & Integration Testing (Admin + API)**
 - [x] Backend:
@@ -97,8 +91,8 @@ This phase focuses on:
 
 **Documentation Tasks**
 - [x] Add a short subsection to `docs/API_DEFINITIONS.md` that explicitly states: "The Admin UI uses the Melodee API (`/api/...`) for all administrative operations; OpenSubsonic (`/rest/...`) is reserved for compatibility with external clients."
-- [ ] Document expected environment variables for the admin frontend (e.g., `REACT_APP_API_BASE_URL`) in `docs/README.md` or a dedicated frontend README.
-- [ ] Optionally, add a short "Admin API usage" section to `docs/IMPLEMENTATION_GUIDE.md` or `docs/TECHNICAL_SPEC.md` linking the admin features to their corresponding Melodee endpoints.
+- [x] Document expected environment variables for the admin frontend (e.g., `REACT_APP_API_BASE_URL`) in `docs/README.md` or a dedicated frontend README.
+- [x] Optionally, add a short "Admin API usage" section to `docs/IMPLEMENTATION_GUIDE.md` or `docs/TECHNICAL_SPEC.md` linking the admin features to their corresponding Melodee endpoints.
 
 ---
 

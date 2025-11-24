@@ -272,6 +272,10 @@ curl "https://your-melodee-instance.com/rest/stream.view?u=username&p=enc:passwo
 ### Admin API Usage
 The Admin UI uses the Melodee API (`/api/...`) for all administrative operations; OpenSubsonic (`/rest/...`) is reserved for compatibility with external clients.
 
+The frontend service layer clearly separates admin functionality from compatibility features:
+- **Admin operations**: All administrative functions (users, libraries, DLQ, shares, settings, etc.) use Melodee API endpoints under `/api/...`
+- **Compatibility helpers**: Any remaining `mediaService` endpoints that access `/rest/...` are clearly delineated as "Subsonic compatibility" features and are intended only for compatibility with external clients
+
 ## Related documentation
 
 - Internal admin‑focused routes (user management, libraries, jobs, etc.) live under `/api/...` and are cataloged in `docs/INTERNAL_API_ROUTES.md`.
@@ -286,6 +290,7 @@ The Admin UI uses the Melodee API (`/api/...`) for all administrative operations
 
 ### Performance
 - Rate limiting applies to expensive operations: search endpoints are limited to 30 requests per 10 minutes
+- Public API rate limiting applies globally to prevent abuse: all endpoints are subject to rate limiting with different tiers based on endpoint type
 - OpenSubsonic API endpoints maintain compatibility with existing clients but may not perform as well as Melodee API on very large libraries
 - Some legacy OpenSubsonic endpoints do not include pagination metadata which may cause performance issues with large result sets in some client applications
 
