@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/hibiken/asynq"
 	"gorm.io/gorm"
@@ -20,10 +18,10 @@ import (
 
 // WorkerServer handles background job processing
 type WorkerServer struct {
-	srv        *asynq.Server
-	db         *gorm.DB
-	config     *config.AppConfig
-	mediaSvc   *media.MediaService
+	srv          *asynq.Server
+	db           *gorm.DB
+	config       *config.AppConfig
+	mediaSvc     *media.MediaService
 	directorySvc *directory.DirectoryCodeGenerator
 	pathResolver *directory.PathTemplateResolver
 }
@@ -64,37 +62,33 @@ func NewWorkerServer() (*WorkerServer, error) {
 	pathConfig := directory.DefaultPathTemplateConfig()
 	pathResolver := directory.NewPathTemplateResolver(pathConfig)
 
-	// Initialize media service
-	mediaSvc := media.NewMediaService(dbManager.GetGormDB(), directorySvc, pathResolver)
+	// Initialize quarantine and media services
+	quarantineSvc := media.NewDefaultQuarantineService(dbManager.GetGormDB())
+	mediaSvc := media.NewMediaService(dbManager.GetGormDB(), directorySvc, pathResolver, quarantineSvc)
 
 	// Initialize Asynq server with Redis connection
-	redisAddr := fmt.Sprintf("%s:%d", cfg.Redis.Address, cfg.Redis.Port)
+	redisAddr := cfg.Redis.Address
 	srv := asynq.NewServer(
 		asynq.RedisClientOpt{Addr: redisAddr},
 		asynq.Config{
-			// Specify queues and their priorities
 			Queues: map[string]int{
-				"critical":  6, // stream-serving support tasks
-				"default":   3, // library scans, metadata write-backs
-				"bulk":      1, // large backfills
-				"maintenance": 2, // partition/index management
+				"critical":    6,
+				"default":     3,
+				"bulk":        1,
+				"maintenance": 2,
 			},
-			// Set concurrency for each worker
 			Concurrency: 10,
-			// Enable periodic task scheduler
-			PeriodicTaskConfig: &asynq.PeriodicTaskConfig{
-				CleanupInterval: 24 * time.Hour,
-			},
 		},
 	)
 
-	// Register task handlers
-	srv.HandleFunc(media.TypeLibraryScan, media.HandleLibraryScan)
-	srv.HandleFunc(media.TypeLibraryProcess, media.HandleLibraryProcess)
-	srv.HandleFunc(media.TypeLibraryMoveOK, media.HandleLibraryMoveOK)
-	srv.HandleFunc(media.TypeDirectoryRecalculate, media.HandleDirectoryRecalculate)
-	srv.HandleFunc(media.TypeMetadataWriteback, media.HandleMetadataWriteback)
-	srv.HandleFunc(media.TypeMetadataEnhance, media.HandleMetadataEnhance)
+	// Register task handlers using a ServeMux
+	mux := asynq.NewServeMux()
+	mux.HandleFunc(media.TypeLibraryScan, media.HandleLibraryScan)
+	mux.HandleFunc(media.TypeLibraryProcess, media.HandleLibraryProcess)
+	mux.HandleFunc(media.TypeLibraryMoveOK, media.HandleLibraryMoveOK)
+	mux.HandleFunc(media.TypeDirectoryRecalculate, media.HandleDirectoryRecalculate)
+	mux.HandleFunc(media.TypeMetadataWriteback, media.HandleMetadataWriteback)
+	mux.HandleFunc(media.TypeMetadataEnhance, media.HandleMetadataEnhance)
 
 	return &WorkerServer{
 		srv:          srv,
@@ -111,7 +105,7 @@ func (w *WorkerServer) Start() error {
 	log.Println("Starting worker server...")
 
 	// Start the server
-	if err := w.srv.Run(); err != nil {
+	if err := w.srv.Run(asynq.NewServeMux()); err != nil {
 		return fmt.Errorf("failed to start worker server: %w", err)
 	}
 

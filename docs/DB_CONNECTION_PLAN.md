@@ -76,8 +76,8 @@ var GORMConfig = &gorm.Config{
         SingularTable: false,      // Use plural table names
     },
     
-    // Optimized for PostgreSQL partitioning support
-    DisableForeignKeyConstraintWhenMigrating: true, // Allow migration of partitioned tables
+    // Standard GORM configuration for AutoMigrate
+    DisableForeignKeyConstraintWhenMigrating: false, // Enable FK constraints for data integrity
 }
 ```
 
@@ -145,54 +145,53 @@ func (d *DatabaseManager) runHealthCheck() error {
 
 ### Migration Management
 ```go
-// Migration management for partitioned tables and schema updates
+// Migration management using GORM AutoMigrate
 type MigrationManager struct {
     db     *gorm.DB
     logger *zerolog.Logger
 }
 
-// Run database migrations with partition-aware approach
+// Run database migrations using GORM
 func (m *MigrationManager) Migrate() error {
-    // Migrate static tables first
-    if err := m.migrateStaticTables(); err != nil {
-        return fmt.Errorf("failed to migrate static tables: %w", err)
+    // Create PostgreSQL extensions
+    if err := m.createExtensions(); err != nil {
+        return fmt.Errorf("failed to create extensions: %w", err)
     }
     
-    // Migrate partitioned tables (special handling needed)
-    if err := m.migratePartitionedTables(); err != nil {
-        return fmt.Errorf("failed to migrate partitioned tables: %w", err)
+    // Let GORM handle all table creation via AutoMigrate
+    if err := m.db.AutoMigrate(
+        &models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{},
+        &models.Playlist{}, &models.PlaylistSong{},
+        &models.UserSong{}, &models.UserAlbum{}, &models.UserArtist{},
+        // ... all other models
+    ); err != nil {
+        return fmt.Errorf("failed to auto-migrate tables: %w", err)
     }
     
-    // Create indexes and constraints
-    if err := m.createIndexes(); err != nil {
-        return fmt.Errorf("failed to create indexes: %w", err)
+    if m.logger != nil {
+        m.logger.Info().Msg("Database migrations completed successfully")
     }
-    
-    // Create materialized views
-    if err := m.createMaterializedViews(); err != nil {
-        return fmt.Errorf("failed to create materialized views: %w", err)
-    }
-    
-    m.logger.Info().Msg("Database migrations completed successfully")
     return nil
 }
 
-// Special handling for partitioned tables
-func (m *MigrationManager) migratePartitionedTables() error {
-    // First, create the main partitioned table
-    if err := m.db.Exec(`
-        CREATE TABLE IF NOT EXISTS songs (
-            id BIGSERIAL PRIMARY KEY,
-            api_key UUID UNIQUE DEFAULT gen_random_uuid(),
-            name VARCHAR(255) NOT NULL,
-            name_normalized VARCHAR(255) NOT NULL,
-            album_id BIGINT,
-            artist_id BIGINT,
-            duration BIGINT,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        ) PARTITION BY RANGE (created_at);
-    `).Error; err != nil {
-        return fmt.Errorf("failed to create partitioned songs table: %w", err)
+// Create required PostgreSQL extensions
+func (m *MigrationManager) createExtensions() error {
+    extensions := []string{"uuid-ossp", "pg_trgm", "btree_gin"}
+    
+    for _, ext := range extensions {
+        if err := m.db.Exec(fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS \"%s\"", ext)).Error; err != nil {
+            return fmt.Errorf("failed to create extension %s: %w", ext, err)
+        }
+    }
+    return nil
+}
+```
+
+**Key Points:**
+- All table definitions live in Go models (`src/internal/models/models.go`)
+- Indexes defined via GORM struct tags (e.g., `` `gorm:"index"` ``)
+- GORM handles naming conventions automatically
+- Schema changes made by modifying Go structs, not SQL
     }
     
     // Create initial partitions

@@ -7,9 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"golang.org/x/time/rate"
-	"melodee/internal/services"
 )
-
 
 // NewRateLimiter creates a new rate limiter middleware with the provided configuration
 func NewRateLimiter(config RateLimiterConfig) fiber.Handler {
@@ -18,8 +16,8 @@ func NewRateLimiter(config RateLimiterConfig) fiber.Handler {
 		Expiration: config.GeneralWindow,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Rate limit exceeded",
-				"message": "Too many requests. Please try again later.",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many requests. Please try again later.",
 				"retry_after": config.GeneralWindow.Seconds(),
 			})
 		},
@@ -33,8 +31,8 @@ func NewAuthRateLimiter(config RateLimiterConfig) fiber.Handler {
 		Expiration: config.AuthWindow,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Rate limit exceeded",
-				"message": "Too many authentication attempts. Please try again later.",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many authentication attempts. Please try again later.",
 				"retry_after": config.AuthWindow.Seconds(),
 			})
 		},
@@ -48,8 +46,8 @@ func NewSearchRateLimiter(config RateLimiterConfig) fiber.Handler {
 		Expiration: config.SearchWindow,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Rate limit exceeded",
-				"message": "Too many search requests. Please try again later.",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many search requests. Please try again later.",
 				"retry_after": config.SearchWindow.Seconds(),
 			})
 		},
@@ -63,8 +61,8 @@ func NewCustomRateLimiter(limit int, window time.Duration, message string) fiber
 		Expiration: window,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Rate limit exceeded",
-				"message": message,
+				"error":       "Rate limit exceeded",
+				"message":     message,
 				"retry_after": window.Seconds(),
 			})
 		},
@@ -78,8 +76,8 @@ func NewExpensiveEndpointRateLimiter() fiber.Handler {
 		Expiration: 10 * time.Minute,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Rate limit exceeded",
-				"message": "Too many requests to expensive operations. Please try again later.",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many requests to expensive operations. Please try again later.",
 				"retry_after": 600, // 10 minutes
 			})
 		},
@@ -96,8 +94,8 @@ func RateLimiterForPublicAPI() fiber.Handler {
 		Expiration: 15 * time.Minute,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Rate limit exceeded",
-				"message": "Too many requests. Please try again later.",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many requests. Please try again later.",
 				"retry_after": (15 * time.Minute).Seconds(),
 			})
 		},
@@ -118,8 +116,8 @@ func NewTieredRateLimiter() fiber.Handler {
 		Expiration: 15 * time.Minute,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Rate limit exceeded",
-				"message": "Too many requests. Please try again later.",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many requests. Please try again later.",
 				"retry_after": (15 * time.Minute).Seconds(),
 			})
 		},
@@ -155,8 +153,8 @@ func RateLimitByUser(queriesPerWindow int, window time.Duration) fiber.Handler {
 
 		if !limiter.Allow() {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"error": "Rate limit exceeded",
-				"message": "Too many requests. Please try again later.",
+				"error":       "Rate limit exceeded",
+				"message":     "Too many requests. Please try again later.",
 				"retry_after": window.Seconds(),
 			})
 		}

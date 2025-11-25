@@ -28,7 +28,7 @@ This document outlines the recommended technology stack for the Melodee music ma
 - **Features**:
   - JSON/JSONB support for flexible metadata storage
   - Full-text search for music library search functionality
-  - Horizontal partitioning support with GORM
+  - Comprehensive indexing via GORM struct tags
   - Connection pooling with pgx driver
   - Materialized views for aggregate statistics
 

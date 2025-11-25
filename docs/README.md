@@ -34,7 +34,7 @@ For implementation sequencing, see `IMPLEMENTATION_GUIDE.md`.
 ### 2.2 Architecture & Behavior
 - `TECHNICAL_SPEC.md`  Canonical technical spec (architecture, APIs, jobs, normalization)
 - `TECHNICAL_STACK.md`  Canonical stack & tooling choices
-- `DATABASE_SCHEMA.md`  Canonical DB schema and partitioning playbook
+- `DATABASE_SCHEMA.md`  Database schema overview (source of truth: Go models)
 - `DIRECTORY_ORGANIZATION_PLAN.md`  Directory codes, path templates, and FS integration
 - `MEDIA_FILE_PROCESSING.md`  Media pipeline, FFmpeg profiles, idempotency rules
 - `METADATA_MAPPING.md`  Metadata rules and mappings

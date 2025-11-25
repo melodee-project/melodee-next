@@ -13,11 +13,11 @@ COPY go.mod go.sum ./
 # Download dependencies
 RUN go mod download
 
-# Copy source code
+# Copy source code (entire repo so internal modules resolve)
 COPY . .
 
-# Build the binary - specifically for worker functionality
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o melodee-worker .
+# Build the worker binary from its module path
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o melodee-worker melodee/worker
 
 # Final stage: Use scratch as a minimal base for smallest image
 FROM alpine:latest

@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/hibiken/asynq"
 	"gorm.io/gorm"
 
 	"melodee/internal/config"
@@ -32,7 +33,7 @@ type APIServer struct {
 // NewAPIServer creates a new API server
 func NewAPIServer(cfg *config.AppConfig, dbManager *database.DatabaseManager) *APIServer {
 	db := dbManager.GetGormDB()
-	
+
 	server := &APIServer{
 		cfg:         cfg,
 		db:          db,
@@ -70,7 +71,7 @@ func (s *APIServer) setupRoutes() {
 	authHandler := handlers.NewAuthHandler(s.authService)
 	userHandler := handlers.NewUserHandler(s.repo, s.authService)
 	playlistHandler := handlers.NewPlaylistHandler(s.repo)
-	searchHandler := handlers.NewSearchHandler(s.repo) // Add search handler
+	searchHandler := handlers.NewSearchHandler(s.repo)      // Add search handler
 	healthHandler := handlers.NewHealthHandler(s.dbManager) // Pass the dbManager
 
 	// Health check route
@@ -112,14 +113,16 @@ func (s *APIServer) setupRoutes() {
 	// Library routes (admin only for pipeline management)
 	libraries := protected.Group("/libraries", middleware.NewAuthMiddleware(s.authService).AdminOnly())
 
-	// Create media service with directory service
-	directoryService := directory.NewDirectoryCodeGenerator(directory.DefaultDirectoryCodeConfig(), s.db) // Pass config and database
-	pathTemplateResolver := directory.NewPathTemplateResolver(directory.DefaultPathTemplateConfig()) // Use default config
+	// Create media services and job client
+	directoryService := directory.NewDirectoryCodeGenerator(directory.DefaultDirectoryCodeConfig(), s.db)
+	pathTemplateResolver := directory.NewPathTemplateResolver(directory.DefaultPathTemplateConfig())
+	quarantineSvc := media.NewDefaultQuarantineService(s.db)
+	mediaSvc := media.NewMediaService(s.db, directoryService, pathTemplateResolver, quarantineSvc)
 
-	// Create media service instance
-	mediaSvc := media.NewMediaService(s.db, directoryService, pathTemplateResolver)
+	// Asynq client for enqueueing background jobs from the API
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{Addr: s.cfg.Redis.Address})
 
-	libraryHandler := handlers.NewLibraryHandler(s.repo, mediaSvc)
+	libraryHandler := handlers.NewLibraryHandler(s.repo, mediaSvc, asynqClient, quarantineSvc)
 	libraries.Get("/", libraryHandler.GetLibraryStates)
 	libraries.Get("/:id", libraryHandler.GetLibraryState)
 	libraries.Get("/:id/scan", libraryHandler.TriggerLibraryScan)

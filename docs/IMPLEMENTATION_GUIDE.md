@@ -82,7 +82,7 @@ Use this guide to sequence work for coding agents. Check off phases as completed
   - Verify password rules, lockout/reset, API key rotation.
   - Pen-test uploads (size/MIME) per fixtures.
 - Performance:
-  - Partition creation jobs per `DATABASE_SCHEMA.md` playbook; index checks.
+  - Verify index creation via GORM migrations; query performance tests.
   - Load test streaming/transcoding profiles.
 - Deliverables:
   - All phase checkboxes marked, CI green on contract tests, deployment-ready configs (prod env matrix) validated.

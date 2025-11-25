@@ -32,7 +32,7 @@ The new implementation will follow a microservices architecture with the followi
 
 The database schema is defined in detail in `DATABASE_SCHEMA.md`.
 
-This section intentionally stays high-level and focuses on how the schema supports the behavior in this spec (performance targets, denormalization, partitioning) rather than repeating full DDL. When updating schema details, edit `DATABASE_SCHEMA.md` and ensure any behavioral implications are reflected here.
+This section intentionally stays high-level and focuses on how the schema supports the behavior in this spec (performance targets, denormalization, indexing) rather than repeating full DDL. When updating schema details, edit `DATABASE_SCHEMA.md` and ensure any behavioral implications are reflected here.
 
 ## 3. API Specifications
 
@@ -245,7 +245,7 @@ Example error:
 - **Workers**: Goroutine-based workers for parallel processing
 
 **Queues & Payloads**
-- Queues: `critical` (stream-serving support tasks), `default` (library scans, metadata write-backs), `bulk` (large backfills), `maintenance` (partition/index management).
+- Queues: `critical` (stream-serving support tasks), `default` (library scans, metadata write-backs), `bulk` (large backfills), `maintenance` (index maintenance, cache refreshes).
 - Job payload shape (JSON): `{ "type": "<job_type>", "id": "<entity id or batch key>", "args": {...} }`.
 - Dedup keys: `queue:type:id`. Reject duplicates while in-flight.
 - Retries: expo backoff base 2s, max 5 attempts, DLQ to Redis list `asynq:dlq`.
@@ -261,7 +261,6 @@ Example error:
 
 **Job Payload Schemas**
 - `library.scan`: `{ "library_ids":[int], "force":bool }`, dedup `library.scan:<ids>`, timeout 5m.
-- `partition.create-next-month`: `{}`, dedup `partition.create-next-month`, timeout 1m.
 - `metadata.writeback`: `{ "song_ids":[int] }`, dedup `metadata.writeback:<song_ids hash>`, timeout 2m.
 - `directory.recalculate`: `{ "artist_ids":[int] }`, dedup `directory.recalculate:<artist_ids hash>`, timeout 2m.
 - `metadata.enhance`: `{ "album_id":int, "sources":["musicbrainz","lastfm"] }`, dedup `metadata.enhance:<album_id>`, timeout 3m.
@@ -312,7 +311,7 @@ Example error:
 - **Query Timeout**: Database queries timeout after 30 seconds to prevent hung connections
 - **Memory Limits**: Search and indexing operations limited to prevent memory exhaustion
 - **Concurrent Request Limits**: Per-user request limits as defined in rate limiting section
-- **Database Partitioning**: Consider partitioning for large tables
+- **Index Optimization**: Regular ANALYZE and index maintenance for query performance
 
 ### 7.4 File System Optimization
 - **Efficient File Access**: Use streaming for large file operations

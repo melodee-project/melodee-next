@@ -13,17 +13,17 @@ COPY go.mod go.sum ./
 # Download dependencies
 RUN go mod download
 
-# Copy source code
+# Copy source code (entire repo so internal modules resolve)
 COPY . .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o melodee .
+# Build the API binary from its module path
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o melodee melodee/api
 
-# Final stage: Use scratch as a minimal base for smallest image
-FROM scratch
+# Final stage: Use Alpine as a small base with ffmpeg available
+FROM alpine:3.20
 
-# Copy certificates for HTTPS requests
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Install ffmpeg and CA certificates
+RUN apk add --no-cache ffmpeg ca-certificates
 
 WORKDIR /root/
 

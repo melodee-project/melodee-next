@@ -7,8 +7,10 @@ require (
 	github.com/hibiken/asynq v0.25.1
 	github.com/prometheus/client_golang v1.23.2
 	gorm.io/gorm v1.31.1
+	melodee/api v0.0.0-00010101000000-000000000000
 	melodee/internal v0.0.0-00010101000000-000000000000
 	melodee/open_subsonic v0.0.0-00010101000000-000000000000
+	melodee/worker v0.0.0-00010101000000-000000000000
 )
 
 replace (

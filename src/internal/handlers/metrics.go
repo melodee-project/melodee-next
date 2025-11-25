@@ -6,7 +6,6 @@ import (
 	"net/url"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -23,10 +22,10 @@ func (h *MetricsHandler) Metrics() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Create prometheus handler
 		handler := promhttp.Handler()
-		
+
 		// Create a basic http.ResponseWriter implementation
 		writer := &fiberResponseWriter{c: c}
-		
+
 		// Create a basic http.Request
 		uri := c.Request().URI()
 		urlStr := string(uri.RequestURI())
@@ -40,15 +39,15 @@ func (h *MetricsHandler) Metrics() fiber.Handler {
 			URL:    httpReqURL,
 			Header: make(http.Header),
 		}
-		
+
 		// Copy headers from Fiber request
 		c.Request().Header.VisitAll(func(key, value []byte) {
 			req.Header.Set(string(key), string(value))
 		})
-		
+
 		// Serve metrics
 		handler.ServeHTTP(writer, req)
-		
+
 		return nil
 	}
 }

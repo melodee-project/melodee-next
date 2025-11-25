@@ -5,7 +5,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: ./api/Dockerfile
+      dockerfile: ./src/api/Dockerfile
     image: melodee/api:latest
     container_name: melodee-api
     restart: unless-stopped
@@ -51,7 +51,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: ./web/Dockerfile
+      dockerfile: ./src/web/Dockerfile
     image: melodee/web:latest
     container_name: melodee-web
     restart: unless-stopped
@@ -86,7 +86,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: ./worker/Dockerfile
+      dockerfile: ./src/worker/Dockerfile
     image: melodee/worker:latest
     container_name: melodee-worker
     restart: unless-stopped
@@ -126,7 +126,7 @@ services:
 
   # Database Service
   db:
-    image: postgres:17
+    image: docker.io/library/postgres:17
     container_name: melodee-db
     restart: unless-stopped
     environment:
@@ -174,7 +174,7 @@ services:
 
   # Redis Service
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     container_name: melodee-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
@@ -199,7 +199,7 @@ services:
 
   # Prometheus
   prometheus:
-    image: prom/prometheus:latest
+    image: docker.io/prom/prometheus:latest
     container_name: melodee-prometheus
     restart: unless-stopped
     user: root
@@ -220,7 +220,7 @@ services:
 
   # Grafana
   grafana:
-    image: grafana/grafana-enterprise
+    image: docker.io/grafana/grafana-enterprise
     container_name: melodee-grafana
     restart: unless-stopped
     volumes:
@@ -239,7 +239,7 @@ services:
 
   # Jaeger (for tracing - optional)
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    image: docker.io/jaegertracing/all-in-one:latest
     container_name: melodee-jaeger
     restart: unless-stopped
     environment:
