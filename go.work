@@ -1,3 +1,6 @@
 go 1.25.1
 
-use ./src
+use (
+	./scripts/cmd/bcrypt-hash
+	./src
+)

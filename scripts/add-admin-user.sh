@@ -17,7 +17,7 @@ PASSWORD="$3"
 : "${MELODEE_DB_NAME:=melodee}"
 
 # Generate bcrypt hash using the helper Go program
-HASH=$(cd "$(dirname "$0")" && go run ./cmd/bcrypt-hash "$PASSWORD")
+HASH=$(cd "$(dirname "$0")/cmd/bcrypt-hash" && GO111MODULE=on go run . "$PASSWORD")
 
 export PGPASSWORD="$MELODEE_DB_PASSWORD"
 

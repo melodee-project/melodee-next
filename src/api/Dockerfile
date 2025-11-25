@@ -22,8 +22,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o melodee melodee/a
 # Final stage: Use Alpine as a small base with ffmpeg available
 FROM alpine:3.20
 
-# Install ffmpeg and CA certificates
-RUN apk add --no-cache ffmpeg ca-certificates
+# Install ffmpeg, CA certificates, and curl for healthchecks
+RUN apk add --no-cache ffmpeg ca-certificates curl
 
 WORKDIR /root/
 
