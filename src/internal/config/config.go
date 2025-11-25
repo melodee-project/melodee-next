@@ -8,20 +8,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/viper"
 	"melodee/internal/utils"
+
+	"github.com/spf13/viper"
 )
 
 // AppConfig holds the main application configuration
 type AppConfig struct {
-	Server          ServerConfig    `mapstructure:"server"`
-	Database        DatabaseConfig  `mapstructure:"database"`
-	Redis           RedisConfig     `mapstructure:"redis"`
-	JWT             JWTConfig       `mapstructure:"jwt"`
-	Processing      ProcessingConfig `mapstructure:"processing"`
-	Capacity        CapacityConfig  `mapstructure:"capacity"`
-	Logging         LoggingConfig   `mapstructure:"logging"`
-	Security        SecurityConfig  `mapstructure:"security"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Database   DatabaseConfig   `mapstructure:"database"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+	Processing ProcessingConfig `mapstructure:"processing"`
+	Capacity   CapacityConfig   `mapstructure:"capacity"`
+	Logging    LoggingConfig    `mapstructure:"logging"`
+	Security   SecurityConfig   `mapstructure:"security"`
 }
 
 // ServerConfig holds server-specific configuration
@@ -59,55 +60,55 @@ type RedisConfig struct {
 
 // JWTConfig holds JWT configuration
 type JWTConfig struct {
-	Secret       string        `mapstructure:"secret"`
-	AccessExpiry time.Duration `mapstructure:"access_expiry"`
+	Secret        string        `mapstructure:"secret"`
+	AccessExpiry  time.Duration `mapstructure:"access_expiry"`
 	RefreshExpiry time.Duration `mapstructure:"refresh_expiry"`
 }
 
 // ProcessingConfig holds media processing configuration
 type ProcessingConfig struct {
-	FFmpegPath      string            `mapstructure:"ffmpeg_path"`
-	Profiles        map[string]string `mapstructure:"profiles"`
-	MaxConcurrent   int               `mapstructure:"max_concurrent"`
-	MaxBitrate      int               `mapstructure:"max_bitrate"`
-	DefaultFormat   string            `mapstructure:"default_format"`
-	TranscodeCache  TranscodeCacheConfig `mapstructure:"transcode_cache"`
+	FFmpegPath     string               `mapstructure:"ffmpeg_path"`
+	Profiles       map[string]string    `mapstructure:"profiles"`
+	MaxConcurrent  int                  `mapstructure:"max_concurrent"`
+	MaxBitrate     int                  `mapstructure:"max_bitrate"`
+	DefaultFormat  string               `mapstructure:"default_format"`
+	TranscodeCache TranscodeCacheConfig `mapstructure:"transcode_cache"`
 }
 
 // TranscodeCacheConfig holds transcoding cache configuration
 type TranscodeCacheConfig struct {
-	Enabled     bool   `mapstructure:"enabled"`
-	MaxSize     int64  `mapstructure:"max_size"` // in MB
-	CacheDir    string `mapstructure:"cache_dir"`
-	MaxAge      int64  `mapstructure:"max_age"`  // in hours
-	MaxFiles    int    `mapstructure:"max_files"`
+	Enabled  bool   `mapstructure:"enabled"`
+	MaxSize  int64  `mapstructure:"max_size"` // in MB
+	CacheDir string `mapstructure:"cache_dir"`
+	MaxAge   int64  `mapstructure:"max_age"` // in hours
+	MaxFiles int    `mapstructure:"max_files"`
 }
 
 // CapacityConfig holds capacity monitoring configuration
 type CapacityConfig struct {
-	Enabled       bool          `mapstructure:"enabled"`
-	Interval      time.Duration `mapstructure:"interval"`       // How often to check
-	WarningThreshold float64    `mapstructure:"warning_threshold"` // Percentage for warning
-	AlertThreshold float64     `mapstructure:"alert_threshold"`  // Percentage for alert
-	Libraries     []string      `mapstructure:"libraries"`      // Paths to monitor
-	ProbeCommand  string        `mapstructure:"probe_command"`  // Command to check usage
+	Enabled          bool          `mapstructure:"enabled"`
+	Interval         time.Duration `mapstructure:"interval"`          // How often to check
+	WarningThreshold float64       `mapstructure:"warning_threshold"` // Percentage for warning
+	AlertThreshold   float64       `mapstructure:"alert_threshold"`   // Percentage for alert
+	Libraries        []string      `mapstructure:"libraries"`         // Paths to monitor
+	ProbeCommand     string        `mapstructure:"probe_command"`     // Command to check usage
 }
 
 // LoggingConfig holds logging configuration
 type LoggingConfig struct {
-	Level     string `mapstructure:"level"`
-	Format    string `mapstructure:"format"` // "json", "text"
-	File      string `mapstructure:"file"`   // Log file path (optional)
-	MaxSize   int    `mapstructure:"max_size"` // Max file size in MB
-	MaxAge    int    `mapstructure:"max_age"`  // Max age in days
-	Compress  bool   `mapstructure:"compress"`
+	Level    string `mapstructure:"level"`
+	Format   string `mapstructure:"format"`   // "json", "text"
+	File     string `mapstructure:"file"`     // Log file path (optional)
+	MaxSize  int    `mapstructure:"max_size"` // Max file size in MB
+	MaxAge   int    `mapstructure:"max_age"`  // Max age in days
+	Compress bool   `mapstructure:"compress"`
 }
 
 // SecurityConfig holds security configuration
 type SecurityConfig struct {
-	MaxRequestBodySize int64    `mapstructure:"max_request_body_size"` // in bytes
-	AllowedHosts       []string `mapstructure:"allowed_hosts"`
-	CORS               CORSConfig `mapstructure:"cors"`
+	MaxRequestBodySize int64           `mapstructure:"max_request_body_size"` // in bytes
+	AllowedHosts       []string        `mapstructure:"allowed_hosts"`
+	CORS               CORSConfig      `mapstructure:"cors"`
 	BasicAuth          BasicAuthConfig `mapstructure:"basic_auth"`
 	RateLimiting       RateLimitConfig `mapstructure:"rate_limiting"`
 }
@@ -132,9 +133,9 @@ type BasicAuthConfig struct {
 // RateLimitConfig holds rate limiting configuration
 type RateLimitConfig struct {
 	Enabled    bool          `mapstructure:"enabled"`
-	Requests   int           `mapstructure:"requests"`   // Requests per window
-	Window     time.Duration `mapstructure:"window"`     // Time window
-	Message    string        `mapstructure:"message"`    // Rate limit message
+	Requests   int           `mapstructure:"requests"`    // Requests per window
+	Window     time.Duration `mapstructure:"window"`      // Time window
+	Message    string        `mapstructure:"message"`     // Rate limit message
 	StatusCode int           `mapstructure:"status_code"` // HTTP status code for rate-limited requests
 }
 
@@ -142,8 +143,8 @@ type RateLimitConfig struct {
 func DefaultAppConfig() *AppConfig {
 	return &AppConfig{
 		Server: ServerConfig{
-			Port:        8080,
-			Host:        "0.0.0.0",
+			Port:         8080,
+			Host:         "0.0.0.0",
 			ReadTimeout:  15 * time.Second,
 			WriteTimeout: 15 * time.Second,
 			IdleTimeout:  60 * time.Second,
@@ -175,8 +176,8 @@ func DefaultAppConfig() *AppConfig {
 			Timeout:  5 * time.Second,
 		},
 		JWT: JWTConfig{
-			Secret:       "default-secret-key-change-in-production",
-			AccessExpiry: 15 * time.Minute,
+			Secret:        "default-secret-key-change-in-production",
+			AccessExpiry:  15 * time.Minute,
 			RefreshExpiry: 24 * time.Hour,
 		},
 		Processing: ProcessingConfig{
@@ -185,8 +186,8 @@ func DefaultAppConfig() *AppConfig {
 			MaxBitrate:    320, // kbps
 			DefaultFormat: "mp3",
 			Profiles: map[string]string{
-				"transcode_high":      "-c:a libmp3lame -b:a 320k -ar 44100 -ac 2",
-				"transcode_mid":       "-c:a libmp3lame -b:a 192k -ar 44100 -ac 2",
+				"transcode_high":        "-c:a libmp3lame -b:a 320k -ar 44100 -ac 2",
+				"transcode_mid":         "-c:a libmp3lame -b:a 192k -ar 44100 -ac 2",
 				"transcode_opus_mobile": "-c:a libopus -b:a 96k -application audio",
 			},
 			TranscodeCache: TranscodeCacheConfig{
@@ -198,12 +199,12 @@ func DefaultAppConfig() *AppConfig {
 			},
 		},
 		Capacity: CapacityConfig{
-			Enabled:        true,
-			Interval:       10 * time.Minute,
+			Enabled:          true,
+			Interval:         10 * time.Minute,
 			WarningThreshold: 80.0, // Percent
-			AlertThreshold:  90.0, // Percent
-			Libraries:      []string{"/storage"},
-			ProbeCommand:   "df --output=pcent /storage",
+			AlertThreshold:   90.0, // Percent
+			Libraries:        []string{"/storage"},
+			ProbeCommand:     "df --output=pcent /storage",
 		},
 		Logging: LoggingConfig{
 			Level:    "info",
@@ -244,10 +245,10 @@ func LoadConfig() (*AppConfig, error) {
 	viper.AddConfigPath("./config")
 	viper.AddConfigPath("./configs")
 	viper.AddConfigPath("/etc/melodee/")
-	
+
 	// Set default values
 	setDefaults()
-	
+
 	// Read config file if it exists
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -319,7 +320,7 @@ func setDefaults() {
 	viper.SetDefault("processing.profiles.transcode_high", "-c:a libmp3lame -b:a 320k -ar 44100 -ac 2")
 	viper.SetDefault("processing.profiles.transcode_mid", "-c:a libmp3lame -b:a 192k -ar 44100 -ac 2")
 	viper.SetDefault("processing.profiles.transcode_opus_mobile", "-c:a libopus -b:a 96k -application audio")
-	
+
 	// Transcode cache defaults
 	viper.SetDefault("processing.transcode_cache.enabled", true)
 	viper.SetDefault("processing.transcode_cache.max_size", 1024) // 1GB
@@ -339,7 +340,7 @@ func setDefaults() {
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("logging.format", "json")
 	viper.SetDefault("logging.max_size", 100) // MB
-	viper.SetDefault("logging.max_age", 30) // days
+	viper.SetDefault("logging.max_age", 30)   // days
 	viper.SetDefault("logging.compress", true)
 
 	// Security defaults

@@ -7,6 +7,8 @@ function LibraryManagement() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'inbound', 'staging', 'production', 'quarantine'
   const [message, setMessage] = useState('');
+  const [editingLibrary, setEditingLibrary] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', path: '', base_path: '' });
 
   useEffect(() => {
     fetchLibraryStats();
@@ -36,13 +38,16 @@ function LibraryManagement() {
 
   const handleScan = async () => {
     try {
-      setMessage('Scanning initiated...');
-      await libraryService.scanLibrary();
+      setMessage('Scanning all libraries...');
+      // Scan all libraries
+      for (const lib of libraries) {
+        await libraryService.scanLibrary(lib.id);
+      }
       setMessage('Scan completed. Refreshing stats...');
       setTimeout(() => {
         fetchLibraryStats();
         setMessage('Scan completed and stats refreshed.');
-      }, 2000); // Give some time for the scan to process
+      }, 2000);
     } catch (error) {
       console.error('Error initiating scan:', error);
       setMessage('Error initiating scan: ' + (error.response?.data?.error || error.message));
@@ -52,7 +57,11 @@ function LibraryManagement() {
   const handleProcess = async () => {
     try {
       setMessage('Processing inbound files...');
-      await libraryService.processInbound();
+      // Process inbound library
+      const inboundLib = libraries.find(lib => lib.type === 'inbound');
+      if (inboundLib) {
+        await libraryService.processInbound(inboundLib.id);
+      }
       setMessage('Inbound processing completed.');
       setTimeout(() => {
         fetchLibraryStats();
@@ -67,7 +76,11 @@ function LibraryManagement() {
   const handlePromote = async () => {
     try {
       setMessage('Promoting OK albums...');
-      await libraryService.moveOkAlbums();
+      // Move OK albums from staging library
+      const stagingLib = libraries.find(lib => lib.type === 'staging');
+      if (stagingLib) {
+        await libraryService.moveOkAlbums(stagingLib.id);
+      }
       setMessage('Album promotion completed.');
       setTimeout(() => {
         fetchLibraryStats();
@@ -77,6 +90,32 @@ function LibraryManagement() {
       console.error('Error promoting albums:', error);
       setMessage('Error promoting albums: ' + (error.response?.data?.error || error.message));
     }
+  };
+
+  const handleEditLibrary = (library) => {
+    setEditingLibrary(library);
+    setEditForm({
+      name: library.name,
+      path: library.path,
+      base_path: library.base_path || library.basePath || ''
+    });
+  };
+
+  const handleSaveLibrary = async () => {
+    try {
+      await libraryService.updateLibrary(editingLibrary.id, editForm);
+      setMessage('Library updated successfully');
+      setEditingLibrary(null);
+      fetchLibraries();
+    } catch (error) {
+      console.error('Error updating library:', error);
+      setMessage('Error updating library: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLibrary(null);
+    setEditForm({ name: '', path: '', base_path: '' });
   };
 
   if (loading) {
@@ -103,6 +142,62 @@ function LibraryManagement() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Library Management</h1>
+
+      {/* Edit Library Modal */}
+      {editingLibrary && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Edit Library: {editingLibrary.name}</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Path</label>
+                <input
+                  type="text"
+                  value={editForm.path}
+                  onChange={(e) => setEditForm({ ...editForm, path: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Base Path</label>
+                <input
+                  type="text"
+                  value={editForm.base_path}
+                  onChange={(e) => setEditForm({ ...editForm, base_path: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveLibrary}
+                className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="mb-4 border-b border-gray-200">
@@ -196,21 +291,44 @@ function LibraryManagement() {
           </div>
 
           <div className="mt-6 bg-white p-4 rounded shadow">
-            <h2 className="text-xl font-semibold mb-2">Library Status</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Inbound Path:</span>
-                <span>{stats.inbound_path || stats.inboundPath || '/melodee/inbound'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Staging Path:</span>
-                <span>{stats.staging_path || stats.stagingPath || '/melodee/staging'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Production Path:</span>
-                <span>{stats.production_path || stats.productionPath || '/melodee/storage'}</span>
-              </div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Configured Libraries</h2>
             </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Path</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {libraries.map((lib) => (
+                  <tr key={lib.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{lib.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                        ${lib.type === 'inbound' ? 'bg-blue-100 text-blue-800' :
+                          lib.type === 'staging' ? 'bg-purple-100 text-purple-800' :
+                          lib.type === 'production' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'}`}>
+                        {lib.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">{lib.path}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => handleEditLibrary(lib)}
+                        className="text-blue-600 hover:text-blue-900 underline"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </>
       )}

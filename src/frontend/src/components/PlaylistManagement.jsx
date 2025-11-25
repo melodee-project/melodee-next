@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { playlistService, searchService } from '../services/apiService';
+import { playlistService } from '../services/apiService';
 
 function PlaylistManagement() {
   const [playlists, setPlaylists] = useState([]);

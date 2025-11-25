@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 	"unicode"
@@ -11,9 +12,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"github.com/google/uuid"
 	"melodee/internal/models"
 	"melodee/internal/utils"
+
+	"github.com/google/uuid"
 )
 
 // AccountLockedException represents an account that is temporarily locked
@@ -108,12 +110,17 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// NewAuthService creates a new auth service
+// NewAuthService creates a new authentication service
 func NewAuthService(db *gorm.DB, jwtSecret string) *AuthService {
 	return &AuthService{
 		db:        db,
 		jwtSecret: jwtSecret,
 	}
+}
+
+// GetJWTSecret returns the JWT secret (for middleware use)
+func (a *AuthService) GetJWTSecret() string {
+	return a.jwtSecret
 }
 
 // Login authenticates a user and returns tokens
@@ -318,7 +325,7 @@ func (a *AuthService) ValidateOpenSubsonicToken(username, password, token, salt 
 	// the password hash in the expected manner (token = MD5(password + salt))
 	// This is a simplified version - in a real implementation, we'd compute the expected token
 	// and compare it with the provided one
-	
+
 	// Compare password hash to ensure the token is valid for this user
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return nil, fmt.Errorf("invalid credentials")
@@ -327,9 +334,11 @@ func (a *AuthService) ValidateOpenSubsonicToken(username, password, token, salt 
 	return &user, nil
 }
 
-
 // generateAccessToken generates a JWT access token
 func (a *AuthService) generateAccessToken(user models.User) (string, error) {
+	// Debug: log secret length when generating token
+	log.Printf("[AUTH] Generating token with secret length: %d", len(a.jwtSecret))
+
 	claims := &Claims{
 		UserID:   user.ID,
 		Username: user.Username,
@@ -364,19 +373,25 @@ func (a *AuthService) generateRefreshToken(user models.User) (string, error) {
 
 // parseAccessToken parses and validates an access token
 func (a *AuthService) parseAccessToken(tokenString string) (*Claims, error) {
+	// Debug: log secret length when parsing token
+	log.Printf("[AUTH] Parsing token with secret length: %d", len(a.jwtSecret))
+
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(a.jwtSecret), nil
 	})
 
 	if err != nil {
+		log.Printf("[AUTH] Token parse error: %v", err)
 		return nil, err
 	}
 
 	if !token.Valid {
+		log.Printf("[AUTH] Token is not valid")
 		return nil, fmt.Errorf("invalid token")
 	}
 
+	log.Printf("[AUTH] Token validated successfully for user: %s", claims.Username)
 	return claims, nil
 }
 

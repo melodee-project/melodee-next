@@ -1,0 +1,53 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "melodee_user"
+  password: "admin123"
+  dbname: "melodee"
+  sslmode: "disable"
+  max_open_conns: 10
+  max_idle_conns: 5
+
+redis:
+  address: "localhost:6379"
+  password: ""
+  db: 0
+
+jwt:
+  secret: "my-local-dev-secret-key-12345"
+  access_token_expiry: "15m"
+  refresh_token_expiry: "7d"
+
+logging:
+  level: "info"
+  format: "text"
+
+capacity:
+  enabled: true
+  interval: "10m"
+  warning_threshold: 80.0
+  alert_threshold: 90.0
+  libraries:
+    - "/home/steven/melodee-test/storage"
+    - "/mnt/incoming/complete/inbound"
+  probe_command: "df --output=pcent /home/steven/melodee-test/storage"
+
+processing:
+  ffmpeg_path: "/usr/bin/ffmpeg"
+  max_concurrent: 4
+  transcode_cache:
+    enabled: true
+    cache_dir: "/home/steven/melodee-test/transcode-cache"
+    max_size: 1024
+    max_age: 168
+
+# External API keys (optional)
+external_apis:
+  lastfm_api_key: ""
+  musicbrainz_api_key: ""
+  spotify_client_id: ""
+  spotify_client_secret: ""

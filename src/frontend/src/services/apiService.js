@@ -4,7 +4,7 @@ import axios from 'axios';
 
 // Create an axios instance with defaults
 const apiService = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || '/api', // Use REACT_APP_API_BASE_URL from environment or relative path
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api', // Use Vite's import.meta.env instead of process.env
   timeout: 10000, // 10 seconds timeout
   withCredentials: true, // Include cookies in cross-origin requests if needed
 });
@@ -108,11 +108,12 @@ export const adminService = {
 
 // Library-related API endpoints
 export const libraryService = {
-  getStats: () => apiService.get('/libraries/stats'),
-  scanLibrary: () => apiService.post('/libraries/scan'),
-  processInbound: () => apiService.post('/libraries/process'),
-  moveOkAlbums: () => apiService.post('/libraries/move-ok'),
+  getStats: () => apiService.get('/library-stats'),
+  scanLibrary: (libraryId) => apiService.get(`/libraries/${libraryId}/scan`),
+  processInbound: (libraryId) => apiService.get(`/libraries/${libraryId}/process`),
+  moveOkAlbums: (libraryId) => apiService.get(`/libraries/${libraryId}/move-ok`),
   getLibraries: () => apiService.get('/libraries'),
+  updateLibrary: (id, data) => apiService.put(`/libraries/${id}`, data),
   getQuarantineItems: (params = {}) => apiService.get('/libraries/quarantine', { params }),
   resolveQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/resolve`),
   requeueQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/requeue`),
@@ -120,8 +121,8 @@ export const libraryService = {
 
 // System health and capacity monitoring endpoints
 export const healthService = {
-  getHealth: () => apiService.get('/healthz'),
-  getMetrics: () => apiService.get('/metrics'),
+  getHealth: () => axios.get('/healthz'), // Direct call without /api prefix
+  getMetrics: () => axios.get('/metrics'), // Direct call without /api prefix
   getCapacity: () => apiService.get('/admin/capacity'),
   getCapacityForLibrary: (libraryId) => apiService.get(`/admin/capacity/${libraryId}`),
   probeCapacityNow: () => apiService.post('/admin/capacity/probe-now'),
@@ -145,40 +146,40 @@ export const metricsService = {
 // These are flagged as compatibility features for third-party client support
 export const mediaService = {
   // Check if OpenSubsonic compatibility features are enabled in config
-  isOpenSubsonicEnabled: () => process.env.REACT_APP_OPEN_SUBSONIC_ENABLED === 'true',
+  isOpenSubsonicEnabled: () => import.meta.env.VITE_OPEN_SUBSONIC_ENABLED === 'true',
 
   // For OpenSubsonic API access - only use for compatibility features
   // These endpoints support existing Subsonic/OpenSubsonic clients and should be
   // used exclusively for compatibility purposes, not for core admin functionality
   getMusicFolders: () => {
-    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+    if (!import.meta.env.VITE_OPEN_SUBSONIC_ENABLED) {
       return Promise.reject(new Error('OpenSubsonic features are disabled'));
     }
     return apiService.get('/rest/getMusicFolders.view?u=admin&p=enc:xxx&t=xxx&s=xxx');
   },
   getArtists: () => {
-    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+    if (!import.meta.env.VITE_OPEN_SUBSONIC_ENABLED) {
       return Promise.reject(new Error('OpenSubsonic features are disabled'));
     }
     return apiService.get('/rest/getArtists.view?u=admin&p=enc:xxx&t=xxx&s=xxx');
   },
   getAlbum: (id) => {
-    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+    if (!import.meta.env.VITE_OPEN_SUBSONIC_ENABLED) {
       return Promise.reject(new Error('OpenSubsonic features are disabled'));
     }
     return apiService.get(`/rest/getAlbum.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`);
   },
   stream: (id) => {
-    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+    if (!import.meta.env.VITE_OPEN_SUBSONIC_ENABLED) {
       throw new Error('OpenSubsonic features are disabled');
     }
-    return `${process.env.REACT_APP_API_BASE_URL || ''}/rest/stream.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`;
+    return `${import.meta.env.VITE_API_BASE_URL || ''}/rest/stream.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`;
   },
   getCoverArt: (id) => {
-    if (!process.env.REACT_APP_OPEN_SUBSONIC_ENABLED) {
+    if (!import.meta.env.VITE_OPEN_SUBSONIC_ENABLED) {
       throw new Error('OpenSubsonic features are disabled');
     }
-    return `${process.env.REACT_APP_API_BASE_URL || ''}/rest/getCoverArt.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`;
+    return `${import.meta.env.VITE_API_BASE_URL || ''}/rest/getCoverArt.view?u=admin&p=enc:xxx&t=xxx&s=xxx&id=${id}`;
   },
 };
 

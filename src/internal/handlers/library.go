@@ -4,22 +4,23 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/hibiken/asynq"
-	"gorm.io/gorm"
 	"melodee/internal/media"
 	"melodee/internal/models"
 	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/hibiken/asynq"
+	"gorm.io/gorm"
 )
 
 // LibraryHandler handles library-related requests
 type LibraryHandler struct {
-	repo            *services.Repository
-	mediaSvc        *media.MediaService
-	asynqClient     *asynq.Client
-	quarantineSvc   *media.QuarantineService
+	repo          *services.Repository
+	mediaSvc      *media.MediaService
+	asynqClient   *asynq.Client
+	quarantineSvc *media.QuarantineService
 }
 
 // NewLibraryHandler creates a new library handler
@@ -34,45 +35,45 @@ func NewLibraryHandler(repo *services.Repository, mediaSvc *media.MediaService, 
 
 // LibraryState represents the state of a library
 type LibraryState struct {
-	ID              int32                     `json:"id"`
-	Name            string                    `json:"name"`
-	Type            string                    `json:"type"` // inbound, staging, production
-	Path            string                    `json:"path"`
-	ItemCount       int64                     `json:"item_count"`
-	IsLocked        bool                      `json:"is_locked"`
-	InboundCount    int32                     `json:"inbound_count"`
-	StagingCount    int32                     `json:"staging_count"`
-	ProductionCount int32                     `json:"production_count"`
-	QuarantineCount int32                     `json:"quarantine_count"`
-	Stats           *models.Library           `json:"stats"`
-	SongCount       int32                     `json:"song_count"`
-	AlbumCount      int32                     `json:"album_count"`
-	Duration        int64                     `json:"duration"` // in milliseconds
-	BasePath        string                    `json:"base_path"`
-	QuarantineItems []QuarantineItem          `json:"quarantine_items,omitempty"`
-	ProcessingJobs  []ProcessingJob           `json:"processing_jobs,omitempty"`
+	ID              int32            `json:"id"`
+	Name            string           `json:"name"`
+	Type            string           `json:"type"` // inbound, staging, production
+	Path            string           `json:"path"`
+	ItemCount       int64            `json:"item_count"`
+	IsLocked        bool             `json:"is_locked"`
+	InboundCount    int32            `json:"inbound_count"`
+	StagingCount    int32            `json:"staging_count"`
+	ProductionCount int32            `json:"production_count"`
+	QuarantineCount int32            `json:"quarantine_count"`
+	Stats           *models.Library  `json:"stats"`
+	SongCount       int32            `json:"song_count"`
+	AlbumCount      int32            `json:"album_count"`
+	Duration        int64            `json:"duration"` // in milliseconds
+	BasePath        string           `json:"base_path"`
+	QuarantineItems []QuarantineItem `json:"quarantine_items,omitempty"`
+	ProcessingJobs  []ProcessingJob  `json:"processing_jobs,omitempty"`
 }
 
 // QuarantineItem represents an item in the quarantine state
 type QuarantineItem struct {
-	ID          int64     `json:"id"`
-	FilePath    string    `json:"file_path"`
-	Reason      string    `json:"reason"`
-	Message     string    `json:"message"`
-	LibraryID   int32     `json:"library_id"`
-	CreatedAt   string    `json:"created_at"`
-	Resolved    bool      `json:"resolved"`
+	ID        int64  `json:"id"`
+	FilePath  string `json:"file_path"`
+	Reason    string `json:"reason"`
+	Message   string `json:"message"`
+	LibraryID int32  `json:"library_id"`
+	CreatedAt string `json:"created_at"`
+	Resolved  bool   `json:"resolved"`
 }
 
 // ProcessingJob represents a processing job
 type ProcessingJob struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`  // scan, process, move_ok, etc.
-	Status      string    `json:"status"` // pending, running, complete, failed
-	CreatedAt   string    `json:"created_at"`
-	FinishedAt  *string   `json:"finished_at,omitempty"`
-	Error       *string   `json:"error,omitempty"`
-	Progress    float64   `json:"progress"`
+	ID         string  `json:"id"`
+	Type       string  `json:"type"`   // scan, process, move_ok, etc.
+	Status     string  `json:"status"` // pending, running, complete, failed
+	CreatedAt  string  `json:"created_at"`
+	FinishedAt *string `json:"finished_at,omitempty"`
+	Error      *string `json:"error,omitempty"`
+	Progress   float64 `json:"progress"`
 }
 
 // GetLibraryStates handles retrieving all library states
@@ -206,13 +207,13 @@ func (h *LibraryHandler) GetQuarantineItems(c *fiber.Ctx) error {
 	items := make([]QuarantineItem, len(records))
 	for i, record := range records {
 		items[i] = QuarantineItem{
-			ID:          record.ID,
-			FilePath:    record.FilePath,
-			Reason:      string(record.Reason),
-			Message:     record.Message,
-			LibraryID:   record.LibraryID,
-			CreatedAt:   record.CreatedAt.Format(time.RFC3339), // Use RFC3339 format to match other datetime fields
-			Resolved:    false, // In a real implementation, this would depend on actual status
+			ID:        record.ID,
+			FilePath:  record.FilePath,
+			Reason:    string(record.Reason),
+			Message:   record.Message,
+			LibraryID: record.LibraryID,
+			CreatedAt: record.CreatedAt.Format(time.RFC3339), // Use RFC3339 format to match other datetime fields
+			Resolved:  false,                                 // In a real implementation, this would depend on actual status
 		}
 	}
 
@@ -230,9 +231,9 @@ func (h *LibraryHandler) GetProcessingJobs(c *fiber.Ctx) error {
 	// In a real implementation, you would query your job queue (Asynq) for processing jobs
 	// For now, return an empty list
 	jobs := []ProcessingJob{}
-	
+
 	return c.JSON(fiber.Map{
-		"data": jobs,
+		"data":  jobs,
 		"count": len(jobs),
 	})
 }
@@ -256,9 +257,9 @@ func (h *LibraryHandler) TriggerLibraryScan(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"status": "queued",
+		"status":     "queued",
 		"library_id": libraryID,
-		"message": "Library scan triggered successfully",
+		"message":    "Library scan triggered successfully",
 	})
 }
 
@@ -282,9 +283,9 @@ func (h *LibraryHandler) TriggerLibraryProcess(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"status": "queued",
+		"status":     "queued",
 		"library_id": libraryID,
-		"message": "Library process triggered successfully",
+		"message":    "Library process triggered successfully",
 	})
 }
 
@@ -307,9 +308,9 @@ func (h *LibraryHandler) TriggerLibraryMoveOK(c *fiber.Ctx) error {
 	// The proper way would be to query for albums in staging with 'OK' status and trigger individual moves
 
 	return c.JSON(fiber.Map{
-		"status": "processed",
+		"status":     "processed",
 		"library_id": libraryID,
-		"message": "Library move OK processing started",
+		"message":    "Library move OK processing started",
 	})
 }
 
@@ -364,7 +365,7 @@ func (h *LibraryHandler) GetLibrariesStats(c *fiber.Ctx) error {
 		"total_artists":     totalArtists,
 		"total_albums":      totalAlbums,
 		"total_tracks":      totalTracks,
-		"total_size_bytes":  totalSizeBytes,  // This should be actual file size in a real implementation
+		"total_size_bytes":  totalSizeBytes, // This should be actual file size in a real implementation
 		"last_full_scan_at": lastFullScanAtStr,
 	}
 
@@ -393,7 +394,7 @@ func (h *LibraryHandler) ResolveQuarantineItem(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"status": "resolved",
+		"status":  "resolved",
 		"item_id": itemID,
 		"message": "Quarantine item removed successfully",
 	})
@@ -421,7 +422,7 @@ func (h *LibraryHandler) RequeueQuarantineItem(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"status": "requeued",
+		"status":  "requeued",
 		"item_id": itemID,
 		"message": "Quarantine item requeued for processing",
 	})
@@ -497,4 +498,48 @@ func (h *LibraryHandler) getQuarantineItemCount(libraryPath string) int64 {
 	}
 
 	return count
+}
+
+// UpdateLibraryRequest represents a request to update a library
+type UpdateLibraryRequest struct {
+	Name     *string `json:"name"`
+	Path     *string `json:"path"`
+	BasePath *string `json:"base_path"`
+}
+
+// UpdateLibrary handles updating a library's details
+func (h *LibraryHandler) UpdateLibrary(c *fiber.Ctx) error {
+	libraryID, err := c.ParamsInt("id")
+	if err != nil {
+		return utils.SendError(c, http.StatusBadRequest, "Invalid library ID")
+	}
+
+	var req UpdateLibraryRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Get the library
+	var library models.Library
+	if err := h.repo.GetDB().First(&library, libraryID).Error; err != nil {
+		return utils.SendNotFoundError(c, "Library")
+	}
+
+	// Update fields if provided
+	if req.Name != nil {
+		library.Name = *req.Name
+	}
+	if req.Path != nil {
+		library.Path = *req.Path
+	}
+	if req.BasePath != nil {
+		library.BasePath = *req.BasePath
+	}
+
+	// Save changes
+	if err := h.repo.GetDB().Save(&library).Error; err != nil {
+		return utils.SendInternalServerError(c, "Failed to update library")
+	}
+
+	return c.JSON(library)
 }

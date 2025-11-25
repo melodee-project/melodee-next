@@ -53,74 +53,81 @@ function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-        <div className="text-center py-8">Loading dashboard...</div>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
+        <div className="text-center py-12 text-gray-600">Loading dashboard...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
 
       {/* Health Status Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Overall Health</h3>
-          <p className={`text-2xl ${
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Overall Health</h3>
+          <p className={`text-3xl font-bold ${
             health.status === 'ok' ? 'text-green-600' :
-            health.status === 'degraded' ? 'text-yellow-600' : 'text-red-600'
+            health.status === 'degraded' ? 'text-yellow-600' : 
+            health.status ? 'text-red-600' : 'text-gray-400'
           }`}>
-            {health.status || 'Unknown'}
+            {health.status ? health.status.charAt(0).toUpperCase() + health.status.slice(1) : 'No Data'}
           </p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Database Status</h3>
-          <p className={`text-2xl ${
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Database Status</h3>
+          <p className={`text-3xl font-bold ${
             health.db?.status === 'ok' ? 'text-green-600' :
-            health.db?.status === 'degraded' ? 'text-yellow-600' : 'text-red-600'
+            health.db?.status === 'degraded' ? 'text-yellow-600' :
+            health.db?.status ? 'text-red-600' : 'text-gray-400'
           }`}>
-            {health.db?.status || 'Unknown'}
-            {health.db?.latency_ms !== undefined && ` (${health.db.latency_ms}ms)`}
+            {health.db?.status ? health.db.status.charAt(0).toUpperCase() + health.db.status.slice(1) : 'No Data'}
           </p>
+          {health.db?.latency_ms !== undefined && (
+            <p className="text-sm text-gray-600 mt-1">{health.db.latency_ms}ms latency</p>
+          )}
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Redis Status</h3>
-          <p className={`text-2xl ${
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Redis Status</h3>
+          <p className={`text-3xl font-bold ${
             health.redis?.status === 'ok' ? 'text-green-600' :
-            health.redis?.status === 'degraded' ? 'text-yellow-600' : 'text-red-600'
+            health.redis?.status === 'degraded' ? 'text-yellow-600' :
+            health.redis?.status ? 'text-red-600' : 'text-gray-400'
           }`}>
-            {health.redis?.status || 'Unknown'}
-            {health.redis?.latency_ms !== undefined && ` (${health.redis.latency_ms}ms)`}
+            {health.redis?.status ? health.redis.status.charAt(0).toUpperCase() + health.redis.status.slice(1) : 'No Data'}
           </p>
+          {health.redis?.latency_ms !== undefined && (
+            <p className="text-sm text-gray-600 mt-1">{health.redis.latency_ms}ms latency</p>
+          )}
         </div>
       </div>
 
       {/* Library Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Total Artists</h3>
-          <p className="text-2xl">{stats.total_artists || stats.totalArtists || 0}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Total Artists</h3>
+          <p className="text-3xl font-bold text-gray-900">{stats.total_artists || stats.totalArtists || 0}</p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Total Albums</h3>
-          <p className="text-2xl">{stats.total_albums || stats.totalAlbums || 0}</p>
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Total Albums</h3>
+          <p className="text-3xl font-bold text-gray-900">{stats.total_albums || stats.totalAlbums || 0}</p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Total Songs</h3>
-          <p className="text-2xl">{stats.total_songs || stats.totalSongs || 0}</p>
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Total Tracks</h3>
+          <p className="text-3xl font-bold text-gray-900">{stats.total_tracks || stats.totalTracks || stats.total_songs || stats.totalSongs || 0}</p>
         </div>
       </div>
 
       {/* Capacity Status Row */}
       {capacity.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Storage Capacity</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Storage Capacity</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {capacity.map((item, index) => (
-              <div key={index} className="bg-white p-4 rounded shadow">
-                <h3 className="font-semibold truncate">{item.Path || item.path || `Library ${index + 1}`}</h3>
+              <div key={index} className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <h3 className="font-semibold text-gray-900 truncate mb-3">{item.Path || item.path || `Library ${index + 1}`}</h3>
                 <div className="mt-2">
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
                     <div
@@ -144,23 +151,23 @@ function AdminDashboard() {
       )}
 
       {/* Pipeline stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Inbound Files</h3>
-          <p className="text-2xl">{stats.inbound_count || stats.inboundCount || 0}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Inbound Files</h3>
+          <p className="text-3xl font-bold text-gray-900">{stats.inbound_count || stats.inboundCount || 0}</p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">Staging Files</h3>
-          <p className="text-2xl">{stats.staging_count || stats.stagingCount || 0}</p>
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Staging Files</h3>
+          <p className="text-3xl font-bold text-gray-900">{stats.staging_count || stats.stagingCount || 0}</p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="font-semibold">System Status</h3>
-          <p className="text-2xl text-green-600">Operational</p>
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">System Status</h3>
+          <p className="text-3xl font-bold text-green-600">Operational</p>
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded shadow">
-        <h2 className="text-xl font-semibold mb-2">Recent Activity</h2>
+      <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Recent Activity</h2>
 
         {jobs.length > 0 ? (
           <table className="min-w-full divide-y divide-gray-200">

@@ -44,27 +44,27 @@ function Layout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Navigation */}
-      <nav className="bg-blue-600 text-white p-4">
-        <div className="container mx-auto">
-          <div className="flex justify-between items-center">
-            <Link to="/admin" className="text-xl font-bold hover:underline">Melodee Admin</Link>
-            <ul className="flex space-x-6">
-              <li><Link to="/admin" className="hover:underline">Dashboard</Link></li>
-              <li><Link to="/admin/dlq" className="hover:underline">DLQ</Link></li>
-              <li><Link to="/admin/users" className="hover:underline">Users</Link></li>
-              <li><Link to="/admin/settings" className="hover:underline">Settings</Link></li>
-              <li><Link to="/admin/shares" className="hover:underline">Shares</Link></li>
-              <li><Link to="/admin/libraries" className="hover:underline">Libraries</Link></li>
-              <li><Link to="/admin/quarantine" className="hover:underline">Quarantine</Link></li>
-              <li><Link to="/admin/playlists" className="hover:underline">Playlists</Link></li>
+      <nav className="bg-blue-700 text-white shadow-md">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link to="/admin" className="text-xl font-bold hover:text-blue-200 transition-colors">Melodee Admin</Link>
+            <ul className="hidden md:flex space-x-4 lg:space-x-6">
+              <li><Link to="/admin" className="hover:text-blue-200 transition-colors">Dashboard</Link></li>
+              <li><Link to="/admin/dlq" className="hover:text-blue-200 transition-colors">DLQ</Link></li>
+              <li><Link to="/admin/users" className="hover:text-blue-200 transition-colors">Users</Link></li>
+              <li><Link to="/admin/settings" className="hover:text-blue-200 transition-colors">Settings</Link></li>
+              <li><Link to="/admin/shares" className="hover:text-blue-200 transition-colors">Shares</Link></li>
+              <li><Link to="/admin/libraries" className="hover:text-blue-200 transition-colors">Libraries</Link></li>
+              <li><Link to="/admin/quarantine" className="hover:text-blue-200 transition-colors">Quarantine</Link></li>
+              <li><Link to="/admin/playlists" className="hover:text-blue-200 transition-colors">Playlists</Link></li>
             </ul>
             <div className="flex items-center space-x-4">
-              <span>Welcome, {user?.username || user?.Username || 'User'}!</span>
+              <span className="text-sm md:text-base">Welcome, <span className="font-semibold">{user?.username || user?.Username || 'User'}</span>!</span>
               <button
                 onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors font-medium"
               >
                 Logout
               </button>
@@ -74,7 +74,7 @@ function Layout({ children }) {
       </nav>
 
       {/* Main Content */}
-      <main className="container mx-auto mt-4 pb-6">
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
     </div>

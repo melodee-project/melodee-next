@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 
+	"melodee/internal/media"
 	"melodee/internal/models"
 )
 
@@ -41,6 +42,59 @@ func (m *MigrationManager) Migrate() error {
 	return nil
 }
 
+// SeedDefaultLibraries creates default library entries if none exist
+func (m *MigrationManager) SeedDefaultLibraries(storagePath, inboundPath, stagingPath string) error {
+	// Check if libraries already exist
+	var count int64
+	if err := m.db.Model(&models.Library{}).Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to count libraries: %w", err)
+	}
+
+	// Only seed if no libraries exist
+	if count > 0 {
+		if m.logger != nil {
+			m.logger.Info().Int64("count", count).Msg("Libraries already exist, skipping seed")
+		}
+		return nil
+	}
+
+	// Create default libraries
+	libraries := []models.Library{
+		{
+			Name:     "Production Library",
+			Path:     storagePath,
+			Type:     "production",
+			BasePath: storagePath,
+			IsLocked: false,
+		},
+		{
+			Name:     "Inbound Library",
+			Path:     inboundPath,
+			Type:     "inbound",
+			BasePath: inboundPath,
+			IsLocked: false,
+		},
+		{
+			Name:     "Staging Library",
+			Path:     stagingPath,
+			Type:     "staging",
+			BasePath: stagingPath,
+			IsLocked: false,
+		},
+	}
+
+	for _, lib := range libraries {
+		if err := m.db.Create(&lib).Error; err != nil {
+			return fmt.Errorf("failed to create library %s: %w", lib.Name, err)
+		}
+		if m.logger != nil {
+			m.logger.Info().Str("name", lib.Name).Str("path", lib.Path).Msg("Created library")
+		}
+	}
+
+	return nil
+}
+
 // migrateTables handles migration of all tables via GORM
 func (m *MigrationManager) migrateTables() error {
 	// Let GORM create all tables from Go models
@@ -69,6 +123,7 @@ func (m *MigrationManager) migrateTables() error {
 		&models.RadioStation{},
 		&models.Contributor{},
 		&models.CapacityStatus{},
+		&media.QuarantineRecord{},
 	); err != nil {
 		return fmt.Errorf("failed to auto-migrate tables: %w", err)
 	}
