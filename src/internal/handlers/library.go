@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"melodee/internal/media"
@@ -240,21 +243,58 @@ func (h *LibraryHandler) GetProcessingJobs(c *fiber.Ctx) error {
 
 // TriggerLibraryScan handles triggering a library scan
 func (h *LibraryHandler) TriggerLibraryScan(c *fiber.Ctx) error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("PANIC in TriggerLibraryScan: %v", r)
+		}
+	}()
+
+	log.Printf("INFO: TriggerLibraryScan called")
+
 	libraryID, err := c.ParamsInt("id")
 	if err != nil {
+		log.Printf("ERROR: Invalid library ID parameter: %v", err)
 		return utils.SendError(c, http.StatusBadRequest, "Invalid library ID")
 	}
+
+	log.Printf("INFO: Scanning library ID %d", libraryID)
 
 	// Check if library exists
 	var library models.Library
 	if err := h.repo.GetDB().First(&library, libraryID).Error; err != nil {
+		log.Printf("ERROR: Library %d not found: %v", libraryID, err)
 		return utils.SendNotFoundError(c, "Library")
 	}
 
+	// Check for nil dependencies
+	if h.mediaSvc == nil {
+		log.Printf("ERROR: mediaSvc is nil in TriggerLibraryScan")
+		return utils.SendInternalServerError(c, "Media service not initialized")
+	}
+	if h.asynqClient == nil {
+		log.Printf("ERROR: asynqClient is nil in TriggerLibraryScan")
+		return utils.SendInternalServerError(c, "Background job client not initialized")
+	}
+
+	log.Printf("INFO: Enqueueing scan for library %d", libraryID)
+
 	// Enqueue the scan job
 	if err := h.mediaSvc.EnqueueLibraryScan(h.asynqClient, []int32{int32(libraryID)}, false); err != nil {
-		return utils.SendInternalServerError(c, "Failed to enqueue library scan")
+		log.Printf("ERROR: Failed to enqueue library scan for library %d: %v", libraryID, err)
+
+		// Check if it's a duplicate task error
+		if strings.Contains(err.Error(), "task ID conflicts") {
+			return c.JSON(fiber.Map{
+				"status":     "already_queued",
+				"library_id": libraryID,
+				"message":    "Library scan is already queued or in progress",
+			})
+		}
+
+		return utils.SendInternalServerError(c, fmt.Sprintf("Failed to enqueue library scan: %v", err))
 	}
+
+	log.Printf("INFO: Successfully enqueued scan for library %d", libraryID)
 
 	return c.JSON(fiber.Map{
 		"status":     "queued",

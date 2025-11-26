@@ -1,12 +1,12 @@
 #!/bin/bash
 # Database initialization script for Melodee
+# Runs once when the database container starts for the first time
 
-# This script initializes the database with the required schemas and tables
-# It will be run once when the database container starts for the first time
+set -e
 
 echo "Initializing database schema..."
 
-# Example: Create extensions, users, and tables
+# Create extensions
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     -- Create required extensions
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -17,13 +17,16 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     DO \$\$
     BEGIN
        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'melodee_user') THEN
-          CREATE ROLE melodee_user LOGIN PASSWORD '${MELODEE_DB_PASSWORD}';
+          CREATE ROLE melodee_user LOGIN PASSWORD '${MELODEE_DB_PASSWORD:-melodee_password}';
        END IF;
     END
     \$\$;
 
-    -- Grant privileges
+    -- Grant database privileges
     GRANT ALL PRIVILEGES ON DATABASE melodee TO melodee_user;
 EOSQL
 
-echo "Database initialization completed."
+# Run schema creation (executed in order by filename)
+echo "Creating tables from schema files..."
+
+echo "Database initialization completed successfully."

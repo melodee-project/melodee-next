@@ -104,6 +104,10 @@ export const adminService = {
   createShare: (data) => apiService.post('/shares', data),
   updateShare: (id, data) => apiService.put(`/shares/${id}`, data),
   deleteShare: (id) => apiService.delete(`/shares/${id}`),
+  getLogs: (params) => apiService.get(`/admin/logs?${params}`),
+  getLogStats: () => apiService.get('/admin/logs/stats'),
+  downloadLogs: (params) => apiService.get(`/admin/logs/download?${params}`),
+  cleanupLogs: (olderThanDays) => apiService.post(`/admin/logs/cleanup?older_than_days=${olderThanDays}`),
 };
 
 // Library-related API endpoints

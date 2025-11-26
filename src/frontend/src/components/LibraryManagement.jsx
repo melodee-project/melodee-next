@@ -39,15 +39,48 @@ function LibraryManagement() {
   const handleScan = async () => {
     try {
       setMessage('Scanning all libraries...');
+      let alreadyQueued = 0;
+      let successCount = 0;
+      
       // Scan all libraries
       for (const lib of libraries) {
-        await libraryService.scanLibrary(lib.id);
+        try {
+          const response = await libraryService.scanLibrary(lib.id);
+          
+          // Check if the response indicates the scan is already queued
+          if (response.data?.status === 'already_queued') {
+            alreadyQueued++;
+            console.log(`Library ${lib.name} scan is already queued or in progress`);
+          } else {
+            successCount++;
+          }
+        } catch (error) {
+          // If error response has already_queued status, treat it as such
+          if (error.response?.data?.status === 'already_queued') {
+            alreadyQueued++;
+            console.log(`Library ${lib.name} scan is already queued or in progress`);
+          } else {
+            throw error; // Re-throw for other errors
+          }
+        }
       }
-      setMessage('Scan completed. Refreshing stats...');
-      setTimeout(() => {
-        fetchLibraryStats();
-        setMessage('Scan completed and stats refreshed.');
-      }, 2000);
+      
+      // Set appropriate message
+      if (alreadyQueued > 0 && successCount === 0) {
+        setMessage(`All library scans are already queued or in progress (${alreadyQueued} libraries)`);
+      } else if (alreadyQueued > 0) {
+        setMessage(`Scan initiated for ${successCount} libraries. ${alreadyQueued} scans were already in progress. Refreshing stats...`);
+        setTimeout(() => {
+          fetchLibraryStats();
+          setMessage(`Scan completed for ${successCount} libraries. ${alreadyQueued} were already in progress.`);
+        }, 2000);
+      } else {
+        setMessage('Scan completed. Refreshing stats...');
+        setTimeout(() => {
+          fetchLibraryStats();
+          setMessage('Scan completed and stats refreshed.');
+        }, 2000);
+      }
     } catch (error) {
       console.error('Error initiating scan:', error);
       setMessage('Error initiating scan: ' + (error.response?.data?.error || error.message));

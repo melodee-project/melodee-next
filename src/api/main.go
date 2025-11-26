@@ -16,6 +16,7 @@ import (
 	"melodee/internal/database"
 	"melodee/internal/directory"
 	"melodee/internal/handlers"
+	"melodee/internal/logging"
 	"melodee/internal/media"
 	"melodee/internal/middleware"
 	"melodee/internal/services"
@@ -69,8 +70,9 @@ func NewAPIServer(cfg *config.AppConfig, dbManager *database.DatabaseManager) *A
 // setupRoutes configures the API routes
 func (s *APIServer) setupRoutes() {
 	// Create asynq client for enqueueing background jobs from the API
-	asynqClient := asynq.NewClient(asynq.RedisClientOpt{Addr: s.cfg.Redis.Address})
-	asynqInspector := asynq.NewInspector(asynq.RedisClientOpt{Addr: s.cfg.Redis.Address})
+	redisOpt := asynq.RedisClientOpt{Addr: s.cfg.Redis.Address}
+	asynqClient := asynq.NewClient(redisOpt)
+	asynqInspector := asynq.NewInspector(redisOpt)
 
 	// Create handlers
 	authHandler := handlers.NewAuthHandler(s.authService)
@@ -82,6 +84,10 @@ func (s *APIServer) setupRoutes() {
 	sharesHandler := handlers.NewSharesHandler(s.repo)
 	dlqHandler := handlers.NewDLQHandler(asynqInspector, asynqClient)
 	capacityHandler := handlers.NewCapacityHandler(s.db)
+
+	// Logging services
+	logStorage := logging.NewLogStorage(s.db)
+	logsHandler := handlers.NewLogsHandler(logStorage)
 
 	// Health check route
 	s.app.Get("/healthz", healthHandler.HealthCheck)
@@ -169,6 +175,12 @@ func (s *APIServer) setupRoutes() {
 	admin.Get("/capacity", capacityHandler.GetAllCapacityStatuses)
 	admin.Get("/capacity/:id", capacityHandler.GetCapacityForLibrary)
 
+	// Log routes
+	admin.Get("/logs", logsHandler.GetLogs)
+	admin.Get("/logs/stats", logsHandler.GetLogStats)
+	admin.Get("/logs/download", logsHandler.DownloadLogs)
+	admin.Post("/logs/cleanup", logsHandler.CleanupOldLogs)
+
 	// Search route (protected with auth and rate limiting)
 	s.app.Post("/api/search", middleware.RateLimiterForSearch(), searchHandler.Search) // Search endpoint with rate limiting
 
@@ -228,11 +240,10 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Run migrations
-	migrationManager := database.NewMigrationManager(dbManager.GetGormDB(), nil)
-	if err := migrationManager.Migrate(); err != nil {
-		log.Fatal("Failed to run migrations:", err)
-	}
+	// Initialize global logger with database storage
+	logStorage := logging.NewLogStorage(dbManager.GetGormDB())
+	logging.InitGlobalLogger(logging.InfoLevel, "console", logStorage)
+	log.Println("Global logger initialized with database storage")
 
 	// Seed default libraries if none exist
 	if err := database.SeedDefaultLibraries(dbManager.GetGormDB()); err != nil {

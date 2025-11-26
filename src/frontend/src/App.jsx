@@ -6,6 +6,7 @@ import ThemeSelector from './components/ThemeSelector';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './components/AdminDashboard';
 import DLQManagement from './components/DLQManagement';
+import LogViewer from './components/LogViewer';
 import UserManagement from './components/UserManagement';
 import SettingsManagement from './components/SettingsManagement';
 import SharesManagement from './components/SharesManagement';
@@ -62,6 +63,7 @@ function Layout({ children }) {
             <ul className="hidden md:flex space-x-4 lg:space-x-6">
               <li><Link to="/admin" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Dashboard</Link></li>
               <li><Link to="/admin/dlq" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>DLQ</Link></li>
+              <li><Link to="/admin/logs" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Logs</Link></li>
               <li><Link to="/admin/users" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Users</Link></li>
               <li><Link to="/admin/settings" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Settings</Link></li>
               <li><Link to="/admin/shares" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Shares</Link></li>
@@ -117,6 +119,13 @@ function App() {
             <AdminRoute>
               <Layout>
                 <DLQManagement />
+              </Layout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/logs" element={
+            <AdminRoute>
+              <Layout>
+                <LogViewer />
               </Layout>
             </AdminRoute>
           } />

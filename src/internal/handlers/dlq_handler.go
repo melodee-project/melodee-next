@@ -1,37 +1,39 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
+
+	"melodee/internal/pagination"
+	"melodee/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/hibiken/asynq"
-	"melodee/internal/pagination"
-	"melodee/internal/utils"
 )
 
 // DLQHandler manages Dead Letter Queue operations
 type DLQHandler struct {
 	inspector *asynq.Inspector
-	client *asynq.Client
+	client    *asynq.Client
 }
 
 // NewDLQHandler creates a new DLQ handler
 func NewDLQHandler(inspector *asynq.Inspector, client *asynq.Client) *DLQHandler {
 	return &DLQHandler{
 		inspector: inspector,
-		client: client,
+		client:    client,
 	}
 }
 
 // DLQItem represents a single DLQ item
 type DLQItem struct {
-	ID         string      `json:"id"`
-	Queue      string      `json:"queue"`
-	Type       string      `json:"type"`
-	Reason     string      `json:"reason"`
-	Payload    string      `json:"payload"`
-	CreatedAt  string      `json:"created_at"`
-	RetryCount int         `json:"retry_count"`
+	ID         string `json:"id"`
+	Queue      string `json:"queue"`
+	Type       string `json:"type"`
+	Reason     string `json:"reason"`
+	Payload    string `json:"payload"`
+	CreatedAt  string `json:"created_at"`
+	RetryCount int    `json:"retry_count"`
 }
 
 // DLQRequeueRequest is the request for requeuing DLQ items
@@ -58,6 +60,8 @@ type DLQPurgeRequest struct {
 
 // GetDLQItems retrieves the list of items in the dead letter queue
 func (h *DLQHandler) GetDLQItems(c *fiber.Ctx) error {
+	log.Println("INFO: GetDLQItems called")
+
 	// Get pagination parameters
 	page, pageSize := pagination.GetPaginationParams(c, 1, 50)
 	offset := pagination.CalculateOffset(page, pageSize)
@@ -116,8 +120,8 @@ func (h *DLQHandler) RequeueDLQItems(c *fiber.Ctx) error {
 
 	// Return result in the format specified in the Appendix
 	return c.JSON(fiber.Map{
-		"status": "ok",
-		"requeued": requeued,
+		"status":     "ok",
+		"requeued":   requeued,
 		"failed_ids": failedIds,
 	})
 }
@@ -146,8 +150,8 @@ func (h *DLQHandler) PurgeDLQItems(c *fiber.Ctx) error {
 
 	// Return result in the format specified in the Appendix
 	return c.JSON(fiber.Map{
-		"status": "ok",
-		"purged": purged,
+		"status":     "ok",
+		"purged":     purged,
 		"failed_ids": failedIds,
 	})
 }

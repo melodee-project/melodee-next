@@ -31,21 +31,21 @@ type Logger struct {
 
 // LogContext holds contextual information for logging
 type LogContext struct {
-	RequestID  string      `json:"req_id,omitempty"`
-	UserID     int64       `json:"user_id,omitempty"`
-	TraceID    string      `json:"trace_id,omitempty"`
-	SpanID     string      `json:"span_id,omitempty"`
-	IP         string      `json:"ip,omitempty"`
-	Route      string      `json:"route,omitempty"`
-	Status     int         `json:"status,omitempty"`
-	Duration   int64       `json:"duration_ms,omitempty"`
-	Queue      string      `json:"queue,omitempty"`
-	JobType    string      `json:"job_type,omitempty"`
-	Attempt    int         `json:"attempt,omitempty"`
-	LibraryID  int32       `json:"library_id,omitempty"`
-	FilePath   string      `json:"file_path,omitempty"`
-	Module     string      `json:"module,omitempty"`
-	Function   string      `json:"function,omitempty"`
+	RequestID string `json:"req_id,omitempty"`
+	UserID    int64  `json:"user_id,omitempty"`
+	TraceID   string `json:"trace_id,omitempty"`
+	SpanID    string `json:"span_id,omitempty"`
+	IP        string `json:"ip,omitempty"`
+	Route     string `json:"route,omitempty"`
+	Status    int    `json:"status,omitempty"`
+	Duration  int64  `json:"duration_ms,omitempty"`
+	Queue     string `json:"queue,omitempty"`
+	JobType   string `json:"job_type,omitempty"`
+	Attempt   int    `json:"attempt,omitempty"`
+	LibraryID int32  `json:"library_id,omitempty"`
+	FilePath  string `json:"file_path,omitempty"`
+	Module    string `json:"module,omitempty"`
+	Function  string `json:"function,omitempty"`
 }
 
 // NewLogger creates a new logger instance with the specified log level
@@ -99,33 +99,33 @@ func (l *Logger) WithContext(ctx context.Context) *zerolog.Logger {
 }
 
 // Debug logs a debug message with contextual fields
-func (l *Logger) Debug(msg string) *zerolog.Event {
-	return l.logger.Debug().Msg(msg)
+func (l *Logger) Debug(msg string) {
+	l.logger.Debug().Msg(msg)
 }
 
 // Info logs an info message with contextual fields
-func (l *Logger) Info(msg string) *zerolog.Event {
-	return l.logger.Info().Msg(msg)
+func (l *Logger) Info(msg string) {
+	l.logger.Info().Msg(msg)
 }
 
 // Warn logs a warning message with contextual fields
-func (l *Logger) Warn(msg string) *zerolog.Event {
-	return l.logger.Warn().Msg(msg)
+func (l *Logger) Warn(msg string) {
+	l.logger.Warn().Msg(msg)
 }
 
 // Error logs an error message with contextual fields
-func (l *Logger) Error(msg string) *zerolog.Event {
-	return l.logger.Error().Msg(msg)
+func (l *Logger) Error(msg string) {
+	l.logger.Error().Msg(msg)
 }
 
 // Fatal logs a fatal message with contextual fields, then calls os.Exit(1)
-func (l *Logger) Fatal(msg string) *zerolog.Event {
-	return l.logger.Fatal().Msg(msg)
+func (l *Logger) Fatal(msg string) {
+	l.logger.Fatal().Msg(msg)
 }
 
 // Panic logs a panic message with contextual fields, then panics
-func (l *Logger) Panic(msg string) *zerolog.Event {
-	return l.logger.Panic().Msg(msg)
+func (l *Logger) Panic(msg string) {
+	l.logger.Panic().Msg(msg)
 }
 
 // WithField adds a single field to the logger
@@ -137,11 +137,11 @@ func (l *Logger) WithField(key string, value interface{}) *zerolog.Logger {
 // WithFields adds multiple fields to the logger
 func (l *Logger) WithFields(fields map[string]interface{}) *zerolog.Logger {
 	logCtx := l.logger.With()
-	
+
 	for key, value := range fields {
 		logCtx = logCtx.Interface(key, value)
 	}
-	
+
 	logger := logCtx.Logger()
 	return &logger
 }
@@ -149,7 +149,7 @@ func (l *Logger) WithFields(fields map[string]interface{}) *zerolog.Logger {
 // WithContextFields adds context-specific fields to the logger
 func (l *Logger) WithContextFields(ctx LogContext) *zerolog.Logger {
 	logCtx := l.logger.With()
-	
+
 	if ctx.RequestID != "" {
 		logCtx = logCtx.Str("req_id", ctx.RequestID)
 	}
