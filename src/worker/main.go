@@ -27,11 +27,11 @@ type WorkerServer struct {
 }
 
 // NewWorkerServer creates a new worker server
-func NewWorkerServer() (*WorkerServer, error) {
+func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return nil, nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
 	// Initialize database
@@ -51,7 +51,7 @@ func NewWorkerServer() (*WorkerServer, error) {
 		nil, // logger
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		return nil, nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	// Initialize directory code generator
@@ -65,6 +65,16 @@ func NewWorkerServer() (*WorkerServer, error) {
 	// Initialize quarantine and media services
 	quarantineSvc := media.NewDefaultQuarantineService(dbManager.GetGormDB())
 	mediaSvc := media.NewMediaService(dbManager.GetGormDB(), directorySvc, pathResolver, quarantineSvc)
+
+	// Initialize task handler with dependencies and configuration
+	taskHandler := media.NewTaskHandler(
+		dbManager.GetGormDB(),
+		directorySvc,
+		pathResolver,
+		quarantineSvc,
+		cfg.Processing.ScanWorkers,
+		cfg.Processing.ScanBufferSize,
+	)
 
 	// Initialize Asynq server with Redis connection
 	redisAddr := cfg.Redis.Address
@@ -81,9 +91,9 @@ func NewWorkerServer() (*WorkerServer, error) {
 		},
 	)
 
-	// Register task handlers using a ServeMux
+	// Register task handlers using a ServeMux with handler that has dependencies
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(media.TypeLibraryScan, media.HandleLibraryScan)
+	mux.HandleFunc(media.TypeLibraryScan, taskHandler.HandleLibraryScan)
 	mux.HandleFunc(media.TypeLibraryProcess, media.HandleLibraryProcess)
 	mux.HandleFunc(media.TypeLibraryMoveOK, media.HandleLibraryMoveOK)
 	mux.HandleFunc(media.TypeDirectoryRecalculate, media.HandleDirectoryRecalculate)
@@ -97,15 +107,15 @@ func NewWorkerServer() (*WorkerServer, error) {
 		mediaSvc:     mediaSvc,
 		directorySvc: directorySvc,
 		pathResolver: pathResolver,
-	}, nil
+	}, mux, nil
 }
 
 // Start starts the worker server
-func (w *WorkerServer) Start() error {
+func (w *WorkerServer) Start(mux *asynq.ServeMux) error {
 	log.Println("Starting worker server...")
 
 	// Start the server
-	if err := w.srv.Run(asynq.NewServeMux()); err != nil {
+	if err := w.srv.Run(mux); err != nil {
 		return fmt.Errorf("failed to start worker server: %w", err)
 	}
 
@@ -120,7 +130,7 @@ func (w *WorkerServer) Shutdown() {
 
 // Main entry point for the worker service
 func main() {
-	worker, err := NewWorkerServer()
+	worker, mux, err := NewWorkerServer()
 	if err != nil {
 		log.Fatal("Failed to create worker server:", err)
 	}
@@ -131,7 +141,7 @@ func main() {
 
 	// Start the worker in a goroutine
 	go func() {
-		if err := worker.Start(); err != nil {
+		if err := worker.Start(mux); err != nil {
 			log.Fatal("Worker server error:", err)
 		}
 	}()

@@ -119,7 +119,7 @@ function LibraryManagement() {
   };
 
   if (loading) {
-    return <div className="p-4">Loading library statistics...</div>;
+    return <div className="p-4 text-gray-900 dark:text-gray-100">Loading library statistics...</div>;
   }
 
   // Filter libraries based on active tab
@@ -141,42 +141,42 @@ function LibraryManagement() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Library Management</h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Library Management</h1>
 
       {/* Edit Library Modal */}
       {editingLibrary && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Edit Library: {editingLibrary.name}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Edit Library: {editingLibrary.name}</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Name</label>
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Path</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Path</label>
                 <input
                   type="text"
                   value={editForm.path}
                   onChange={(e) => setEditForm({ ...editForm, path: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Base Path</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Base Path</label>
                 <input
                   type="text"
                   value={editForm.base_path}
                   onChange={(e) => setEditForm({ ...editForm, base_path: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -184,13 +184,13 @@ function LibraryManagement() {
             <div className="flex justify-end gap-2 mt-6">
               <button
                 onClick={handleCancelEdit}
-                className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveLibrary}
-                className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
+                className="px-4 py-2 text-white bg-blue-500 dark:bg-blue-600 rounded hover:bg-blue-600 dark:hover:bg-blue-700"
               >
                 Save
               </button>
@@ -200,8 +200,8 @@ function LibraryManagement() {
       )}
 
       {/* Tab Navigation */}
-      <div className="mb-4 border-b border-gray-200">
-        <nav className="flex space-x-8">
+      <div className="mb-6">
+        <nav className="flex flex-wrap gap-2">
           {[
             { id: 'overview', label: 'Overview', count: libraries.length },
             { id: 'inbound', label: 'Inbound', count: libraries.filter(lib => lib.inbound_count > 0 || lib.inboundCount > 0).length },
@@ -212,13 +212,17 @@ function LibraryManagement() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
                 activeTab === tab.id
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-blue-600 dark:bg-blue-700 text-white shadow-md'
+                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
-              {tab.label} {tab.count > 0 && <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded-full ml-1">{tab.count}</span>}
+              {tab.label} {tab.count > 0 && <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                activeTab === tab.id 
+                  ? 'bg-blue-500 dark:bg-blue-600 text-white' 
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+              }`}>{tab.count}</span>}
             </button>
           ))}
         </nav>
@@ -226,87 +230,87 @@ function LibraryManagement() {
 
       {activeTab === 'overview' && (
         <>
-          <div className="mb-6 p-4 bg-white rounded shadow">
-            <h2 className="text-xl font-semibold mb-4">Library Controls</h2>
+          <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Library Controls</h2>
             <div className="flex flex-wrap gap-4">
               <button
                 onClick={handleScan}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700"
               >
                 Scan Libraries
               </button>
               <button
                 onClick={handleProcess}
-                className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+                className="bg-purple-500 dark:bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-600 dark:hover:bg-purple-700"
               >
                 Process Inbound → Staging
               </button>
               <button
                 onClick={handlePromote}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                className="bg-green-500 dark:bg-green-600 text-white px-4 py-2 rounded hover:bg-green-600 dark:hover:bg-green-700"
               >
                 Promote OK Albums to Production
               </button>
             </div>
 
             {message && (
-              <div className="mt-4 p-3 bg-blue-100 text-blue-800 rounded">
+              <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded border border-blue-200 dark:border-blue-800">
                 {message}
               </div>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white p-4 rounded shadow">
-              <h3 className="font-semibold">Total Artists</h3>
-              <p className="text-2xl">{stats.total_artists || stats.totalArtists || 0}</p>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">Total Artists</h3>
+              <p className="text-2xl text-gray-900 dark:text-gray-100">{stats.total_artists || stats.totalArtists || 0}</p>
             </div>
-            <div className="bg-white p-4 rounded shadow">
-              <h3 className="font-semibold">Total Albums</h3>
-              <p className="text-2xl">{stats.total_albums || stats.totalAlbums || 0}</p>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">Total Albums</h3>
+              <p className="text-2xl text-gray-900 dark:text-gray-100">{stats.total_albums || stats.totalAlbums || 0}</p>
             </div>
-            <div className="bg-white p-4 rounded shadow">
-              <h3 className="font-semibold">Total Songs</h3>
-              <p className="text-2xl">{stats.total_songs || stats.totalSongs || 0}</p>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">Total Songs</h3>
+              <p className="text-2xl text-gray-900 dark:text-gray-100">{stats.total_songs || stats.totalSongs || 0}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded shadow">
-              <h3 className="font-semibold">Inbound Files</h3>
-              <p className="text-2xl">{stats.inbound_count || stats.inboundCount || 0}</p>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">Inbound Files</h3>
+              <p className="text-2xl text-gray-900 dark:text-gray-100">{stats.inbound_count || stats.inboundCount || 0}</p>
             </div>
-            <div className="bg-white p-4 rounded shadow">
-              <h3 className="font-semibold">Staging Files</h3>
-              <p className="text-2xl">{stats.staging_count || stats.stagingCount || 0}</p>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">Staging Files</h3>
+              <p className="text-2xl text-gray-900 dark:text-gray-100">{stats.staging_count || stats.stagingCount || 0}</p>
             </div>
-            <div className="bg-white p-4 rounded shadow">
-              <h3 className="font-semibold">Production Files</h3>
-              <p className="text-2xl">{stats.production_count || stats.productionCount || 0}</p>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">Production Files</h3>
+              <p className="text-2xl text-gray-900 dark:text-gray-100">{stats.production_count || stats.productionCount || 0}</p>
             </div>
-            <div className="bg-white p-4 rounded shadow">
-              <h3 className="font-semibold">Total Duration</h3>
-              <p className="text-2xl">{formatDuration(stats.total_duration || stats.totalDuration || 0)}</p>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">Total Duration</h3>
+              <p className="text-2xl text-gray-900 dark:text-gray-100">{formatDuration(stats.total_duration || stats.totalDuration || 0)}</p>
             </div>
           </div>
 
-          <div className="mt-6 bg-white p-4 rounded shadow">
+          <div className="mt-6 bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Configured Libraries</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Configured Libraries</h2>
             </div>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Path</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Path</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {libraries.map((lib) => (
                   <tr key={lib.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{lib.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{lib.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                         ${lib.type === 'inbound' ? 'bg-blue-100 text-blue-800' :
@@ -316,11 +320,11 @@ function LibraryManagement() {
                         {lib.type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm">{lib.path}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{lib.path}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={() => handleEditLibrary(lib)}
-                        className="text-blue-600 hover:text-blue-900 underline"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 underline"
                       >
                         Edit
                       </button>
@@ -334,29 +338,29 @@ function LibraryManagement() {
       )}
 
       {(activeTab !== 'overview') && (
-        <div className="bg-white rounded shadow overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold capitalize">{activeTab} Libraries</h2>
+        <div className="bg-white dark:bg-gray-800 rounded shadow overflow-hidden border border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold capitalize text-gray-900 dark:text-gray-100">{activeTab} Libraries</h2>
           </div>
 
           {filteredLibraries.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Library</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inbound</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staging</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Production</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quarantine</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Library</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Inbound</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Staging</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Production</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quarantine</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredLibraries.map((lib) => (
                   <tr key={lib.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{lib.name}</div>
-                      <div className="text-sm text-gray-500">{lib.path}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{lib.name}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{lib.path}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
@@ -367,21 +371,21 @@ function LibraryManagement() {
                         {lib.type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {lib.inbound_count || lib.inboundCount || 0}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {lib.staging_count || lib.stagingCount || 0}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {lib.production_count || lib.productionCount || 0}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {lib.quarantine_count || lib.quarantineCount || 0}
                       {lib.quarantine_count > 0 && lib.quarantineCount > 0 && (
                         <button
                           onClick={() => setActiveTab('quarantine')}
-                          className="ml-2 text-blue-600 hover:text-blue-900 underline text-xs"
+                          className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 underline text-xs"
                         >
                           View Quarantine Items
                         </button>
@@ -392,7 +396,7 @@ function LibraryManagement() {
               </tbody>
             </table>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               No {activeTab} libraries found.
             </div>
           )}

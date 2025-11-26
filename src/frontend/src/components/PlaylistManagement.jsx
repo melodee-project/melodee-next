@@ -101,19 +101,19 @@ function PlaylistManagement() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Playlist Management</h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Playlist Management</h1>
 
       {message && (
         <div className={`mb-4 p-3 rounded ${
-          message.toLowerCase().includes('error') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+          message.toLowerCase().includes('error') ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
         }`}>
           {message}
         </div>
       )}
 
       {/* Controls and Search */}
-      <div className="mb-6 p-4 bg-white rounded shadow">
-        <h2 className="text-lg font-semibold mb-3">Playlist Management</h2>
+      <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow border border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Playlist Management</h2>
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
             <input
@@ -121,12 +121,12 @@ function PlaylistManagement() {
               placeholder="Search playlists..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700"
           >
             Create Playlist
           </button>
@@ -137,13 +137,13 @@ function PlaylistManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredPlaylists.length > 0 ? (
           filteredPlaylists.map((playlist) => (
-            <div key={playlist.id || playlist.ID} className="bg-white rounded shadow overflow-hidden">
+            <div key={playlist.id || playlist.ID} className="bg-white dark:bg-gray-800 rounded shadow overflow-hidden border border-gray-200 dark:border-gray-700">
               <div className="p-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-lg truncate">{playlist.name || playlist.Name || 'Unnamed Playlist'}</h3>
-                    <p className="text-sm text-gray-600 truncate">{playlist.comment || playlist.Comment}</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <h3 className="font-semibold text-lg truncate text-gray-900 dark:text-gray-100">{playlist.name || playlist.Name || 'Unnamed Playlist'}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{playlist.comment || playlist.Comment}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Owner: {playlist.owner || playlist.Owner || 'Unknown'} • 
                       Songs: {playlist.song_count || playlist.SongCount || 0} • 
                       {playlist.public || playlist.Public ? ' Public' : ' Private'}
@@ -160,14 +160,14 @@ function PlaylistManagement() {
                         });
                         setShowEditModal(true);
                       }}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                       title="Edit Playlist"
                     >
                       ✏️
                     </button>
                     <button
                       onClick={() => handleDeletePlaylist(playlist.id || playlist.ID)}
-                      className="text-red-600 hover:text-red-900"
+                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                       title="Delete Playlist"
                     >
                       🗑️
@@ -177,11 +177,11 @@ function PlaylistManagement() {
                 <div className="mt-3 flex justify-between">
                   <button
                     onClick={() => handleViewPlaylist(playlist.id || playlist.ID)}
-                    className="text-indigo-600 hover:text-indigo-900 text-sm"
+                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 text-sm"
                   >
                     View Details
                   </button>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     {playlist.created_at || playlist.CreatedAt ? new Date(playlist.created_at || playlist.CreatedAt).toLocaleDateString() : 'N/A'}
                   </span>
                 </div>
@@ -189,7 +189,7 @@ function PlaylistManagement() {
             </div>
           ))
         ) : (
-          <div className="col-span-full text-center py-8 text-gray-500">
+          <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
             {loading ? 'Loading playlists...' : 'No playlists found.'}
           </div>
         )}
@@ -197,22 +197,22 @@ function PlaylistManagement() {
 
       {/* Selected Playlist Detail View */}
       {selectedPlaylist && (
-        <div className="mt-6 bg-white rounded shadow p-4">
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded shadow p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               {selectedPlaylist.name || selectedPlaylist.Name} ({playlistSongs.length} songs)
             </h2>
             <button
               onClick={() => setSelectedPlaylist(null)}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             >
               Close
             </button>
           </div>
 
           <div className="mb-4">
-            <p className="text-gray-600 mb-2">{selectedPlaylist.comment || selectedPlaylist.Comment}</p>
-            <div className="text-sm text-gray-500">
+            <p className="text-gray-600 dark:text-gray-400 mb-2">{selectedPlaylist.comment || selectedPlaylist.Comment}</p>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               <div>Owner: {selectedPlaylist.owner || selectedPlaylist.Owner}</div>
               <div>Created: {selectedPlaylist.created_at || selectedPlaylist.CreatedAt ? new Date(selectedPlaylist.created_at || selectedPlaylist.CreatedAt).toLocaleString() : 'N/A'}</div>
               <div>Changed: {selectedPlaylist.changed_at || selectedPlaylist.ChangedAt ? new Date(selectedPlaylist.changed_at || selectedPlaylist.ChangedAt).toLocaleString() : 'N/A'}</div>
@@ -222,27 +222,27 @@ function PlaylistManagement() {
 
           {/* Playlist Songs */}
           <div>
-            <h3 className="text-lg font-semibold mb-2">Playlist Contents</h3>
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Playlist Contents</h3>
             {playlistSongs.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artist</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Album</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Title</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Artist</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Album</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Duration</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {playlistSongs.map((song, index) => (
                       <tr key={song.id || song.ID || index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{song.title || song.Title || 'Unknown'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{song.artist || song.Artist || 'Unknown'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{song.album || song.Album || 'Unknown'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{index + 1}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{song.title || song.Title || 'Unknown'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{song.artist || song.Artist || 'Unknown'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{song.album || song.Album || 'Unknown'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, '0')}` : 'N/A'}
                         </td>
                       </tr>
@@ -251,7 +251,7 @@ function PlaylistManagement() {
                 </table>
               </div>
             ) : (
-              <div className="text-gray-500 text-center py-4">
+              <div className="text-gray-500 dark:text-gray-400 text-center py-4">
                 No songs in this playlist.
               </div>
             )}
@@ -262,27 +262,27 @@ function PlaylistManagement() {
       {/* Create Playlist Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-semibold mb-4">Create New Playlist</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Create New Playlist</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
                 <input
                   type="text"
                   value={newPlaylist.name}
                   onChange={(e) => setNewPlaylist({...newPlaylist, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   placeholder="Enter playlist name"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment</label>
                 <textarea
                   value={newPlaylist.comment}
                   onChange={(e) => setNewPlaylist({...newPlaylist, comment: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   placeholder="Enter playlist description"
                   rows="3"
                 />
@@ -296,7 +296,7 @@ function PlaylistManagement() {
                   onChange={(e) => setNewPlaylist({...newPlaylist, public: e.target.checked})}
                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <label htmlFor="publicCheckbox" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="publicCheckbox" className="ml-2 block text-sm text-gray-900 dark:text-gray-100">
                   Make public
                 </label>
               </div>
@@ -305,13 +305,13 @@ function PlaylistManagement() {
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreatePlaylist}
-                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800"
               >
                 Create
               </button>
@@ -323,26 +323,26 @@ function PlaylistManagement() {
       {/* Edit Playlist Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-semibold mb-4">Edit Playlist</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit Playlist</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
                 <input
                   type="text"
                   value={editPlaylist.name}
                   onChange={(e) => setEditPlaylist({...editPlaylist, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment</label>
                 <textarea
                   value={editPlaylist.comment}
                   onChange={(e) => setEditPlaylist({...editPlaylist, comment: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   rows="3"
                 />
               </div>
@@ -355,7 +355,7 @@ function PlaylistManagement() {
                   onChange={(e) => setEditPlaylist({...editPlaylist, public: e.target.checked})}
                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <label htmlFor="editPublicCheckbox" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="editPublicCheckbox" className="ml-2 block text-sm text-gray-900 dark:text-gray-100">
                   Make public
                 </label>
               </div>
@@ -364,13 +364,13 @@ function PlaylistManagement() {
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpdatePlaylist}
-                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800"
               >
                 Update
               </button>

@@ -73,6 +73,8 @@ type ProcessingConfig struct {
 	MaxBitrate     int                  `mapstructure:"max_bitrate"`
 	DefaultFormat  string               `mapstructure:"default_format"`
 	TranscodeCache TranscodeCacheConfig `mapstructure:"transcode_cache"`
+	ScanWorkers    int                  `mapstructure:"scan_workers"`     // Number of concurrent workers for directory scanning
+	ScanBufferSize int                  `mapstructure:"scan_buffer_size"` // Buffer size for scan file channel
 }
 
 // TranscodeCacheConfig holds transcoding cache configuration
@@ -181,10 +183,12 @@ func DefaultAppConfig() *AppConfig {
 			RefreshExpiry: 24 * time.Hour,
 		},
 		Processing: ProcessingConfig{
-			FFmpegPath:    "/usr/bin/ffmpeg",
-			MaxConcurrent: 4,
-			MaxBitrate:    320, // kbps
-			DefaultFormat: "mp3",
+			FFmpegPath:     "/usr/bin/ffmpeg",
+			MaxConcurrent:  4,
+			MaxBitrate:     320, // kbps
+			DefaultFormat:  "mp3",
+			ScanWorkers:    8,    // Concurrent workers for directory scanning
+			ScanBufferSize: 1000, // Buffer size for file paths during scanning
 			Profiles: map[string]string{
 				"transcode_high":        "-c:a libmp3lame -b:a 320k -ar 44100 -ac 2",
 				"transcode_mid":         "-c:a libmp3lame -b:a 192k -ar 44100 -ac 2",
@@ -317,6 +321,8 @@ func setDefaults() {
 	viper.SetDefault("processing.max_concurrent", 4)
 	viper.SetDefault("processing.max_bitrate", 320)
 	viper.SetDefault("processing.default_format", "mp3")
+	viper.SetDefault("processing.scan_workers", 8)
+	viper.SetDefault("processing.scan_buffer_size", 1000)
 	viper.SetDefault("processing.profiles.transcode_high", "-c:a libmp3lame -b:a 320k -ar 44100 -ac 2")
 	viper.SetDefault("processing.profiles.transcode_mid", "-c:a libmp3lame -b:a 192k -ar 44100 -ac 2")
 	viper.SetDefault("processing.profiles.transcode_opus_mobile", "-c:a libopus -b:a 96k -application audio")

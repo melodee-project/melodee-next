@@ -239,6 +239,11 @@ func main() {
 		log.Fatal("Failed to seed default libraries:", err)
 	}
 
+	// Seed default settings if none exist
+	if err := database.SeedDefaultSettings(dbManager.GetGormDB()); err != nil {
+		log.Fatal("Failed to seed default settings:", err)
+	}
+
 	// Create and start server
 	server := NewAPIServer(cfg, dbManager)
 	if err := server.Start(); err != nil {

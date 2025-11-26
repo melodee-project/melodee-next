@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import ThemeSelector from './components/ThemeSelector';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './components/AdminDashboard';
 import DLQManagement from './components/DLQManagement';
@@ -38,33 +40,41 @@ function AdminRoute({ children }) {
 // Main Layout Component with Navigation
 function Layout({ children }) {
   const { user, isAuthenticated, logout } = useAuth();
+  const { currentTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
   };
 
+  // Get theme-specific classes
+  const navbarClass = currentTheme?.colors?.navbar || 'bg-blue-700 dark:bg-gray-800';
+  const navbarTextClass = currentTheme?.colors?.navbarText || 'text-white';
+  const navbarHoverClass = currentTheme?.colors?.navbarHover || 'hover:text-blue-200 dark:hover:text-blue-300';
+  const backgroundClass = currentTheme?.colors?.background || 'bg-gray-100 dark:bg-gray-900';
+
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className={`min-h-screen ${backgroundClass} flex flex-col transition-colors`}>
       {/* Navigation */}
-      <nav className="bg-blue-700 text-white shadow-md">
+      <nav className={`${navbarClass} ${navbarTextClass} shadow-md`}>
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/admin" className="text-xl font-bold hover:text-blue-200 transition-colors">Melodee Admin</Link>
+            <Link to="/admin" className={`text-xl font-bold ${navbarTextClass} ${navbarHoverClass} transition-colors`}>Melodee Admin</Link>
             <ul className="hidden md:flex space-x-4 lg:space-x-6">
-              <li><Link to="/admin" className="hover:text-blue-200 transition-colors">Dashboard</Link></li>
-              <li><Link to="/admin/dlq" className="hover:text-blue-200 transition-colors">DLQ</Link></li>
-              <li><Link to="/admin/users" className="hover:text-blue-200 transition-colors">Users</Link></li>
-              <li><Link to="/admin/settings" className="hover:text-blue-200 transition-colors">Settings</Link></li>
-              <li><Link to="/admin/shares" className="hover:text-blue-200 transition-colors">Shares</Link></li>
-              <li><Link to="/admin/libraries" className="hover:text-blue-200 transition-colors">Libraries</Link></li>
-              <li><Link to="/admin/quarantine" className="hover:text-blue-200 transition-colors">Quarantine</Link></li>
-              <li><Link to="/admin/playlists" className="hover:text-blue-200 transition-colors">Playlists</Link></li>
+              <li><Link to="/admin" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Dashboard</Link></li>
+              <li><Link to="/admin/dlq" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>DLQ</Link></li>
+              <li><Link to="/admin/users" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Users</Link></li>
+              <li><Link to="/admin/settings" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Settings</Link></li>
+              <li><Link to="/admin/shares" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Shares</Link></li>
+              <li><Link to="/admin/libraries" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Libraries</Link></li>
+              <li><Link to="/admin/quarantine" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Quarantine</Link></li>
+              <li><Link to="/admin/playlists" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Playlists</Link></li>
             </ul>
             <div className="flex items-center space-x-4">
+              <ThemeSelector />
               <span className="text-sm md:text-base">Welcome, <span className="font-semibold">{user?.username || user?.Username || 'User'}</span>!</span>
               <button
                 onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors font-medium"
+                className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-4 py-2 rounded transition-colors font-medium"
               >
                 Logout
               </button>
@@ -84,17 +94,18 @@ function Layout({ children }) {
 // Combined app with AuthProvider and Layout
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Layout>
-                <AdminDashboard />
-              </Layout>
-            </ProtectedRoute>
-          } />
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminDashboard />
+                </Layout>
+              </ProtectedRoute>
+            } />
           <Route path="/admin" element={
             <ProtectedRoute>
               <Layout>
@@ -161,6 +172,7 @@ function App() {
         </Routes>
       </Router>
     </AuthProvider>
+    </ThemeProvider>
   );
 }
 
