@@ -359,7 +359,7 @@ CREATE TABLE staging_items (
     metadata_file TEXT NOT NULL,        -- Path to .melodee.json file
     artist_name TEXT NOT NULL,
     album_name TEXT NOT NULL,
-    song_count INTEGER DEFAULT 0,
+    track_count INTEGER DEFAULT 0,
     total_size BIGINT DEFAULT 0,
     processed_at TIMESTAMP NOT NULL,
     status VARCHAR(50) NOT NULL CHECK (status IN ('pending_review', 'approved', 'rejected', 'processing')),
@@ -388,6 +388,7 @@ Each scan operation is completely independent:
 - **Duplicate detection by file hash**: Same file in multiple scans gets same hash
 - **Archive for audit**: Keep scan DBs for 90 days in `/melodee/scans/archive/`
 - **Rationale**: Simple, stateless, repeatable workflow. No complex state management.
+- **Configurable roots**: These paths are logical defaults; in code, derive them from configurable inbound, staging, production, and scan-archive directories.
 
 #### Two-Stage Album Grouping
 Albums are identified through normalized metadata matching:
@@ -439,12 +440,14 @@ Designed for typical single-admin usage:
        validation_error TEXT,
        
        -- Grouping (computed later)
-       album_group_id INTEGER,
+       album_group_hash TEXT,
+       album_group_id TEXT,
        
        created_at INTEGER DEFAULT (strftime('%s','now'))
    );
    
    CREATE INDEX idx_artist_album ON scanned_files(artist, album, year);
+   CREATE INDEX idx_album_group_hash ON scanned_files(album_group_hash);
    CREATE INDEX idx_album_group ON scanned_files(album_group_id);
    ```
 
@@ -455,6 +458,7 @@ Designed for typical single-admin usage:
      - Validate: has artist, album, title, audio stream
      - INSERT into `scanned_files` table
      - If validation fails: set `is_valid=0`, record error message
+   - Use a worker pool for metadata extraction, with a single writer goroutine performing batched inserts into SQLite (for example with WAL mode) to avoid multiple-writer contention.
    - No file moves yet - just cataloging
    - Invalid files remain in inbound for manual review
 
@@ -506,6 +510,7 @@ Designed for typical single-admin usage:
    )
    WHERE is_valid = 1;
    ```
+   Note: `MD5(...)` and `normalize_album_name(...)` are application-provided helpers exposed to SQLite (or applied in Go); this SQL is illustrative pseudocode rather than a literal migration script.
    
    **Examples**:
    - `Led Zeppelin IV` (1971) → hash: `ledzeppelin::ledzeppeliniv` → group: `ledzeppelin::ledzeppeliniv_1971`
@@ -642,7 +647,7 @@ Output: "pianoman"  // Same result - spacing inconsistencies eliminated
    - Read `.melodee.json` metadata file
    - Create/update `artists` record (check if exists by name)
    - Create `albums` record
-   - Create `songs` records (one per track)
+   - Create `tracks` records (one per track)
    - Calculate production path using artist directory code
    - Move files from `/melodee/staging/...` to `/melodee/storage/...`
    - Update file tags to match any edits made in staging
@@ -654,6 +659,7 @@ Output: "pianoman"  // Same result - spacing inconsistencies eliminated
    - Album remains in staging with status='rejected'
    - Log error details to `staging_items.notes`
    - User can review and retry or delete
+The `/api/staging/promote` endpoint iterates approved items and runs this per-album transaction, returning a summary of successes and failures to the UI; failed albums remain in staging with `status='rejected'`.
 
 **Benefits**:
 - Atomic promotion - all or nothing
@@ -673,7 +679,7 @@ AND reviewed_at < NOW() - INTERVAL '30 days';
 
 **Orphaned Files**:
 - Periodic job scans `/melodee/staging` for directories without `staging_items` entry
-- Either import them or move to quarantine
+- Either import them (create `staging_items` entries) or delete/archive them after manual review
 
 **Scan Archive Cleanup**:
 - Scan databases archived in `/melodee/scans/archive/`
@@ -916,7 +922,7 @@ graph TD
 
 ### Integration Tests
 - Full workflow: inbound → staging → production
-- Quarantine handling at each stage
+- Invalid/rejected item handling at each stage
 - Concurrent processing (multiple workers)
 - File system operations (move, rename, delete)
 
@@ -976,12 +982,12 @@ graph TD
 
 ### Should Have (V1)
 - **Scan details UI** - Query/browse scan DB before processing
-- **Duplicate detection** - Find same album from multiple scans
+- **Duplicate detection** - Find same album from multiple scans (MVP: surface in Scan Details UI only; no automatic deletes/merges)
 - **Re-grouping logic** - Edit album_group_id assignments in scan DB
 - Bulk operations (approve all, reject all)
 - Staging search/filter
 - Metadata editing in UI
-- Quarantine workflow integration
+- Error/rejection workflow integration
 - Auto-cleanup rejected items
 
 ### Nice to Have (V2)
@@ -1068,7 +1074,7 @@ graph TD
 **Mitigation**:
 - Full transaction wrapping
 - Rollback moves files back
-- Quarantine on persistent failures
+- On persistent failures, keep items in staging with `status='rejected'` for manual intervention
 - Idempotent retry logic
 
 ### Risk: Disk Space
@@ -1242,7 +1248,7 @@ CREATE TABLE staging_items (
     metadata_file TEXT NOT NULL,        -- Path to .melodee.json file
     artist_name TEXT NOT NULL,
     album_name TEXT NOT NULL,
-    song_count INTEGER DEFAULT 0,
+    track_count INTEGER DEFAULT 0,
     total_size BIGINT DEFAULT 0,
     processed_at TIMESTAMP NOT NULL,
     status VARCHAR(50) NOT NULL CHECK (status IN ('pending_review', 'approved', 'rejected')),
