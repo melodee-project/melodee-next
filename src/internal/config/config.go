@@ -11,18 +11,20 @@ import (
 	"melodee/internal/utils"
 
 	"github.com/spf13/viper"
+	"gorm.io/gorm"
 )
 
 // AppConfig holds the main application configuration
 type AppConfig struct {
-	Server     ServerConfig     `mapstructure:"server"`
-	Database   DatabaseConfig   `mapstructure:"database"`
-	Redis      RedisConfig      `mapstructure:"redis"`
-	JWT        JWTConfig        `mapstructure:"jwt"`
-	Processing ProcessingConfig `mapstructure:"processing"`
-	Capacity   CapacityConfig   `mapstructure:"capacity"`
-	Logging    LoggingConfig    `mapstructure:"logging"`
-	Security   SecurityConfig   `mapstructure:"security"`
+	Server      ServerConfig      `mapstructure:"server"`
+	Database    DatabaseConfig    `mapstructure:"database"`
+	Redis       RedisConfig       `mapstructure:"redis"`
+	JWT         JWTConfig         `mapstructure:"jwt"`
+	Processing  ProcessingConfig  `mapstructure:"processing"`
+	Capacity    CapacityConfig    `mapstructure:"capacity"`
+	Logging     LoggingConfig     `mapstructure:"logging"`
+	Security    SecurityConfig    `mapstructure:"security"`
+	StagingCron StagingCronConfig `mapstructure:"staging_cron"`
 }
 
 // ServerConfig holds server-specific configuration
@@ -141,6 +143,16 @@ type RateLimitConfig struct {
 	StatusCode int           `mapstructure:"status_code"` // HTTP status code for rate-limited requests
 }
 
+// StagingCronConfig holds configuration for the staging cron job
+type StagingCronConfig struct {
+	Enabled        bool   `mapstructure:"enabled"`           // If staging cron is enabled
+	DryRun         bool   `mapstructure:"dry_run"`           // If true then dry run only
+	Schedule       string `mapstructure:"schedule"`          // Cron schedule (e.g. "0 */1 * * *")
+	Workers        int    `mapstructure:"workers"`           // Number of worker goroutines
+	RateLimit      int    `mapstructure:"rate_limit"`        // Rate limit for file operations (0 = unlimited)
+	ScanDBDataPath string `mapstructure:"scan_db_data_path"` // Directory for scan database files
+}
+
 // DefaultAppConfig returns default configuration values
 func DefaultAppConfig() *AppConfig {
 	return &AppConfig{
@@ -238,6 +250,14 @@ func DefaultAppConfig() *AppConfig {
 				StatusCode: 429,
 			},
 		},
+		StagingCron: StagingCronConfig{
+			Enabled:        false,
+			DryRun:         false,
+			Schedule:       "0 */1 * * *", // Every hour
+			Workers:        4,
+			RateLimit:      0, // Unlimited
+			ScanDBDataPath: "/tmp/melodee-scans",
+		},
 	}
 }
 
@@ -281,6 +301,62 @@ func LoadConfig() (*AppConfig, error) {
 	}
 
 	return &config, nil
+}
+
+// MergeDatabaseSettings loads settings from the database and merges them into the config
+// This allows runtime configuration changes via the admin UI to take effect
+func MergeDatabaseSettings(config *AppConfig, db *gorm.DB) error {
+	// Define a minimal Setting struct to avoid import cycles with models
+	type Setting struct {
+		Key   string
+		Value string
+	}
+
+	var settings []Setting
+
+	// Query all settings from the database
+	if err := db.Find(&settings).Error; err != nil {
+		return fmt.Errorf("failed to query settings: %w", err)
+	}
+
+	// Apply settings to config
+	for _, s := range settings {
+		switch s.Key {
+		case "staging_cron.enabled":
+			if enabled, err := strconv.ParseBool(s.Value); err == nil {
+				config.StagingCron.Enabled = enabled
+				log.Printf("Loaded setting from DB: staging_cron.enabled = %v", enabled)
+			}
+		case "staging_cron.dry_run":
+			if dryRun, err := strconv.ParseBool(s.Value); err == nil {
+				config.StagingCron.DryRun = dryRun
+				log.Printf("Loaded setting from DB: staging_cron.dry_run = %v", dryRun)
+			}
+		case "staging_cron.schedule":
+			config.StagingCron.Schedule = s.Value
+			log.Printf("Loaded setting from DB: staging_cron.schedule = %s", s.Value)
+		case "staging_cron.workers":
+			if workers, err := strconv.Atoi(s.Value); err == nil {
+				config.StagingCron.Workers = workers
+			}
+		case "staging_cron.rate_limit":
+			if rateLimit, err := strconv.Atoi(s.Value); err == nil {
+				config.StagingCron.RateLimit = rateLimit
+			}
+		case "staging_cron.scan_db_data_path":
+			config.StagingCron.ScanDBDataPath = s.Value
+		case "processing.scan_workers":
+			if scanWorkers, err := strconv.Atoi(s.Value); err == nil {
+				config.Processing.ScanWorkers = scanWorkers
+			}
+		case "processing.scan_buffer_size":
+			if bufferSize, err := strconv.Atoi(s.Value); err == nil {
+				config.Processing.ScanBufferSize = bufferSize
+			}
+		}
+	}
+
+	return nil
 }
 
 // setDefaults sets default configuration values
@@ -363,6 +439,14 @@ func setDefaults() {
 	viper.SetDefault("security.rate_limiting.window", "1m")
 	viper.SetDefault("security.rate_limiting.message", "Rate limit exceeded")
 	viper.SetDefault("security.rate_limiting.status_code", 429)
+
+	// Staging cron defaults
+	viper.SetDefault("staging_cron.enabled", false)
+	viper.SetDefault("staging_cron.dry_run", false)
+	viper.SetDefault("staging_cron.schedule", "0 */1 * * *") // Every hour
+	viper.SetDefault("staging_cron.workers", 4)
+	viper.SetDefault("staging_cron.rate_limit", 0) // Unlimited
+	viper.SetDefault("staging_cron.scan_db_data_path", "/tmp/melodee-scans")
 }
 
 // applyEnvironmentOverrides applies configuration overrides from environment variables
@@ -419,6 +503,26 @@ func applyEnvironmentOverrides(config *AppConfig) {
 	// Logging overrides
 	if logLevel := getEnv("MELODEE_LOGGING_LEVEL", ""); logLevel != "" {
 		config.Logging.Level = logLevel
+	}
+
+	// Staging cron overrides
+	if stagingEnabled := getEnvBool("MELODEE_STAGING_CRON_ENABLED", config.StagingCron.Enabled); stagingEnabled {
+		config.StagingCron.Enabled = stagingEnabled
+	}
+	if stagingDryRun := getEnvBool("MELODEE_STAGING_CRON_DRY_RUN", config.StagingCron.DryRun); stagingDryRun {
+		config.StagingCron.DryRun = stagingDryRun
+	}
+	if stagingSchedule := getEnv("MELODEE_STAGING_CRON_SCHEDULE", ""); stagingSchedule != "" {
+		config.StagingCron.Schedule = stagingSchedule
+	}
+	if stagingWorkers := getEnvInt("MELODEE_STAGING_CRON_WORKERS", config.StagingCron.Workers); stagingWorkers > 0 {
+		config.StagingCron.Workers = stagingWorkers
+	}
+	if stagingRateLimit := getEnvInt("MELODEE_STAGING_CRON_RATE_LIMIT", config.StagingCron.RateLimit); stagingRateLimit >= 0 {
+		config.StagingCron.RateLimit = stagingRateLimit
+	}
+	if stagingScanDBDataPath := getEnv("MELODEE_STAGING_CRON_SCAN_DB_DATA_PATH", ""); stagingScanDBDataPath != "" {
+		config.StagingCron.ScanDBDataPath = stagingScanDBDataPath
 	}
 }
 
@@ -551,6 +655,17 @@ func (c *AppConfig) Validate() error {
 	}
 	if c.Capacity.AlertThreshold < 0 || c.Capacity.AlertThreshold > 100 {
 		return fmt.Errorf("capacity alert threshold must be between 0 and 100, got: %f", c.Capacity.AlertThreshold)
+	}
+
+	// Validate staging cron configuration
+	if c.StagingCron.Workers <= 0 {
+		return fmt.Errorf("staging cron workers must be greater than 0")
+	}
+	if c.StagingCron.RateLimit < 0 {
+		return fmt.Errorf("staging cron rate limit must be greater than or equal to 0")
+	}
+	if c.StagingCron.ScanDBDataPath == "" {
+		return fmt.Errorf("staging cron scan DB data path cannot be empty")
 	}
 
 	return nil

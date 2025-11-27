@@ -33,14 +33,15 @@ function JobMonitor() {
       } else if (activeTab === 'overview') {
         // Fetch all data for overview
         const [activeResp, pendingResp, scheduledResp, dlqResp, statsResp] = await Promise.all([
-          adminService.getActiveJobs().catch(() => ({ data: { data: [] } })),
-          adminService.getPendingJobs().catch(() => ({ data: { data: [] } })),
-          adminService.getScheduledJobs().catch(() => ({ data: { data: [] } })),
-          adminService.getDLQItems().catch(() => ({ data: { data: [] } })),
-          adminService.getJobStats().catch(() => ({ data: { data: [] } }))
+          adminService.getActiveJobs().catch((err) => { console.error('Failed to fetch active jobs:', err); return { data: { data: [] } }; }),
+          adminService.getPendingJobs().catch((err) => { console.error('Failed to fetch pending jobs:', err); return { data: { data: [] } }; }),
+          adminService.getScheduledJobs().catch((err) => { console.error('Failed to fetch scheduled jobs:', err); return { data: { data: [] } }; }),
+          adminService.getDLQItems().catch((err) => { console.error('Failed to fetch DLQ items:', err); return { data: { data: [] } }; }),
+          adminService.getJobStats().catch((err) => { console.error('Failed to fetch job stats:', err); return { data: { data: [] } }; })
         ]);
         
-        setStats(statsResp.data.data || []);
+        console.log('Job stats response:', statsResp);
+        setStats(statsResp.data.data || statsResp.data || []);
       } else {
         // Fetch active, pending, or scheduled jobs
         const endpoint = activeTab === 'active' ? 'getActiveJobs' : 
@@ -53,7 +54,8 @@ function JobMonitor() {
       // Always fetch stats for tab counts
       if (activeTab !== 'overview') {
         const statsResp = await adminService.getJobStats();
-        setStats(statsResp.data.data || []);
+        console.log('Job stats response:', statsResp);
+        setStats(statsResp.data.data || statsResp.data || []);
       }
       
       if (initialLoad) {
@@ -156,6 +158,13 @@ function JobMonitor() {
         {message && (
           <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded border border-blue-200 dark:border-blue-800">
             {message}
+          </div>
+        )}
+        
+        {stats.length === 0 && !loading && (
+          <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded border border-yellow-200 dark:border-yellow-800">
+            <strong>No job queues found.</strong> Job queues will appear once jobs are enqueued. 
+            The worker is connected, but no jobs have been submitted yet.
           </div>
         )}
       </div>

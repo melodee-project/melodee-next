@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	github.com/gofiber/fiber/v2 v2.52.10
 	github.com/hibiken/asynq v0.25.1
-	github.com/prometheus/client_golang v1.23.2
+	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 	melodee/internal v0.0.0-00010101000000-000000000000
 	melodee/open_subsonic v0.0.0-00010101000000-000000000000
@@ -47,6 +47,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.1.3-0.20240916144458-20a13a1f6b7c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
@@ -76,5 +77,4 @@ require (
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
-	gorm.io/driver/postgres v1.6.0 // indirect
 )

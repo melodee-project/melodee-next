@@ -33,18 +33,19 @@
 
 3. **Configuration**
   - This should use the system configuration that is editable by the admin in the Admin UI.
-   | Key | Value | Description |
-   | :------- | :------: | -------: |
-   | staging_cron.enabled | false | if enabled or not |
-   | staging_cron.dry_run | false | if true then dry run only |
-   | staging_cron.schedule | "0 */1 * * *" | cron for every hour |
-   | staging_cron.workers  | 4  | number of worker goroutines |
-   | staging_cron.rate_limit | 0  | 0 = unlimited |
+  | Key | Value | Description |
+  | :------- | :------: | -------: |
+  | staging_cron.enabled | false | if enabled or not |
+  | staging_cron.dry_run | false | if true then dry run only |
+  | staging_cron.schedule | "0 */1 * * *" | cron for every hour |
+  | staging_cron.workers  | 4  | number of worker goroutines |
+  | staging_cron.rate_limit | 0  | 0 = unlimited |
+  | staging_cron.scan_db_data_path | /var/melodee/scan-db | directory where temporary scan DB files are written |
 
   - The worker reads this section when a cron run starts. If `enabled` is `false`, the cron logic never runs.
   - The worker should use the `inbound` type library path as the source directory to scan.
   - The worker should use the `staging` type library path as the staging root when configuring `processor.ProcessorConfig.StagingRoot`.
-  - Scan database files are written to a configured scan output directory (e.g. `staging_cron.scan_output_dir`) or another fixed location, not to the staging library path.
+  - Scan database files are written to a configured scan DB data path (e.g. `staging_cron.scan_db_data_path`) or another fixed location that is **not** any library path. This keeps temporary scan DB artifacts separate from both inbound and staging library trees.
   - These keys are stored in the application settings (editable via `/admin/settings`) and read by the worker at the start of a scan run.
 ---
 
