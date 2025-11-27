@@ -55,38 +55,6 @@ test.describe('Library Management E2E Tests', () => {
     await expect(page.locator('th:has-text("Path")')).toBeVisible();
   });
 
-  test('should display quarantine items with error details', async ({ page }) => {
-    // Navigate to quarantine section
-    await page.click('text=Quarantine');
-    
-    // Wait for quarantine page to load
-    await expect(page.locator('h1:has-text("Quarantine Management")')).toBeVisible();
-    
-    // Check for quarantine items table
-    const quarantineTable = page.locator('table');
-    await expect(quarantineTable).toBeVisible();
-    
-    // Verify quarantine columns exist
-    await expect(page.locator('th:has-text("File Path")')).toBeVisible();
-    await expect(page.locator('th:has-text("Reason")')).toBeVisible();
-    await expect(page.locator('th:has-text("Library")')).toBeVisible();
-  });
-
-  test('should allow resolving quarantine items', async ({ page }) => {
-    await page.click('text=Quarantine');
-    
-    // Check if resolve buttons are present
-    const resolveButtons = page.locator('button:has-text("Resolve")');
-    const count = await resolveButtons.count();
-    
-    if (count > 0) {
-      // Click first resolve button
-      await resolveButtons.first().click();
-      
-      // Should show confirmation or update status
-      await expect(page.locator('[data-testid="status-message"]')).toContainText('resolved');
-    }
-  });
 
   test('should show system health status', async ({ page }) => {
     await page.click('text=Dashboard');

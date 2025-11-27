@@ -201,15 +201,12 @@ func (s *APIServer) setupRoutes() {
 	protected.Get("/libraries", adminMW, libraryHandler.GetLibraryStates)
 	// Use /library-stats instead of /libraries/stats due to Fiber routing issue with /:id matching
 	protected.Get("/library-stats", adminMW, libraryHandler.GetLibrariesStats)
-	protected.Get("/libraries/quarantine", adminMW, libraryHandler.GetQuarantineItems)
 	protected.Get("/libraries/jobs", adminMW, libraryHandler.GetProcessingJobs)
 	protected.Get("/libraries/:id", adminMW, libraryHandler.GetLibraryState)
 	protected.Put("/libraries/:id", adminMW, libraryHandler.UpdateLibrary)
 	protected.Get("/libraries/:id/scan", adminMW, libraryHandler.TriggerLibraryScan)
 	protected.Get("/libraries/:id/process", adminMW, libraryHandler.TriggerLibraryProcess)
 	protected.Get("/libraries/:id/move-ok", adminMW, libraryHandler.TriggerLibraryMoveOK)
-	protected.Post("/libraries/quarantine/:id/resolve", adminMW, libraryHandler.ResolveQuarantineItem)
-	protected.Post("/libraries/quarantine/:id/requeue", adminMW, libraryHandler.RequeueQuarantineItem)
 }
 
 // Start starts the API server

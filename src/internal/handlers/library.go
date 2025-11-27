@@ -9,13 +9,11 @@ import (
 
 	"melodee/internal/media"
 	"melodee/internal/models"
-	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/hibiken/asynq"
-	"gorm.io/gorm"
 )
 
 // LibraryHandler handles library-related requests
@@ -47,7 +45,7 @@ type LibraryState struct {
 	InboundCount    int32            `json:"inbound_count"`
 	StagingCount    int32            `json:"staging_count"`
 	ProductionCount int32            `json:"production_count"`
-	QuarantineCount int32            `json:"quarantine_count"`
+	RejectedCount   int32            `json:"rejected_count"`
 	Stats           *models.Library  `json:"stats"`
 	TrackCount      int32            `json:"track_count"`
 	AlbumCount      int32            `json:"album_count"`
@@ -105,7 +103,7 @@ func (h *LibraryHandler) GetLibraryStates(c *fiber.Ctx) error {
 			return utils.SendInternalServerError(c, "Failed to count production items")
 		}
 
-		quarantineCount := h.getQuarantineItemCount(lib.Path)
+		quarantineCount := h.getRejectedItemCount(lib.Path)
 
 		// Get item counts for different stages
 		states[i] = LibraryState{
@@ -120,7 +118,7 @@ func (h *LibraryHandler) GetLibraryStates(c *fiber.Ctx) error {
 			InboundCount:    inboundCount,
 			StagingCount:    stagingCount,
 			ProductionCount: productionCount,
-			QuarantineCount: int32(quarantineCount),
+			RejectedCount: int32(quarantineCount),
 		}
 	}
 
@@ -156,7 +154,7 @@ func (h *LibraryHandler) GetLibraryState(c *fiber.Ctx) error {
 		return utils.SendInternalServerError(c, "Failed to count production items")
 	}
 
-	quarantineCount := h.getQuarantineItemCount(library.Path)
+	quarantineCount := h.getRejectedItemCount(library.Path)
 
 	// Get state information for this library
 	state := LibraryState{
@@ -171,60 +169,12 @@ func (h *LibraryHandler) GetLibraryState(c *fiber.Ctx) error {
 		InboundCount:    inboundCount,
 		StagingCount:    stagingCount,
 		ProductionCount: productionCount,
-		QuarantineCount: int32(quarantineCount),
+		RejectedCount: int32(quarantineCount),
 	}
 
 	return c.JSON(state)
 }
 
-// GetQuarantineItems handles retrieving quarantine items
-func (h *LibraryHandler) GetQuarantineItems(c *fiber.Ctx) error {
-	// Use standard pagination from the pagination package
-	page, pageSize := pagination.GetPaginationParams(c, 1, 50)
-
-	// Validate limits
-	if pageSize > 100 {
-		pageSize = 100 // Maximum limit for safety
-	}
-
-	offset := pagination.CalculateOffset(page, pageSize)
-
-	// Get reason filter if provided
-	var reasonFilter *media.QuarantineReason
-	reasonParam := c.Query("reason")
-	if reasonParam != "" {
-		reason := media.QuarantineReason(reasonParam)
-		reasonFilter = &reason
-	}
-
-	// Get quarantine records from the service
-	records, totalCount, err := h.quarantineSvc.ListQuarantinedFiles(pageSize, offset, reasonFilter)
-	if err != nil {
-		return utils.SendInternalServerError(c, "Failed to retrieve quarantine items: "+err.Error())
-	}
-
-	// Convert to response format
-	items := make([]QuarantineItem, len(records))
-	for i, record := range records {
-		items[i] = QuarantineItem{
-			ID:        record.ID,
-			FilePath:  record.FilePath,
-			Reason:    string(record.Reason),
-			Message:   record.Message,
-			LibraryID: record.LibraryID,
-			CreatedAt: record.CreatedAt.Format(time.RFC3339), // Use RFC3339 format to match other datetime fields
-			Resolved:  false,                                 // In a real implementation, this would depend on actual status
-		}
-	}
-
-	// Calculate pagination metadata according to OpenAPI spec
-	paginationMeta := pagination.Calculate(int64(totalCount), page, pageSize)
-
-	return c.JSON(fiber.Map{
-		"data":       items,
-		"pagination": paginationMeta,
-	})
-}
 
 // GetProcessingJobs handles retrieving processing jobs
 func (h *LibraryHandler) GetProcessingJobs(c *fiber.Ctx) error {
@@ -409,61 +359,6 @@ func (h *LibraryHandler) GetLibrariesStats(c *fiber.Ctx) error {
 	return c.JSON(stats)
 }
 
-// ResolveQuarantineItem handles resolving a quarantine item
-func (h *LibraryHandler) ResolveQuarantineItem(c *fiber.Ctx) error {
-	itemID, err := c.ParamsInt("id")
-	if err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Invalid item ID")
-	}
-
-	// Check if the quarantine record exists
-	var record media.QuarantineRecord
-	if err := h.repo.GetDB().First(&record, itemID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return utils.SendNotFoundError(c, "Quarantine record")
-		}
-		return utils.SendInternalServerError(c, "Failed to verify quarantine record: "+err.Error())
-	}
-
-	// Delete from quarantine (permanent removal)
-	if err := h.quarantineSvc.DeleteFromQuarantine(int64(itemID)); err != nil {
-		return utils.SendInternalServerError(c, "Failed to resolve quarantine item: "+err.Error())
-	}
-
-	return c.JSON(fiber.Map{
-		"status":  "resolved",
-		"item_id": itemID,
-		"message": "Quarantine item removed successfully",
-	})
-}
-
-// RequeueQuarantineItem handles requeuing a quarantine item for reprocessing
-func (h *LibraryHandler) RequeueQuarantineItem(c *fiber.Ctx) error {
-	itemID, err := c.ParamsInt("id")
-	if err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Invalid item ID")
-	}
-
-	// Validate that the quarantine record exists
-	var record media.QuarantineRecord
-	if err := h.repo.GetDB().First(&record, itemID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return utils.SendNotFoundError(c, "Quarantine record")
-		}
-		return utils.SendInternalServerError(c, "Failed to verify quarantine record: "+err.Error())
-	}
-
-	// Restore the file to its original location for reprocessing
-	if err := h.quarantineSvc.RestoreFromQuarantine(int64(itemID), ""); err != nil {
-		return utils.SendInternalServerError(c, "Failed to restore quarantined file: "+err.Error())
-	}
-
-	return c.JSON(fiber.Map{
-		"status":  "requeued",
-		"item_id": itemID,
-		"message": "Quarantine item requeued for processing",
-	})
-}
 
 // getLibraryItemCount counts items in a specific library with a specific status
 func (h *LibraryHandler) getLibraryItemCount(libraryID int32, statusType string) (int32, error) {
@@ -518,13 +413,11 @@ func (h *LibraryHandler) getLibraryItemCount(libraryID int32, statusType string)
 	return int32(count), nil
 }
 
-// getQuarantineItemCount counts quarantine items for a library path
-func (h *LibraryHandler) getQuarantineItemCount(libraryPath string) int64 {
-	// With new workflow, rejected items in staging_items table serve as quarantine
-	// These are albums that failed validation or were explicitly rejected
+// getRejectedItemCount counts rejected staging items for a library path
+func (h *LibraryHandler) getRejectedItemCount(libraryPath string) int64 {
+	// Count staging items with rejected status
 	var count int64
 
-	// Count staging items with rejected status
 	err := h.repo.GetDB().Model(&models.StagingItem{}).
 		Where("staging_path LIKE ? AND status = ?", libraryPath+"%", "rejected").
 		Count(&count).Error

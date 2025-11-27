@@ -197,13 +197,13 @@ function UserManagement() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
                     onClick={() => handleToggleAdmin(user.id || user.ID, user.is_admin || user.isAdmin || user.IsAdmin)}
-                    className={`mr-2 hover:underline ${user.is_admin || user.isAdmin || user.IsAdmin ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}
+                    className={`mr-2 px-2 py-1 rounded hover:underline ${user.is_admin || user.isAdmin || user.IsAdmin ? 'text-red-600 dark:text-white dark:bg-red-600' : 'text-green-600 dark:text-green-400'}`}
                   >
                     {(user.is_admin || user.isAdmin || user.IsAdmin) ? 'Remove Admin' : 'Make Admin'}
                   </button>
                   <button
                     onClick={() => handleDeleteUser(user.id || user.ID)}
-                    className="text-red-600 dark:text-red-400 hover:underline"
+                    className="px-2 py-1 rounded text-red-600 dark:text-white dark:bg-red-600 hover:underline"
                   >
                     Delete
                   </button>

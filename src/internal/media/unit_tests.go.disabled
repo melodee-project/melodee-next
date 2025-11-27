@@ -316,7 +316,7 @@ func setupTestDB(t *testing.T) (*gorm.DB, func()) {
 	assert.NoError(t, err)
 
 	// Auto-migrate the required models for testing
-	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{}, &models.Playlist{})
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{}, &models.Playlist{})
 	assert.NoError(t, err)
 
 	tearDown := func() {

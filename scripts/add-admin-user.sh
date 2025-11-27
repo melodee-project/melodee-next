@@ -13,7 +13,7 @@ PASSWORD="$3"
 : "${MELODEE_DB_HOST:=localhost}"
 : "${MELODEE_DB_PORT:=5432}"
 : "${MELODEE_DB_USER:=melodee_user}"
-: "${MELODEE_DB_PASSWORD:=admin123}"
+: "${MELODEE_DB_PASSWORD:=melodee_dev_password}"
 : "${MELODEE_DB_NAME:=melodee}"
 
 # Generate bcrypt hash using the helper Go program
@@ -26,11 +26,11 @@ psql -v ON_ERROR_STOP=1 \
   -U "$MELODEE_DB_USER" -d "$MELODEE_DB_NAME" <<SQL
 DO \$\$
 BEGIN
-  IF EXISTS (SELECT 1 FROM melodee_users WHERE username = '$USERNAME') THEN
+  IF EXISTS (SELECT 1 FROM users WHERE username = '$USERNAME') THEN
     RAISE EXCEPTION 'User % already exists', '$USERNAME';
   END IF;
 
-  INSERT INTO melodee_users (username, email, password_hash, is_admin, created_at)
+  INSERT INTO users (username, email, password_hash, is_admin, created_at)
   VALUES ('$USERNAME', '$EMAIL', '$HASH', TRUE, NOW());
 END
 \$\$;

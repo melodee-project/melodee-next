@@ -291,9 +291,6 @@ func (s *Server) setupInternalRoutes() {
 	libraries.Post("/scan", libraryHandler.TriggerLibraryScan)
 	libraries.Post("/process", libraryHandler.TriggerLibraryProcess)
 	libraries.Post("/move-ok", libraryHandler.TriggerLibraryMoveOK)
-	libraries.Get("/quarantine", libraryHandler.GetQuarantineItems)
-	libraries.Post("/quarantine/:id/resolve", libraryHandler.ResolveQuarantineItem)
-	libraries.Post("/quarantine/:id/requeue", libraryHandler.RequeueQuarantineItem)
 
 	// Settings management
 	settingsHandler := handlers.NewSettingsHandler(s.repo)

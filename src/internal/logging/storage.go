@@ -34,7 +34,7 @@ type LogEntry struct {
 
 // TableName specifies the table name for LogEntry
 func (LogEntry) TableName() string {
-	return "melodee_log_entries"
+	return "log_entries"
 }
 
 // LogStorage handles persistent storage of logs

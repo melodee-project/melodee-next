@@ -2,8 +2,10 @@
 -- This file is managed manually - recreate containers to apply changes
 -- PostgreSQL 17 compatible
 
--- Required Extensions (already created in init_db.sh)
--- uuid-ossp, pg_trgm, btree_gin
+-- Required Extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "btree_gin";
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
@@ -91,7 +93,7 @@ CREATE TABLE IF NOT EXISTS artists (
     directory_code VARCHAR(20),
     sort_name VARCHAR(255),
     alternate_names TEXT[],
-    song_count INTEGER DEFAULT 0,
+    track_count INTEGER DEFAULT 0,
     album_count INTEGER DEFAULT 0,
     duration BIGINT DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

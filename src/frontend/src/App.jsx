@@ -13,7 +13,6 @@ import UserManagement from './components/UserManagement';
 import SettingsManagement from './components/SettingsManagement';
 import SharesManagement from './components/SharesManagement';
 import LibraryManagement from './components/LibraryManagement';
-import QuarantineManagement from './components/QuarantineManagement';
 import PlaylistManagement from './components/PlaylistManagement';
 import { 
   LayoutDashboard, 
@@ -87,12 +86,11 @@ function Layout({ children }) {
               <li><Link to="/admin/settings" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Settings className="w-4 h-4" />Settings</Link></li>
               <li><Link to="/admin/shares" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Share2 className="w-4 h-4" />Shares</Link></li>
               <li><Link to="/admin/libraries" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Library className="w-4 h-4" />Libraries</Link></li>
-              <li><Link to="/admin/quarantine" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><AlertCircle className="w-4 h-4" />Quarantine</Link></li>
               <li><Link to="/admin/playlists" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Music className="w-4 h-4" />Playlists</Link></li>
             </ul>
             <div className="flex items-center space-x-4">
               <ThemeSelector />
-              <span className="text-sm md:text-base text-white font-medium">Welcome, <span className="font-bold">{user?.username || user?.Username || 'User'}</span>!</span>
+              <span className={`text-sm md:text-base ${navbarTextClass} font-medium`}>Welcome, <span className="font-bold">{user?.username || user?.Username || 'User'}</span>!</span>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-4 py-2 rounded transition-colors font-medium flex items-center gap-2"
@@ -175,13 +173,6 @@ function App() {
             <AdminRoute>
               <Layout>
                 <LibraryManagement />
-              </Layout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/quarantine" element={
-            <AdminRoute>
-              <Layout>
-                <QuarantineManagement />
               </Layout>
             </AdminRoute>
           } />

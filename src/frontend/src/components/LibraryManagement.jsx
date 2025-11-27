@@ -5,7 +5,7 @@ function LibraryManagement() {
   const [stats, setStats] = useState({});
   const [libraries, setLibraries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'inbound', 'staging', 'production', 'quarantine'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'inbound', 'staging', 'production'
   const [message, setMessage] = useState('');
   const [editingLibrary, setEditingLibrary] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', path: '' });
@@ -75,7 +75,6 @@ function LibraryManagement() {
       if (activeTab === 'inbound') return lib.inbound_count > 0 || lib.inboundCount > 0;
       if (activeTab === 'staging') return lib.staging_count > 0 || lib.stagingCount > 0;
       if (activeTab === 'production') return lib.production_count > 0 || lib.productionCount > 0;
-      if (activeTab === 'quarantine') return lib.quarantine_count > 0 || lib.quarantineCount > 0;
       return true;
     });
   };
@@ -140,8 +139,7 @@ function LibraryManagement() {
             { id: 'overview', label: 'Overview', count: libraries.length },
             { id: 'inbound', label: 'Inbound', count: libraries.filter(lib => lib.inbound_count > 0 || lib.inboundCount > 0).length },
             { id: 'staging', label: 'Staging', count: libraries.filter(lib => lib.staging_count > 0 || lib.stagingCount > 0).length },
-            { id: 'production', label: 'Production', count: libraries.filter(lib => lib.production_count > 0 || lib.productionCount > 0).length },
-            { id: 'quarantine', label: 'Quarantine', count: libraries.filter(lib => lib.quarantine_count > 0 || lib.quarantineCount > 0).length }
+            { id: 'production', label: 'Production', count: libraries.filter(lib => lib.production_count > 0 || lib.productionCount > 0).length }
           ].map(tab => (
             <button
               key={tab.id}
@@ -195,9 +193,8 @@ function LibraryManagement() {
           {message && (
             <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded border border-yellow-200 dark:border-yellow-800">
                 {message}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
@@ -291,7 +288,7 @@ function LibraryManagement() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Inbound</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Staging</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Production</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quarantine</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rejected</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -320,15 +317,7 @@ function LibraryManagement() {
                       {lib.production_count || lib.productionCount || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {lib.quarantine_count || lib.quarantineCount || 0}
-                      {lib.quarantine_count > 0 && lib.quarantineCount > 0 && (
-                        <button
-                          onClick={() => setActiveTab('quarantine')}
-                          className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 underline text-xs"
-                        >
-                          View Quarantine Items
-                        </button>
-                      )}
+                      {lib.rejected_count || lib.rejectedCount || 0}
                     </td>
                   </tr>
                 ))}

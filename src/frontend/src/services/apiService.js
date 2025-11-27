@@ -128,9 +128,6 @@ export const libraryService = {
   getLibraries: () => apiService.get('/libraries'),
   getLibrary: (id) => apiService.get(`/libraries/${id}`),
   updateLibrary: (id, data) => apiService.put(`/libraries/${id}`, data),
-  getQuarantineItems: (params = {}) => apiService.get('/libraries/quarantine', { params }),
-  resolveQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/resolve`),
-  requeueQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/requeue`),
 };
 
 // System health and capacity monitoring endpoints
