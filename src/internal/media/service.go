@@ -148,7 +148,7 @@ func (h *TaskHandler) scanLibrary(ctx context.Context, libraryID int32, force bo
 		Type string `gorm:"column:type"`
 	}
 
-	if err := h.db.Table("melodee_libraries").Where("id = ?", libraryID).First(&library).Error; err != nil {
+	if err := h.db.Table("libraries").Where("id = ?", libraryID).First(&library).Error; err != nil {
 		return fmt.Errorf("failed to get library: %w", err)
 	}
 
@@ -277,12 +277,12 @@ func (h *TaskHandler) scanInboundLibrary(ctx context.Context, libraryID int32, p
 
 	// Update library statistics in the database
 	updateData := map[string]interface{}{
-		"song_count": finalCount,
+		"track_count": finalCount,
 		// Note: For inbound libraries, we're counting files, not necessarily database records
 		// This gives users visibility into how many files are available to process
 	}
 
-	if err := h.db.Table("melodee_libraries").Where("id = ?", libraryID).Updates(updateData).Error; err != nil {
+	if err := h.db.Table("libraries").Where("id = ?", libraryID).Updates(updateData).Error; err != nil {
 		return fmt.Errorf("failed to update library statistics: %w", err)
 	}
 

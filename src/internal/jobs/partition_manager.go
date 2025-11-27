@@ -53,7 +53,7 @@ const (
 
 // PartitionCreatePayload represents the payload for partition creation jobs
 type PartitionCreatePayload struct {
-	TableName string     `json:"table_name"` // "albums" or "songs"
+	TableName string     `json:"table_name"` // "albums" or "tracks"
 	Year      int        `json:"year"`
 	Month     time.Month `json:"month"`
 	Forced    bool       `json:"forced,omitempty"` // If true, recreate even if partition exists
@@ -84,9 +84,9 @@ func (pjm *PartitionJobManager) HandleCreateNextMonthPartition(ctx context.Conte
 		}
 	}
 
-	if tableName == "" || tableName == "songs" {
-		if err := pjm.createSongPartition(year, month, payload.Forced); err != nil {
-			return fmt.Errorf("failed to create song partition: %w", err)
+	if tableName == "" || tableName == "tracks" {
+		if err := pjm.createTrackPartition(year, month, payload.Forced); err != nil {
+			return fmt.Errorf("failed to create track partition: %w", err)
 		}
 	}
 
@@ -131,10 +131,10 @@ func (pjm *PartitionJobManager) createAlbumPartition(year int, month time.Month,
 	return nil
 }
 
-// createSongPartition creates a monthly partition for the songs table
-func (pjm *PartitionJobManager) createSongPartition(year int, month time.Month, forced bool) error {
-	partitionName := fmt.Sprintf("songs_%d_%02d", year, month)
-	partitionOf := "songs"
+// createTrackPartition creates a monthly partition for the tracks table
+func (pjm *PartitionJobManager) createTrackPartition(year int, month time.Month, forced bool) error {
+	partitionName := fmt.Sprintf("tracks_%d_%02d", year, month)
+	partitionOf := "tracks"
 
 	// Check if partition already exists
 	if !forced {
@@ -158,12 +158,12 @@ func (pjm *PartitionJobManager) createSongPartition(year int, month time.Month, 
 	`, partitionName, partitionOf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 
 	if err := pjm.db.Exec(query).Error; err != nil {
-		return fmt.Errorf("failed to create song partition %s: %w", partitionName, err)
+		return fmt.Errorf("failed to create track partition %s: %w", partitionName, err)
 	}
 
 	// Create indexes specific to this partition
-	if err := pjm.createPartitionIndexes(partitionName, "song"); err != nil {
-		return fmt.Errorf("failed to create indexes for song partition %s: %w", partitionName, err)
+	if err := pjm.createPartitionIndexes(partitionName, "track"); err != nil {
+		return fmt.Errorf("failed to create indexes for track partition %s: %w", partitionName, err)
 	}
 
 	return nil
@@ -194,8 +194,8 @@ func (pjm *PartitionJobManager) createPartitionIndexes(tableName, entityType str
 			// Covering index for common API operations (getArtist, getAlbum)
 			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_artist_covering ON %s(artist_id, name_normalized, directory, sort_order);", tableName, tableName),
 		}
-	case "song":
-		// Indexes for song partitions
+	case "track":
+		// Indexes for track partitions
 		indexes = []string{
 			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_album_id_hash ON %s USING hash(album_id);", tableName, tableName),
 			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_artist_id_hash ON %s USING hash(artist_id);", tableName, tableName),
@@ -248,16 +248,16 @@ func (pjm *PartitionJobManager) RunPartitionCreationForMonth(year int, month tim
 		return fmt.Errorf("failed to enqueue album partition creation: %w", err)
 	}
 
-	// Create a task for song partition creation
-	songPayload := &PartitionCreatePayload{
-		TableName: "songs",
+	// Create a task for track partition creation
+	trackPayload := &PartitionCreatePayload{
+		TableName: "tracks",
 		Year:      year,
 		Month:     month,
 	}
 
-	songTask := asynq.NewTask(TaskPartitionCreateNextMonth, songPayload)
-	if _, err := pjm.client.Enqueue(songTask, asynq.Queue("maintenance")); err != nil {
-		return fmt.Errorf("failed to enqueue song partition creation: %w", err)
+	trackTask := asynq.NewTask(TaskPartitionCreateNextMonth, trackPayload)
+	if _, err := pjm.client.Enqueue(trackTask, asynq.Queue("maintenance")); err != nil {
+		return fmt.Errorf("failed to enqueue track partition creation: %w", err)
 	}
 
 	return nil
@@ -270,7 +270,7 @@ func (pjm *PartitionJobManager) VerifyPartitionIndexes(tableName string) error {
 	//
 	// Example queries to test:
 	// EXPLAIN (ANALYZE,BUFFERS) SELECT * FROM albums WHERE artist_id = ? LIMIT 50;
-	// EXPLAIN (ANALYZE,BUFFERS) SELECT * FROM songs WHERE album_id = ? ORDER BY sort_order;
+	// EXPLAIN (ANALYZE,BUFFERS) SELECT * FROM tracks WHERE album_id = ? ORDER BY sort_order;
 
 	// For now, we'll just verify that the table exists
 	exists, err := pjm.partitionExists(tableName)

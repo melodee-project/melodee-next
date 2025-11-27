@@ -425,7 +425,7 @@ type RadioStation struct {
 	StreamURL       string    `gorm:"not null" json:"stream_url"`
 	HomePageURL     string    `json:"home_page_url"`
 	CreatedByUserID *int64    `json:"created_by_user_id"`
-	TrackCount      int32     `json:"song_count"`
+	TrackCount      int32     `json:"track_count"`
 	IsEnabled       bool      `gorm:"default:true" json:"is_enabled"`
 	CreatedAt       time.Time `json:"created_at"`
 }

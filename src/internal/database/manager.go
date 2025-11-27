@@ -38,7 +38,7 @@ var GORMConfig = &gorm.Config{
 
 	// Naming strategy for consistent database schema mapping
 	NamingStrategy: schema.NamingStrategy{
-		TablePrefix:   "melodee_", // Table prefix for organization
+		TablePrefix:   "", // No table prefix - using clean table names
 		SingularTable: false,      // Use plural table names
 	},
 

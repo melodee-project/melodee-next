@@ -233,9 +233,9 @@ func (h *SearchHandler) searchAlbums(query string, offset, size int) ([]utils.Se
 	normalizedQuery := normalizeSearchQuery(query)
 
 	// Use more efficient query that only selects required fields and joins
-	queryStmt := h.db.Table("melodee_albums as albums").
-		Select("albums.id, albums.name, albums.artist_id, albums.release_date, albums.created_at, albums.duration_cached, albums.song_count_cached, artists.name as artist_name").
-		Joins("LEFT JOIN melodee_artists as artists ON albums.artist_id = artists.id").
+	queryStmt := h.db.Table("albums").
+		Select("albums.id, albums.name, albums.artist_id, albums.release_date, albums.created_at, albums.duration, albums.track_count, artists.name as artist_name").
+		Joins("LEFT JOIN artists ON albums.artist_id = artists.id").
 		Where("albums.name_normalized ILIKE ?", "%"+normalizedQuery+"%").
 		Order("albums.name_normalized ASC")
 
@@ -294,10 +294,10 @@ func (h *SearchHandler) searchSongs(query string, offset, size int) ([]utils.Chi
 	normalizedQuery := normalizeSearchQuery(query)
 
 	// Use more efficient query that only selects required fields and joins
-	queryStmt := h.db.Table("melodee_songs as songs").
+	queryStmt := h.db.Table("tracks as songs").
 		Select("songs.id, songs.name, songs.album_id, songs.artist_id, songs.duration, songs.bit_rate, songs.sort_order, songs.created_at, songs.relative_path, songs.file_name, albums.name as album_name, artists.name as artist_name").
-		Joins("LEFT JOIN melodee_albums as albums ON songs.album_id = albums.id").
-		Joins("LEFT JOIN melodee_artists as artists ON songs.artist_id = artists.id").
+		Joins("LEFT JOIN albums ON songs.album_id = albums.id").
+		Joins("LEFT JOIN artists ON songs.artist_id = artists.id").
 		Where("songs.name_normalized ILIKE ?", "%"+normalizedQuery+"%").
 		Order("songs.name_normalized ASC")
 

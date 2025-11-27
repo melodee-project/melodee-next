@@ -49,7 +49,7 @@ type LibraryState struct {
 	ProductionCount int32            `json:"production_count"`
 	QuarantineCount int32            `json:"quarantine_count"`
 	Stats           *models.Library  `json:"stats"`
-	TrackCount      int32            `json:"song_count"`
+	TrackCount      int32            `json:"track_count"`
 	AlbumCount      int32            `json:"album_count"`
 	Duration        int64            `json:"duration"` // in milliseconds
 	QuarantineItems []QuarantineItem `json:"quarantine_items,omitempty"`

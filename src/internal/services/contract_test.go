@@ -385,7 +385,7 @@ func TestLibraryManagementContract(t *testing.T) {
 					"type":        "string", // "inbound", "staging", "production"
 					"is_locked":   "boolean",
 					"created_at":  "string",
-					"song_count":  "number",
+					"track_count":  "number",
 					"album_count": "number",
 					"duration":    "number",
 				},
@@ -502,7 +502,7 @@ func TestPlaylistContract(t *testing.T) {
 					"description": "string",
 					"owner_id":    "number",
 					"is_public":   "boolean",
-					"song_count":  "number",
+					"track_count":  "number",
 					"duration":    "number",
 					"created_at":  "string",
 					"changed_at":  "string",
