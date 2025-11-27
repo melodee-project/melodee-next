@@ -38,7 +38,7 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			"error": "Invalid staging item ID",
 		})
 	}
-	
+
 	// Start transaction
 	tx := h.db.Begin()
 	defer func() {
@@ -46,7 +46,7 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			tx.Rollback()
 		}
 	}()
-	
+
 	// Get staging item
 	var stagingItem models.StagingItem
 	if err := tx.First(&stagingItem, id).Error; err != nil {
@@ -60,7 +60,7 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			"error": "Failed to fetch staging item",
 		})
 	}
-	
+
 	// Check if approved
 	if stagingItem.Status != "approved" {
 		tx.Rollback()
@@ -68,7 +68,7 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			"error": "Only approved items can be promoted",
 		})
 	}
-	
+
 	// Read metadata
 	metadata, err := processor.ReadAlbumMetadata(stagingItem.MetadataFile)
 	if err != nil {
@@ -77,7 +77,7 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			"error": "Failed to read metadata file",
 		})
 	}
-	
+
 	// Create or find artist
 	artist, err := h.findOrCreateArtist(tx, metadata)
 	if err != nil {
@@ -86,7 +86,7 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			"error": fmt.Sprintf("Failed to create artist: %v", err),
 		})
 	}
-	
+
 	// Create album
 	album, err := h.createAlbum(tx, metadata, artist.ID)
 	if err != nil {
@@ -95,7 +95,7 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			"error": fmt.Sprintf("Failed to create album: %v", err),
 		})
 	}
-	
+
 	// Create tracks
 	if err := h.createTracks(tx, metadata, album.ID, artist.ID); err != nil {
 		tx.Rollback()
@@ -103,7 +103,7 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			"error": fmt.Sprintf("Failed to create tracks: %v", err),
 		})
 	}
-	
+
 	// Move files to production
 	productionPath := filepath.Join(
 		h.productionRoot,
@@ -111,14 +111,14 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 		metadata.Artist.Name,
 		fmt.Sprintf("%d - %s", metadata.Album.Year, metadata.Album.Name),
 	)
-	
+
 	if err := processor.SafeMoveFile(stagingItem.StagingPath, productionPath); err != nil {
 		tx.Rollback()
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to move files: %v", err),
 		})
 	}
-	
+
 	// Delete staging item
 	if err := tx.Delete(&stagingItem).Error; err != nil {
 		tx.Rollback()
@@ -126,19 +126,19 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 			"error": "Failed to delete staging item",
 		})
 	}
-	
+
 	// Commit transaction
 	if err := tx.Commit().Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to commit transaction",
 		})
 	}
-	
+
 	return c.JSON(fiber.Map{
-		"success":    true,
-		"message":    "Album promoted to production",
-		"album_id":   album.ID,
-		"artist_id":  artist.ID,
+		"success":     true,
+		"message":     "Album promoted to production",
+		"album_id":    album.ID,
+		"artist_id":   artist.ID,
 		"track_count": len(metadata.Tracks),
 	})
 }
@@ -146,17 +146,17 @@ func (h *PromotionHandler) PromoteAlbum(c *fiber.Ctx) error {
 // findOrCreateArtist finds an existing artist or creates a new one
 func (h *PromotionHandler) findOrCreateArtist(tx *gorm.DB, metadata *processor.AlbumMetadata) (*models.Artist, error) {
 	var artist models.Artist
-	
+
 	// Try to find by name first
 	err := tx.Where("name_normalized = ?", metadata.Artist.NameNormalized).First(&artist).Error
 	if err == nil {
 		return &artist, nil
 	}
-	
+
 	if err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
-	
+
 	// Create new artist
 	artist = models.Artist{
 		Name:           metadata.Artist.Name,
@@ -164,11 +164,11 @@ func (h *PromotionHandler) findOrCreateArtist(tx *gorm.DB, metadata *processor.A
 		DirectoryCode:  metadata.Artist.DirectoryCode,
 		SortName:       metadata.Artist.SortName,
 	}
-	
+
 	if err := tx.Create(&artist).Error; err != nil {
 		return nil, err
 	}
-	
+
 	return &artist, nil
 }
 
@@ -183,25 +183,25 @@ func (h *PromotionHandler) createAlbum(tx *gorm.DB, metadata *processor.AlbumMet
 		IsCompilation:  metadata.Album.IsCompilation,
 		ImageCount:     int32(metadata.Album.ImageCount),
 	}
-	
+
 	// Set release date if provided
 	if metadata.Album.ReleaseDate != nil {
 		if t, err := time.Parse("2006-01-02", *metadata.Album.ReleaseDate); err == nil {
 			album.ReleaseDate = &t
 		}
 	}
-	
+
 	// Set directory path
 	album.Directory = filepath.Join(
 		metadata.Artist.DirectoryCode,
 		metadata.Artist.Name,
 		fmt.Sprintf("%d - %s", metadata.Album.Year, metadata.Album.Name),
 	)
-	
+
 	if err := tx.Create(&album).Error; err != nil {
 		return nil, err
 	}
-	
+
 	return &album, nil
 }
 
@@ -222,12 +222,12 @@ func (h *PromotionHandler) createTracks(tx *gorm.DB, metadata *processor.AlbumMe
 			CRCHash:        trackMeta.Checksum,
 			SortOrder:      int32(trackMeta.TrackNumber),
 		}
-		
+
 		if err := tx.Create(&track).Error; err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -237,23 +237,23 @@ func (h *PromotionHandler) PromoteBatch(c *fiber.Ctx) error {
 	var req struct {
 		IDs []int64 `json:"ids"`
 	}
-	
+
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
 	}
-	
+
 	if len(req.IDs) == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "No IDs provided",
 		})
 	}
-	
+
 	results := make([]map[string]interface{}, len(req.IDs))
 	successCount := 0
 	failCount := 0
-	
+
 	for i, id := range req.IDs {
 		// Create a mock context for individual promotion
 		// In production, you'd want to refactor PromoteAlbum to separate logic from HTTP handling
@@ -264,11 +264,11 @@ func (h *PromotionHandler) PromoteBatch(c *fiber.Ctx) error {
 		}
 		failCount++
 	}
-	
+
 	return c.JSON(fiber.Map{
-		"success":       successCount,
-		"failed":        failCount,
-		"total":         len(req.IDs),
-		"results":       results,
+		"success": successCount,
+		"failed":  failCount,
+		"total":   len(req.IDs),
+		"results": results,
 	})
 }

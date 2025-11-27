@@ -16,8 +16,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/hibiken/asynq"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"gorm.io/gorm"
 
 	"melodee/internal/capacity"
 	"melodee/internal/config"
@@ -81,22 +79,21 @@ func NewServer() (*Server, error) {
 		Addr: cfg.Redis.Address,
 	})
 
-	asynqScheduler := asynq.NewScheduler(asynq.RedisClientOpt{
-		Addr: cfg.Redis.Address,
-	})
+	asynqScheduler := asynq.NewScheduler(
+		asynq.RedisClientOpt{Addr: cfg.Redis.Address},
+		&asynq.SchedulerOpts{},
+	)
 
 	asynqInspector := asynq.NewInspector(asynq.RedisClientOpt{
 		Addr: cfg.Redis.Address,
 	})
 
 	// Initialize capacity probe
-	capacityConfig := &capacity.CapacityConfig{
-		Interval:          10 * time.Minute, // Default 10 minutes
-		WarningThreshold:  80.0,            // 80% warning
-		AlertThreshold:    90.0,            // 90% alert
-		GraceIntervals:    1,               // 1 interval grace period
-		FailureMaxIntervals: 2,             // 2 max failure intervals
-		ProbeCommand:      "df --output=pcent /storage",
+	capacityConfig := &config.CapacityConfig{
+		Interval:         10 * time.Minute, // Default 10 minutes
+		WarningThreshold: 80.0,             // 80% warning
+		AlertThreshold:   90.0,             // 90% alert
+		ProbeCommand:     "df --output=pcent /storage",
 	}
 
 	capacityProbe := capacity.NewCapacityProbe(
@@ -121,7 +118,7 @@ func NewServer() (*Server, error) {
 
 	// Initialize Fiber app
 	server.app = fiber.New(fiber.Config{
-		AppName:      fmt.Sprintf("Melodee v%s", cfg.Version),
+		AppName:      "Melodee",
 		ServerHeader: "Melodee",
 	})
 
@@ -165,10 +162,8 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/healthz", healthHandler.HealthCheck)
 
 	// Metrics endpoint for Prometheus
-	s.app.Get("/metrics", func(c *fiber.Ctx) error {
-		promhttp.Handler().ServeHTTP(c.Response().Acquire(), c.Request().Acquire())
-		return nil
-	})
+	metricsHandler := handlers.NewMetricsHandler()
+	s.app.Get("/metrics", metricsHandler.Metrics())
 
 	// Start capacity monitoring
 	if err := s.capacityProbe.Start(); err != nil {
@@ -244,7 +239,7 @@ func (s *Server) setupInternalRoutes() {
 		MinLength:     2,
 		UseSuffixes:   true,
 		SuffixPattern: "-%d",
-	})
+	}, s.dbManager.GetGormDB())
 
 	pathResolver := directory.NewPathTemplateResolver(&directory.PathTemplateConfig{
 		DefaultTemplate: "{library}/{artist_dir_code}/{artist}/{year} - {album}",
@@ -278,13 +273,14 @@ func (s *Server) setupInternalRoutes() {
 		s.dbManager.GetGormDB(),
 		pathResolver,
 		quarantineSvc, // Use the same quarantine service instance
-		media.NewMediaFileValidator(), // Assuming this exists
+		media.NewMediaFileValidator(&media.ValidationConfig{}),
 		media.NewFFmpegProcessor(&media.FFmpegConfig{
 			FFmpegPath: s.cfg.Processing.FFmpegPath,
 			Profiles:   make(map[string]media.FFmpegProfile),
 		}), // FFmpeg processor
 		checksumSvc,
 	)
+	_ = mediaProcessor // Will be used in future endpoints
 
 	// Library management
 	libraryHandler := handlers.NewLibraryHandler(s.repo, mediaSvc, s.asynqClient, mediaSvc.QuarantineService)
@@ -361,7 +357,8 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	}
 	for name, cmd := range s.cfg.Processing.Profiles {
 		ffmpegConfig.Profiles[name] = media.FFmpegProfile{
-			Command: cmd,
+			Name:        name,
+			CommandLine: cmd,
 		}
 	}
 	ffmpegProcessor := media.NewFFmpegProcessor(ffmpegConfig)
@@ -374,11 +371,11 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	)
 
 	// Create handlers for OpenSubsonic endpoints
-	browsingHandler := open_subsonic_handlers.NewBrowsingHandler(s.repo)
-	mediaHandler := open_subsonic_handlers.NewMediaHandler(s.repo, s.cfg, transcodeService)
-	searchHandler := open_subsonic_handlers.NewSearchHandler(s.repo)
-	playlistHandler := open_subsonic_handlers.NewPlaylistHandler(s.repo)
-	userHandler := open_subsonic_handlers.NewUserHandler(s.repo)
+	browsingHandler := open_subsonic_handlers.NewBrowsingHandler(s.repo.GetDB())
+	mediaHandler := open_subsonic_handlers.NewMediaHandler(s.repo.GetDB(), s.cfg, transcodeService)
+	searchHandler := open_subsonic_handlers.NewSearchHandler(s.repo.GetDB())
+	playlistHandler := open_subsonic_handlers.NewPlaylistHandler(s.repo.GetDB())
+	userHandler := open_subsonic_handlers.NewUserHandler(s.repo.GetDB())
 	systemHandler := open_subsonic_handlers.NewSystemHandler(s.repo)
 
 	// Browsing endpoints
@@ -427,11 +424,7 @@ func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Server.Host, s.cfg.Server.Port)
 	log.Printf("Starting Melodee server on %s", addr)
 	
-	// Run migrations before starting
-	migrationManager := database.NewMigrationManager(s.dbManager.GetGormDB(), nil)
-	if err := migrationManager.Migrate(); err != nil {
-		return fmt.Errorf("failed to run migrations: %w", err)
-	}
+	// Migrations are handled via init-scripts/001_schema.sql
 
 	return s.app.Listen(addr)
 }
@@ -464,7 +457,7 @@ func (s *Server) Shutdown() error {
 	}
 
 	if s.asynqScheduler != nil {
-		s.asynqScheduler.Close()
+		s.asynqScheduler.Shutdown()
 	}
 
 	return nil

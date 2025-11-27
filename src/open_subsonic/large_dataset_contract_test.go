@@ -418,7 +418,6 @@ func createLargeDatasetTestData(t *testing.T, db *gorm.DB, numArtists, albumsPer
 		artists[i] = models.Artist{
 			Name:           fmt.Sprintf("Artist %d", i),
 			NameNormalized: fmt.Sprintf("artist %d", i),
-			AlbumCount:     int64(albumsPerArtist),
 		}
 	}
 	err = db.CreateInBatches(artists, 1000).Error
@@ -429,11 +428,9 @@ func createLargeDatasetTestData(t *testing.T, db *gorm.DB, numArtists, albumsPer
 	for artistIdx, artist := range artists {
 		for albumIdx := 0; albumIdx < albumsPerArtist; albumIdx++ {
 			albums = append(albums, models.Album{
-				Name:         fmt.Sprintf("Album %d by Artist %d", albumIdx, artistIdx),
+				Name:           fmt.Sprintf("Album %d by Artist %d", albumIdx, artistIdx),
 				NameNormalized: fmt.Sprintf("album %d by artist %d", albumIdx, artistIdx),
-				ArtistID:     artist.ID,
-				AlbumStatus:  "Ok", // Only include albums that are Ok status
-				TrackCount:    int64(songsPerAlbum),
+				ArtistID:       artist.ID,
 			})
 		}
 	}
@@ -452,7 +449,7 @@ func createLargeDatasetTestData(t *testing.T, db *gorm.DB, numArtists, albumsPer
 					AlbumID:        albums[albumIdx].ID,
 					ArtistID:       artists[artistIdx].ID,
 					Duration:       180000, // 3 minutes in milliseconds
-					SortOrder:      int64(songIdx),
+					SortOrder:      int32(songIdx),
 					BitRate:        320,
 					FileName:       fmt.Sprintf("song_%d_album_%d_artist_%d.mp3", songIdx, albumIdxWithinArtist, artistIdx),
 					RelativePath:   fmt.Sprintf("/music/artist_%d/album_%d/song_%d.mp3", artistIdx, albumIdxWithinArtist, songIdx),

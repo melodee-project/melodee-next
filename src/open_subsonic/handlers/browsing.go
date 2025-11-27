@@ -40,7 +40,7 @@ func (h *BrowsingHandler) GetMusicFolders(c *fiber.Ctx) error {
 	musicFolders := utils.MusicFolders{
 		XMLName: xml.Name{Local: "musicFolders"},
 	}
-	
+
 	for _, lib := range libraries {
 		musicFolders.Folders = append(musicFolders.Folders, utils.MusicFolder{
 			ID:   int(lib.ID),
@@ -82,7 +82,7 @@ func (h *BrowsingHandler) GetIndexes(c *fiber.Ctx) error {
 		normalizedDisplayName := normalizeForIndexing(artist.NameNormalized)
 		firstChar := getFirstCharForIndex(normalizedDisplayName)
 		if firstChar == "" {
-			firstChar = "#"  // Use "#" for names that don't start with a letter/number
+			firstChar = "#" // Use "#" for names that don't start with a letter/number
 		}
 
 		// Create index artist
@@ -206,8 +206,9 @@ func (h *BrowsingHandler) GetArtist(c *fiber.Ctx) error {
 	}
 
 	// Get albums for this artist
+	// All albums in production are valid (promoted from staging)
 	var albums []models.Album
-	if err := h.db.Where("artist_id = ? AND album_status = 'Ok'", artist.ID).Find(&albums).Error; err != nil {
+	if err := h.db.Where("artist_id = ?", artist.ID).Find(&albums).Error; err != nil {
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve albums")
 	}
 
@@ -222,10 +223,10 @@ func (h *BrowsingHandler) GetArtist(c *fiber.Ctx) error {
 
 	for _, album := range albums {
 		artistAlbum := utils.ArtistAlbum{
-			ID:        int(album.ID),
-			Name:      album.Name,
-			Artist:    album.Artist.Name,
-			ArtistID:  int(album.ArtistID),
+			ID:         int(album.ID),
+			Name:       album.Name,
+			Artist:     album.Artist.Name,
+			ArtistID:   int(album.ArtistID),
 			TrackCount: int(album.TrackCountCached),
 		}
 
@@ -267,7 +268,7 @@ func (h *BrowsingHandler) GetAlbumInfo(c *fiber.Ctx) error {
 		ID: int(album.ID),
 		// Add more fields as needed based on specifications
 	}
-	
+
 	response.AlbumInfo = &albumInfo
 
 	return utils.SendResponse(c, response)
@@ -284,11 +285,12 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 	// Determine if it's an artist or album
 	var artist models.Artist
 	artistErr := h.db.First(&artist, id).Error
-	
+
 	if artistErr == nil {
 		// It's an artist, return their albums
+		// All albums in production are valid (promoted from staging)
 		var albums []models.Album
-		if err := h.db.Where("artist_id = ? AND album_status = 'Ok'", artist.ID).Find(&albums).Error; err != nil {
+		if err := h.db.Where("artist_id = ?", artist.ID).Find(&albums).Error; err != nil {
 			return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve albums")
 		}
 
@@ -300,16 +302,16 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 
 		for _, album := range albums {
 			directory.Children = append(directory.Children, utils.Child{
-				ID:        int(album.ID),
-				Parent:    id,
-				IsDir:     true,
-				Title:     album.Name,
-				Album:     album.Name,
-				Artist:    artist.Name,
-				CoverArt:  fmt.Sprintf("al-%d", album.ID), // Placeholder
-				Created:   utils.FormatTime(album.CreatedAt),
-				Starred:   "", // If starred
-				Duration:  int(album.DurationCached / 1000), // Convert milliseconds to seconds
+				ID:       int(album.ID),
+				Parent:   id,
+				IsDir:    true,
+				Title:    album.Name,
+				Album:    album.Name,
+				Artist:   artist.Name,
+				CoverArt: fmt.Sprintf("al-%d", album.ID), // Placeholder
+				Created:  utils.FormatTime(album.CreatedAt),
+				Starred:  "",                               // If starred
+				Duration: int(album.DurationCached / 1000), // Convert milliseconds to seconds
 			})
 		}
 
@@ -341,21 +343,21 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 
 		for _, song := range songs {
 			child := utils.Child{
-				ID:       int(song.ID),
-				Parent:   id,
-				IsDir:    false,
-				Title:    song.Name,
-				Album:    album.Name,
-				Artist:   album.Artist.Name,
-				CoverArt: fmt.Sprintf("al-%d", album.ID), // Placeholder
-				Created:  utils.FormatTime(song.CreatedAt),
-				Duration: int(song.Duration / 1000), // Convert milliseconds to seconds
-				BitRate:  int(song.BitRate),
-				Track:    int(song.SortOrder), // Assuming SortOrder is used as track number
-				DiscNumber: int(song.SortOrder), // Simplified
-				Year:     0, // Would come from album
-				Genre:    extractGenreFromTags(song.Tags), // Extract genre from song tags
-				Size:     0, // Would need to get from file system
+				ID:          int(song.ID),
+				Parent:      id,
+				IsDir:       false,
+				Title:       song.Name,
+				Album:       album.Name,
+				Artist:      album.Artist.Name,
+				CoverArt:    fmt.Sprintf("al-%d", album.ID), // Placeholder
+				Created:     utils.FormatTime(song.CreatedAt),
+				Duration:    int(song.Duration / 1000), // Convert milliseconds to seconds
+				BitRate:     int(song.BitRate),
+				Track:       int(song.SortOrder),             // Assuming SortOrder is used as track number
+				DiscNumber:  int(song.SortOrder),             // Simplified
+				Year:        0,                               // Would come from album
+				Genre:       extractGenreFromTags(song.Tags), // Extract genre from song tags
+				Size:        0,                               // Would need to get from file system
 				ContentType: getContentType(song.FileName),
 				Suffix:      getSuffix(song.FileName),
 				Path:        song.RelativePath,
@@ -395,15 +397,15 @@ func (h *BrowsingHandler) GetAlbum(c *fiber.Ctx) error {
 	// Build response
 	response := utils.SuccessResponse()
 	albumResp := &utils.Album{
-		ID:        int(album.ID),
-		Title:     album.Name,
-		Album:     album.Name,
-		Artist:    album.Artist.Name,
-		ArtistID:  int(album.ArtistID),
-		CoverArt:  fmt.Sprintf("al-%d", album.ID), // Placeholder
+		ID:         int(album.ID),
+		Title:      album.Name,
+		Album:      album.Name,
+		Artist:     album.Artist.Name,
+		ArtistID:   int(album.ArtistID),
+		CoverArt:   fmt.Sprintf("al-%d", album.ID), // Placeholder
 		TrackCount: len(songs),
-		Created:   utils.FormatTime(album.CreatedAt),
-		Duration:  int(album.DurationCached / 1000), // Convert to seconds
+		Created:    utils.FormatTime(album.CreatedAt),
+		Duration:   int(album.DurationCached / 1000), // Convert to seconds
 	}
 
 	if album.ReleaseDate != nil {
@@ -413,20 +415,20 @@ func (h *BrowsingHandler) GetAlbum(c *fiber.Ctx) error {
 	albumResp.Songs = make([]utils.Child, 0, len(songs))
 	for _, song := range songs {
 		child := utils.Child{
-			ID:       int(song.ID),
-			Parent:   int(album.ID),
-			IsDir:    false,
-			Title:    song.Name,
-			Album:    album.Name,
-			Artist:   album.Artist.Name,
-			CoverArt: fmt.Sprintf("al-%d", album.ID),
-			Created:  utils.FormatTime(song.CreatedAt),
-			Duration: int(song.Duration / 1000), // Convert to seconds
-			BitRate:  int(song.BitRate),
-			Track:    int(song.SortOrder),
-			Year:     albumResp.Year, // Inherit year from album
-			Genre:    extractGenreFromTags(song.Tags), // Extract genre from song tags
-			Size:     0, // Would need to get from file system
+			ID:          int(song.ID),
+			Parent:      int(album.ID),
+			IsDir:       false,
+			Title:       song.Name,
+			Album:       album.Name,
+			Artist:      album.Artist.Name,
+			CoverArt:    fmt.Sprintf("al-%d", album.ID),
+			Created:     utils.FormatTime(song.CreatedAt),
+			Duration:    int(song.Duration / 1000), // Convert to seconds
+			BitRate:     int(song.BitRate),
+			Track:       int(song.SortOrder),
+			Year:        albumResp.Year,                  // Inherit year from album
+			Genre:       extractGenreFromTags(song.Tags), // Extract genre from song tags
+			Size:        0,                               // Would need to get from file system
 			ContentType: getContentType(song.FileName),
 			Suffix:      getSuffix(song.FileName),
 			Path:        song.RelativePath,
@@ -456,24 +458,24 @@ func (h *BrowsingHandler) GetSong(c *fiber.Ctx) error {
 	// Build response
 	response := utils.SuccessResponse()
 	child := utils.Child{
-		ID:       int(song.ID),
-		Parent:   int(song.AlbumID),
-		IsDir:    false,
-		Title:    song.Name,
-		Album:    song.Album.Name,
-		Artist:   song.Artist.Name,
-		CoverArt: fmt.Sprintf("al-%d", song.AlbumID),
-		Created:  utils.FormatTime(song.CreatedAt),
-		Duration: int(song.Duration / 1000), // Convert to seconds
-		BitRate:  int(song.BitRate),
-		Track:    int(song.SortOrder),
-		Genre:    extractGenreFromTags(song.Tags), // Extract genre from song tags
-		Size:     0, // Would need to get from file system
+		ID:          int(song.ID),
+		Parent:      int(song.AlbumID),
+		IsDir:       false,
+		Title:       song.Name,
+		Album:       song.Album.Name,
+		Artist:      song.Artist.Name,
+		CoverArt:    fmt.Sprintf("al-%d", song.AlbumID),
+		Created:     utils.FormatTime(song.CreatedAt),
+		Duration:    int(song.Duration / 1000), // Convert to seconds
+		BitRate:     int(song.BitRate),
+		Track:       int(song.SortOrder),
+		Genre:       extractGenreFromTags(song.Tags), // Extract genre from song tags
+		Size:        0,                               // Would need to get from file system
 		ContentType: getContentType(song.FileName),
 		Suffix:      getSuffix(song.FileName),
 		Path:        song.RelativePath,
 	}
-	
+
 	response.Song = &child
 	return utils.SendResponse(c, response)
 }
@@ -726,4 +728,3 @@ func ExtractGenreFromTagsForTesting(tags []byte) string {
 func NormalizeGenreNameForTesting(genre string) string {
 	return normalizeGenreName(genre)
 }
-

@@ -327,6 +327,8 @@ Albums can be spread across any directories - the scanner groups them correctly 
    - **TODO**: Build UI to start scans
    - **Workaround**: Use CLI tools
 
+**Note**: All core workflow tasks are complete. These are future enhancements.
+
 ## Future Enhancements
 
 ### High Priority

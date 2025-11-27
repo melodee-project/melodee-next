@@ -49,7 +49,7 @@ type LibraryState struct {
 	ProductionCount int32            `json:"production_count"`
 	QuarantineCount int32            `json:"quarantine_count"`
 	Stats           *models.Library  `json:"stats"`
-	TrackCount       int32            `json:"song_count"`
+	TrackCount      int32            `json:"song_count"`
 	AlbumCount      int32            `json:"album_count"`
 	Duration        int64            `json:"duration"` // in milliseconds
 	QuarantineItems []QuarantineItem `json:"quarantine_items,omitempty"`
@@ -114,7 +114,7 @@ func (h *LibraryHandler) GetLibraryStates(c *fiber.Ctx) error {
 			Type:            lib.Type,
 			Path:            lib.Path,
 			IsLocked:        lib.IsLocked,
-			TrackCount:       lib.TrackCount,
+			TrackCount:      lib.TrackCount,
 			AlbumCount:      lib.AlbumCount,
 			Duration:        lib.Duration,
 			InboundCount:    inboundCount,
@@ -165,7 +165,7 @@ func (h *LibraryHandler) GetLibraryState(c *fiber.Ctx) error {
 		Type:            library.Type,
 		Path:            library.Path,
 		IsLocked:        library.IsLocked,
-		TrackCount:       library.TrackCount,
+		TrackCount:      library.TrackCount,
 		AlbumCount:      library.AlbumCount,
 		Duration:        library.Duration,
 		InboundCount:    inboundCount,
@@ -489,19 +489,20 @@ func (h *LibraryHandler) getLibraryItemCount(libraryID int32, statusType string)
 			count = 0
 		}
 	case "staging":
-		// For staging libraries: count albums in staging (status 'New' = not yet promoted)
+		// For staging libraries: use staging_items table instead of album_status
 		if statusType == "staging" {
-			err = h.repo.GetDB().Model(&models.Album{}).
-				Where("directory LIKE ? AND album_status = ?", library.Path+"%", "New").
+			err = h.repo.GetDB().Model(&models.StagingItem{}).
+				Where("staging_path LIKE ?", library.Path+"%").
 				Count(&count).Error
 		} else {
 			count = 0
 		}
 	case "production":
-		// For production libraries: count albums that are ready for serving (status 'Ok')
+		// For production libraries: count all albums in production path
+		// No status field needed - if it's in production, it's ready
 		if statusType == "production" {
 			err = h.repo.GetDB().Model(&models.Album{}).
-				Where("directory LIKE ? AND album_status = ?", library.Path+"%", "Ok").
+				Where("directory LIKE ?", library.Path+"%").
 				Count(&count).Error
 		} else {
 			count = 0
@@ -519,14 +520,13 @@ func (h *LibraryHandler) getLibraryItemCount(libraryID int32, statusType string)
 
 // getQuarantineItemCount counts quarantine items for a library path
 func (h *LibraryHandler) getQuarantineItemCount(libraryPath string) int64 {
-	// In a real implementation, this would query a quarantine table
-	// For now, we'll use a placeholder model or check for albums with Invalid status
-	// This could be enhanced when actual quarantine tracking is implemented
+	// With new workflow, rejected items in staging_items table serve as quarantine
+	// These are albums that failed validation or were explicitly rejected
 	var count int64
 
-	// Count albums that are in the library path but have Invalid status (indicating they're quarantined)
-	err := h.repo.GetDB().Model(&models.Album{}).
-		Where("directory LIKE ? AND album_status = ?", libraryPath+"%", "Invalid").
+	// Count staging items with rejected status
+	err := h.repo.GetDB().Model(&models.StagingItem{}).
+		Where("staging_path LIKE ? AND status = ?", libraryPath+"%", "rejected").
 		Count(&count).Error
 
 	if err != nil {

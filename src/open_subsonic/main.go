@@ -158,11 +158,7 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Run migrations
-	migrationManager := database.NewMigrationManager(dbManager.GetGormDB(), nil)
-	if err := migrationManager.Migrate(); err != nil {
-		log.Fatal("Failed to run migrations:", err)
-	}
+	// Migrations handled via init-scripts/001_schema.sql
 
 	// Create and start server
 	server := NewOpenSubsonicServer(cfg, dbManager)

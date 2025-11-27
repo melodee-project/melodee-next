@@ -36,95 +36,6 @@ function LibraryManagement() {
     }
   };
 
-  const handleScan = async () => {
-    try {
-      setMessage('Scanning all libraries...');
-      let alreadyQueued = 0;
-      let successCount = 0;
-      
-      // Scan all libraries
-      for (const lib of libraries) {
-        try {
-          const response = await libraryService.scanLibrary(lib.id);
-          
-          // Check if the response indicates the scan is already queued
-          if (response.data?.status === 'already_queued') {
-            alreadyQueued++;
-            console.log(`Library ${lib.name} scan is already queued or in progress`);
-          } else {
-            successCount++;
-          }
-        } catch (error) {
-          // If error response has already_queued status, treat it as such
-          if (error.response?.data?.status === 'already_queued') {
-            alreadyQueued++;
-            console.log(`Library ${lib.name} scan is already queued or in progress`);
-          } else {
-            throw error; // Re-throw for other errors
-          }
-        }
-      }
-      
-      // Set appropriate message
-      if (alreadyQueued > 0 && successCount === 0) {
-        setMessage(`All library scans are already queued or in progress (${alreadyQueued} libraries)`);
-      } else if (alreadyQueued > 0) {
-        setMessage(`Scan initiated for ${successCount} libraries. ${alreadyQueued} scans were already in progress. Refreshing stats...`);
-        setTimeout(() => {
-          fetchLibraryStats();
-          setMessage(`Scan completed for ${successCount} libraries. ${alreadyQueued} were already in progress.`);
-        }, 2000);
-      } else {
-        setMessage('Scan completed. Refreshing stats...');
-        setTimeout(() => {
-          fetchLibraryStats();
-          setMessage('Scan completed and stats refreshed.');
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('Error initiating scan:', error);
-      setMessage('Error initiating scan: ' + (error.response?.data?.error || error.message));
-    }
-  };
-
-  const handleProcess = async () => {
-    try {
-      setMessage('Processing inbound files...');
-      // Process inbound library
-      const inboundLib = libraries.find(lib => lib.type === 'inbound');
-      if (inboundLib) {
-        await libraryService.processInbound(inboundLib.id);
-      }
-      setMessage('Inbound processing completed.');
-      setTimeout(() => {
-        fetchLibraryStats();
-        setMessage('Inbound processing completed and stats refreshed.');
-      }, 2000);
-    } catch (error) {
-      console.error('Error processing inbound:', error);
-      setMessage('Error processing inbound: ' + (error.response?.data?.error || error.message));
-    }
-  };
-
-  const handlePromote = async () => {
-    try {
-      setMessage('Promoting OK albums...');
-      // Move OK albums from staging library
-      const stagingLib = libraries.find(lib => lib.type === 'staging');
-      if (stagingLib) {
-        await libraryService.moveOkAlbums(stagingLib.id);
-      }
-      setMessage('Album promotion completed.');
-      setTimeout(() => {
-        fetchLibraryStats();
-        setMessage('Album promotion completed and stats refreshed.');
-      }, 2000);
-    } catch (error) {
-      console.error('Error promoting albums:', error);
-      setMessage('Error promoting albums: ' + (error.response?.data?.error || error.message));
-    }
-  };
-
   const handleEditLibrary = (library) => {
     setEditingLibrary(library);
     setEditForm({
@@ -253,31 +164,36 @@ function LibraryManagement() {
 
       {activeTab === 'overview' && (
         <>
-          <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Library Controls</h2>
-            <div className="flex flex-wrap gap-4">
-              <button
-                onClick={handleScan}
-                className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700"
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded shadow border border-blue-200 dark:border-blue-800">
+            <h2 className="text-xl font-semibold mb-3 text-blue-900 dark:text-blue-100">📋 New Workflow Available</h2>
+            <p className="text-blue-800 dark:text-blue-200 mb-3">
+              The media processing workflow has been updated! Please use the new tools:
+            </p>
+            <ol className="list-decimal list-inside space-y-2 text-blue-800 dark:text-blue-200 mb-4">
+              <li><strong>Scan inbound files:</strong> Run <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">./scan-inbound -path /inbound -output /scans</code></li>
+              <li><strong>Process to staging:</strong> Run <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">./process-scan -scan scan.db -staging /staging</code></li>
+              <li><strong>Review & approve:</strong> Navigate to <a href="/staging" className="underline font-semibold hover:text-blue-600 dark:hover:text-blue-400">Staging page</a></li>
+              <li><strong>Promote to production:</strong> Click "Promote" button on approved albums</li>
+            </ol>
+            <div className="flex gap-3">
+              <a 
+                href="/staging" 
+                className="inline-block bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-800 font-medium"
               >
-                Scan Libraries
-              </button>
-              <button
-                onClick={handleProcess}
-                className="bg-purple-500 dark:bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-600 dark:hover:bg-purple-700"
+                Go to Staging →
+              </a>
+              <a 
+                href="/docs/QUICKSTART.md" 
+                target="_blank"
+                className="inline-block bg-gray-600 dark:bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-800 font-medium"
               >
-                Process Inbound → Staging
-              </button>
-              <button
-                onClick={handlePromote}
-                className="bg-green-500 dark:bg-green-600 text-white px-4 py-2 rounded hover:bg-green-600 dark:hover:bg-green-700"
-              >
-                Promote OK Albums to Production
-              </button>
+                View Documentation
+              </a>
             </div>
+          </div>
 
-            {message && (
-              <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded border border-blue-200 dark:border-blue-800">
+          {message && (
+            <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded border border-yellow-200 dark:border-yellow-800">
                 {message}
               </div>
             )}

@@ -14,11 +14,11 @@ import (
 
 // PartitionJobManager handles partition-related jobs
 type PartitionJobManager struct {
-	client        *asynq.Client
-	scheduler     *asynq.Scheduler
-	config        *config.AppConfig
-	db            *gorm.DB
-	logger        interface{} // Placeholder for logger interface
+	client    *asynq.Client
+	scheduler *asynq.Scheduler
+	config    *config.AppConfig
+	db        *gorm.DB
+	logger    interface{} // Placeholder for logger interface
 }
 
 // NewPartitionJobManager creates a new partition job manager
@@ -42,7 +42,7 @@ func NewPartitionJobManager(
 func (pjm *PartitionJobManager) RegisterPartitionTasks() {
 	// Register the partition creation task
 	asynq.HandleFunc(TaskPartitionCreateNextMonth, pjm.HandleCreateNextMonthPartition)
-	
+
 	// Could register other partition tasks here as needed
 }
 
@@ -53,10 +53,10 @@ const (
 
 // PartitionCreatePayload represents the payload for partition creation jobs
 type PartitionCreatePayload struct {
-	TableName string    `json:"table_name"`  // "albums" or "songs"
-	Year      int       `json:"year"`
+	TableName string     `json:"table_name"` // "albums" or "songs"
+	Year      int        `json:"year"`
 	Month     time.Month `json:"month"`
-	Forced    bool      `json:"forced,omitempty"` // If true, recreate even if partition exists
+	Forced    bool       `json:"forced,omitempty"` // If true, recreate even if partition exists
 }
 
 // HandleCreateNextMonthPartition handles the creation of next month's partitions
@@ -192,9 +192,7 @@ func (pjm *PartitionJobManager) createPartitionIndexes(tableName, entityType str
 			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_api_key ON %s(api_key);", tableName, tableName),
 			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_musicbrainz_id ON %s(musicbrainz_id);", tableName, tableName),
 			// Covering index for common API operations (getArtist, getAlbum)
-			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_artist_status_covering ON %s(artist_id, album_status, name_normalized, directory, sort_order);", tableName, tableName),
-			// Partial index for active albums only
-			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_active ON %s(artist_id, name_normalized, sort_order) WHERE album_status = 'Ok';", tableName, tableName),
+			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_artist_covering ON %s(artist_id, name_normalized, directory, sort_order);", tableName, tableName),
 		}
 	case "song":
 		// Indexes for song partitions
@@ -207,8 +205,6 @@ func (pjm *PartitionJobManager) createPartitionIndexes(tableName, entityType str
 			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_search_covering ON %s(name_normalized, artist_id, album_id, duration, relative_path);", tableName, tableName),
 			// Full-text search
 			fmt.Sprintf(`CREATE INDEX IF NOT EXISTS idx_%s_fulltext ON %s USING gin(to_tsvector('english', name_normalized || ' ' || COALESCE(tags->>'artist', '') || ' ' || COALESCE(tags->>'album', '')));`, tableName, tableName),
-			// Partial index for active (Ok status) songs only
-			fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_active ON %s(album_id, sort_order) WHERE album_id IN (SELECT id FROM albums WHERE album_status = 'Ok');", tableName, tableName),
 		}
 	}
 
@@ -246,7 +242,7 @@ func (pjm *PartitionJobManager) RunPartitionCreationForMonth(year int, month tim
 		Year:      year,
 		Month:     month,
 	}
-	
+
 	albumTask := asynq.NewTask(TaskPartitionCreateNextMonth, albumPayload)
 	if _, err := pjm.client.Enqueue(albumTask, asynq.Queue("maintenance")); err != nil {
 		return fmt.Errorf("failed to enqueue album partition creation: %w", err)
@@ -254,11 +250,11 @@ func (pjm *PartitionJobManager) RunPartitionCreationForMonth(year int, month tim
 
 	// Create a task for song partition creation
 	songPayload := &PartitionCreatePayload{
-		TableName: "songs", 
+		TableName: "songs",
 		Year:      year,
 		Month:     month,
 	}
-	
+
 	songTask := asynq.NewTask(TaskPartitionCreateNextMonth, songPayload)
 	if _, err := pjm.client.Enqueue(songTask, asynq.Queue("maintenance")); err != nil {
 		return fmt.Errorf("failed to enqueue song partition creation: %w", err)
@@ -269,23 +265,23 @@ func (pjm *PartitionJobManager) RunPartitionCreationForMonth(year int, month tim
 
 // VerifyPartitionIndexes verifies partition indexes are in place and working
 func (pjm *PartitionJobManager) VerifyPartitionIndexes(tableName string) error {
-	// In a real implementation, we would run EXPLAIN (ANALYZE,BUFFERS) queries 
+	// In a real implementation, we would run EXPLAIN (ANALYZE,BUFFERS) queries
 	// for sample getAlbum and stream operations to ensure indexes are being used
 	//
 	// Example queries to test:
 	// EXPLAIN (ANALYZE,BUFFERS) SELECT * FROM albums WHERE artist_id = ? LIMIT 50;
 	// EXPLAIN (ANALYZE,BUFFERS) SELECT * FROM songs WHERE album_id = ? ORDER BY sort_order;
-	
+
 	// For now, we'll just verify that the table exists
 	exists, err := pjm.partitionExists(tableName)
 	if err != nil {
 		return fmt.Errorf("failed to verify partition %s: %w", tableName, err)
 	}
-	
+
 	if !exists {
 		return fmt.Errorf("partition %s does not exist", tableName)
 	}
-	
+
 	return nil
 }
 
@@ -293,15 +289,15 @@ func (pjm *PartitionJobManager) VerifyPartitionIndexes(tableName string) error {
 func (pjm *PartitionJobManager) ArchiveOldPartitions(retentionMonths int) error {
 	// Get all partitions older than retention period
 	cutoffDate := time.Now().AddDate(0, -retentionMonths, 0)
-	
+
 	// In a real implementation, we would:
 	// 1. Identify partitions older than cutoffDate
 	// 2. Move them to archive schema with ALTER TABLE ... SET SCHEMA archive
 	// 3. Update autovacuum settings for archived partitions
 	// 4. Create indexes in archive schema as needed
-	
+
 	// This is a simplified implementation
 	fmt.Printf("Archiving partitions older than: %s\n", cutoffDate.Format("2006-01-02"))
-	
+
 	return nil
 }
