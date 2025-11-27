@@ -42,6 +42,25 @@ func NewScanDB(basePath string) (*ScanDB, error) {
 	}, nil
 }
 
+// OpenScanDB opens an existing scan database
+func OpenScanDB(dbPath string) (*ScanDB, error) {
+	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_synchronous=NORMAL&_cache_size=10000")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open scan database: %w", err)
+	}
+	
+	// Extract scan ID from filename
+	basename := filepath.Base(dbPath)
+	scanID := strings.TrimSuffix(basename, filepath.Ext(basename))
+	
+	return &ScanDB{
+		db:        db,
+		path:      dbPath,
+		scanID:    scanID,
+		startedAt: time.Now(), // Not the original start time, but when opened
+	}, nil
+}
+
 // Close closes the database connection
 func (s *ScanDB) Close() error {
 	if s.db != nil {

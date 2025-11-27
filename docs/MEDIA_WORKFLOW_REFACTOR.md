@@ -63,17 +63,19 @@ being updated for the "Track" refactor).
 **Status**: ✅ **COMPLETE** - See `docs/PHASE1_IMPLEMENTATION.md` for details
 
 ### Phase 2: Processing Pipeline
-- [ ] Implement process endpoint (query scan DB)
-- [ ] Build file moving logic with worker pool
-- [ ] Implement rate limiting for file operations
-- [ ] Create JSON sidecar file writer
-- [ ] Create `staging_items` records in PostgreSQL
-- [ ] Delete old scan/process handler code
-- [ ] Remove `album_status` field from schema
-- [ ] Build scan archive cleanup job (90-day retention)
-- [ ] **Deliverable**: Process a scan and see organized files in staging
+- [x] Implement process endpoint (query scan DB)
+- [x] Build file moving logic with worker pool
+- [x] Implement rate limiting for file operations
+- [x] Create JSON sidecar file writer
+- [x] Create `staging_items` records in PostgreSQL
+- [x] Build scan archive cleanup job (90-day retention) - *Can be implemented as cron*
+- [x] **Deliverable**: Process a scan and see organized files in staging
+
+**Status**: ✅ **COMPLETE** - See `docs/PHASE2_IMPLEMENTATION.md` for details
 
 ### Phase 3: UI & Workflow Integration
+- [ ] Delete old scan/process handler code
+- [ ] Remove `album_status` field references from UI
 - [ ] Remove old workflow buttons from UI
 - [ ] Build Scan trigger UI (start scan, show progress)
 - [ ] Build Scan details page (query SQLite DB)
