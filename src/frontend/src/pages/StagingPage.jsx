@@ -153,110 +153,137 @@ const StagingPage = () => {
   };
 
   return (
-    <div className="staging-page">
-      <div className="page-header">
-        <h1>Staging Area</h1>
-        <p>Review and approve albums before promoting to production</p>
+    <div className="p-4 max-w-6xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-1 text-gray-900 dark:text-gray-100">Staging Area</h1>
+        <p className="text-sm text-gray-700 dark:text-gray-300">Review and approve albums before promoting to production</p>
       </div>
 
       {/* Statistics */}
       {stats && (
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-value">{stats.total}</div>
-            <div className="stat-label">Total Albums</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300">Total Albums</h3>
+            <p className="text-2xl text-gray-900 dark:text-gray-100">{stats.total}</p>
           </div>
-          <div className="stat-card pending">
-            <div className="stat-value">{stats.pending_review}</div>
-            <div className="stat-label">Pending Review</div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300">Pending Review</h3>
+            <p className="text-2xl text-amber-600 dark:text-amber-400">{stats.pending_review}</p>
           </div>
-          <div className="stat-card approved">
-            <div className="stat-value">{stats.approved}</div>
-            <div className="stat-label">Approved</div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300">Approved</h3>
+            <p className="text-2xl text-emerald-600 dark:text-emerald-400">{stats.approved}</p>
           </div>
-          <div className="stat-card rejected">
-            <div className="stat-value">{stats.rejected}</div>
-            <div className="stat-label">Rejected</div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300">Rejected</h3>
+            <p className="text-2xl text-rose-600 dark:text-rose-400">{stats.rejected}</p>
           </div>
-          <div className="stat-card">
-            <div className="stat-value">{stats.total_tracks}</div>
-            <div className="stat-label">Total Tracks</div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300">Total Tracks</h3>
+            <p className="text-2xl text-gray-900 dark:text-gray-100">{stats.total_tracks}</p>
           </div>
-          <div className="stat-card">
-            <div className="stat-value">{formatBytes(stats.total_size_bytes)}</div>
-            <div className="stat-label">Total Size</div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded shadow border border-gray-200 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300">Total Size</h3>
+            <p className="text-2xl text-gray-900 dark:text-gray-100">{formatBytes(stats.total_size_bytes)}</p>
           </div>
         </div>
       )}
 
       {/* Filter Tabs */}
-      <div className="filter-tabs">
-        <button 
-          className={filter === 'pending_review' ? 'active' : ''}
+      <div className="mb-6">
+        <nav className="flex flex-wrap gap-2">
+        <button
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+            filter === 'pending_review'
+              ? 'bg-blue-600 dark:bg-blue-700 text-white shadow-md'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
           onClick={() => setFilter('pending_review')}
         >
           Pending Review ({stats?.pending_review || 0})
         </button>
-        <button 
-          className={filter === 'approved' ? 'active' : ''}
+        <button
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+            filter === 'approved'
+              ? 'bg-blue-600 dark:bg-blue-700 text-white shadow-md'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
           onClick={() => setFilter('approved')}
         >
           Approved ({stats?.approved || 0})
         </button>
-        <button 
-          className={filter === 'rejected' ? 'active' : ''}
+        <button
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+            filter === 'rejected'
+              ? 'bg-blue-600 dark:bg-blue-700 text-white shadow-md'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
           onClick={() => setFilter('rejected')}
         >
           Rejected ({stats?.rejected || 0})
         </button>
-        <button 
-          className={filter === '' ? 'active' : ''}
+        <button
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+            filter === ''
+              ? 'bg-blue-600 dark:bg-blue-700 text-white shadow-md'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
           onClick={() => setFilter('')}
         >
           All ({stats?.total || 0})
         </button>
+        </nav>
       </div>
 
       {/* Albums List */}
       {loading ? (
-        <div className="loading">Loading...</div>
+        <div className="bg-white dark:bg-gray-800 rounded shadow border border-gray-200 dark:border-gray-700 text-center py-12 text-gray-700 dark:text-gray-200">Loading...</div>
       ) : stagingItems.length === 0 ? (
-        <div className="empty-state">
-          <p>No albums in this category</p>
-        </div>
+        <div className="bg-white dark:bg-gray-800 rounded shadow border border-gray-200 dark:border-gray-700 text-center py-12 text-gray-700 dark:text-gray-200">No albums in this category</div>
       ) : (
-        <div className="albums-grid">
+        <div className="space-y-4">
           {stagingItems.map(item => (
-            <div key={item.id} className={`album-card status-${item.status}`}>
-              <div className="album-info">
-                <h3>{item.album_name}</h3>
-                <p className="artist">{item.artist_name}</p>
-                <div className="meta">
+            <div
+              key={item.id}
+              className={`bg-white dark:bg-gray-800 rounded shadow border p-4 flex flex-col md:flex-row md:items-start md:justify-between gap-4 ${
+                item.status === 'pending_review'
+                  ? 'border-amber-300 dark:border-amber-500'
+                  : item.status === 'approved'
+                  ? 'border-emerald-300 dark:border-emerald-500'
+                  : item.status === 'rejected'
+                  ? 'border-rose-300 dark:border-rose-500'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
+            >
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">{item.album_name}</h3>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">{item.artist_name}</p>
+                <div className="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-300 mb-2">
                   <span>{item.track_count} tracks</span>
                   <span>{formatBytes(item.total_size)}</span>
                 </div>
-                <div className="scan-info">
-                  <span className="scan-id">Scan: {item.scan_id}</span>
-                  <span className="processed-at">{formatDate(item.processed_at)}</span>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  <span className="mr-4">Scan: {item.scan_id}</span>
+                  <span>{formatDate(item.processed_at)}</span>
                 </div>
                 {item.notes && (
-                  <div className="notes">
-                    <strong>Notes:</strong> {item.notes}
+                  <div className="mt-2 text-sm text-gray-800 dark:text-gray-100 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded p-2">
+                    <span className="font-semibold">Notes:</span> {item.notes}
                   </div>
                 )}
               </div>
 
-              <div className="album-actions">
+              <div className="flex flex-wrap gap-2 md:justify-end">
                 {item.status === 'pending_review' && (
                   <>
                     <button 
-                      className="btn btn-success"
+                      className="px-3 py-1.5 rounded-md text-sm font-semibold bg-green-600 hover:bg-green-700 text-white shadow-sm"
                       onClick={() => handleApprove(item.id)}
                     >
                       ✓ Approve
                     </button>
                     <button 
-                      className="btn btn-danger"
+                      className="px-3 py-1.5 rounded-md text-sm font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm"
                       onClick={() => handleReject(item.id)}
                     >
                       ✗ Reject
@@ -266,7 +293,7 @@ const StagingPage = () => {
                 
                 {item.status === 'approved' && (
                   <button 
-                    className="btn btn-primary"
+                    className="px-3 py-1.5 rounded-md text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                     onClick={() => handlePromote(item.id)}
                   >
                     → Promote to Production
@@ -275,7 +302,7 @@ const StagingPage = () => {
                 
                 {item.status === 'rejected' && (
                   <button 
-                    className="btn btn-danger"
+                    className="px-3 py-1.5 rounded-md text-sm font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm"
                     onClick={() => handleDelete(item.id)}
                   >
                     🗑 Delete
@@ -283,7 +310,7 @@ const StagingPage = () => {
                 )}
                 
                 <button 
-                  className="btn btn-secondary"
+                  className="px-3 py-1.5 rounded-md text-sm font-semibold bg-gray-600 hover:bg-gray-700 text-white shadow-sm"
                   onClick={() => navigate(`/staging/${item.id}`)}
                 >
                   View Details
@@ -294,233 +321,6 @@ const StagingPage = () => {
         </div>
       )}
 
-      <style jsx>{`
-        .staging-page {
-          padding: 2rem;
-          max-width: 1400px;
-          margin: 0 auto;
-        }
-
-        .page-header {
-          margin-bottom: 2rem;
-        }
-
-        .page-header h1 {
-          margin: 0 0 0.5rem 0;
-          font-size: 2rem;
-        }
-
-        .page-header p {
-          margin: 0;
-          color: #666;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 1rem;
-          margin-bottom: 2rem;
-        }
-
-        .stat-card {
-          background: white;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          padding: 1.5rem;
-          text-align: center;
-        }
-
-        .stat-card.pending {
-          border-left: 4px solid #ffc107;
-        }
-
-        .stat-card.approved {
-          border-left: 4px solid #28a745;
-        }
-
-        .stat-card.rejected {
-          border-left: 4px solid #dc3545;
-        }
-
-        .stat-value {
-          font-size: 2rem;
-          font-weight: bold;
-          margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-          font-size: 0.9rem;
-          color: #666;
-        }
-
-        .filter-tabs {
-          display: flex;
-          gap: 0.5rem;
-          margin-bottom: 2rem;
-          border-bottom: 2px solid #ddd;
-        }
-
-        .filter-tabs button {
-          background: none;
-          border: none;
-          padding: 1rem 1.5rem;
-          cursor: pointer;
-          font-size: 1rem;
-          color: #666;
-          border-bottom: 3px solid transparent;
-          transition: all 0.2s;
-        }
-
-        .filter-tabs button:hover {
-          color: #333;
-          background: #f5f5f5;
-        }
-
-        .filter-tabs button.active {
-          color: #007bff;
-          border-bottom-color: #007bff;
-          font-weight: 600;
-        }
-
-        .loading, .empty-state {
-          text-align: center;
-          padding: 3rem;
-          color: #666;
-        }
-
-        .albums-grid {
-          display: grid;
-          gap: 1rem;
-        }
-
-        .album-card {
-          background: white;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          padding: 1.5rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          transition: box-shadow 0.2s;
-        }
-
-        .album-card:hover {
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .album-card.status-pending_review {
-          border-left: 4px solid #ffc107;
-        }
-
-        .album-card.status-approved {
-          border-left: 4px solid #28a745;
-        }
-
-        .album-card.status-rejected {
-          border-left: 4px solid #dc3545;
-        }
-
-        .album-info {
-          flex: 1;
-        }
-
-        .album-info h3 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.3rem;
-        }
-
-        .album-info .artist {
-          margin: 0 0 1rem 0;
-          color: #666;
-          font-size: 1.1rem;
-        }
-
-        .meta {
-          display: flex;
-          gap: 1rem;
-          margin-bottom: 0.5rem;
-        }
-
-        .meta span {
-          font-size: 0.9rem;
-          color: #666;
-        }
-
-        .scan-info {
-          font-size: 0.85rem;
-          color: #999;
-        }
-
-        .scan-info span {
-          margin-right: 1rem;
-        }
-
-        .notes {
-          margin-top: 1rem;
-          padding: 0.75rem;
-          background: #f8f9fa;
-          border-radius: 4px;
-          font-size: 0.9rem;
-        }
-
-        .album-actions {
-          display: flex;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-          align-items: flex-start;
-        }
-
-        .btn {
-          padding: 0.5rem 1rem;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          transition: all 0.2s;
-          white-space: nowrap;
-        }
-
-        .btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .btn-primary {
-          background: #007bff;
-          color: white;
-        }
-
-        .btn-primary:hover {
-          background: #0056b3;
-        }
-
-        .btn-success {
-          background: #28a745;
-          color: white;
-        }
-
-        .btn-success:hover {
-          background: #218838;
-        }
-
-        .btn-danger {
-          background: #dc3545;
-          color: white;
-        }
-
-        .btn-danger:hover {
-          background: #c82333;
-        }
-
-        .btn-secondary {
-          background: #6c757d;
-          color: white;
-        }
-
-        .btn-secondary:hover {
-          background: #5a6268;
-        }
-      `}</style>
     </div>
   );
 };

@@ -236,7 +236,7 @@ function SettingsManagement() {
           </div>
           <button
             type="submit"
-            className="bg-green-500 dark:bg-green-600 text-white px-4 py-2 rounded hover:bg-green-600 dark:hover:bg-green-700"
+            className="px-3 py-2 rounded-md text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors"
           >
             Add Setting
           </button>
@@ -287,13 +287,13 @@ function SettingsManagement() {
                     <>
                       <button
                         onClick={() => handleSave(setting.key || setting.Key || setting.id || setting.ID)}
-                        className="text-green-600 dark:text-green-400 mr-2 hover:underline"
+                        className="mr-2 px-3 py-1.5 rounded-md text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors"
                       >
                         Save
                       </button>
                       <button
                         onClick={() => setEditingSetting(null)}
-                        className="text-gray-600 dark:text-gray-400 hover:underline"
+                        className="px-3 py-1.5 rounded-md text-sm font-semibold bg-gray-600 hover:bg-gray-700 text-white transition-colors"
                       >
                         Cancel
                       </button>
@@ -301,7 +301,7 @@ function SettingsManagement() {
                   ) : (
                     <button
                       onClick={() => handleEditClick(setting)}
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                      className="px-3 py-1.5 rounded-md text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors"
                     >
                       Edit
                     </button>
