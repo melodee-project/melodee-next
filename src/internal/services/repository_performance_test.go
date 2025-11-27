@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"melodee/internal/models"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestRepositoryPerformanceWithLargeOffsets tests performance with large offsets
@@ -46,8 +47,8 @@ func TestGetPlaylistsWithUserPerformance(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Less(t, elapsed.Milliseconds(), int64(2000)) // Should complete in under 2 seconds
-	assert.GreaterOrEqual(t, total, int64(1000))       // Should have at least 1000 playlists
-	assert.LessOrEqual(t, len(playlists), limit)       // Should return at most 'limit' results
+	assert.GreaterOrEqual(t, total, int64(1000))        // Should have at least 1000 playlists
+	assert.LessOrEqual(t, len(playlists), limit)        // Should return at most 'limit' results
 
 	t.Logf("Retrieved %d playlists with offset %d in %v. Total: %d",
 		len(playlists), offset, elapsed, total)
@@ -88,8 +89,8 @@ func TestSearchPerformance(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Less(t, elapsed.Milliseconds(), int64(2000)) // Should complete in under 2 seconds
-	assert.GreaterOrEqual(t, total, int64(500))        // Should have at least 500 results
-	assert.LessOrEqual(t, len(artists), limit)         // Should return at most 'limit' results
+	assert.GreaterOrEqual(t, total, int64(500))         // Should have at least 500 results
+	assert.LessOrEqual(t, len(artists), limit)          // Should return at most 'limit' results
 
 	t.Logf("Searched artists with query '%s', offset %d in %v. Total: %d",
 		query, offset, elapsed, total)
@@ -105,14 +106,15 @@ func TestSearchPerformance(t *testing.T) {
 	t.Logf("Searched albums with query '%s', offset %d in %v. Total: %d",
 		query, offset, elapsed, total)
 
-	// Test search songs performance
+	// Test search tracks performance
 	start = time.Now()
-	songs, total, err := repo.SearchSongsPaginated(query, limit, offset)
+	tracks, total, err := repo.SearchTracksPaginated(query, limit, offset)
 	elapsed = time.Since(start)
 
 	assert.NoError(t, err)
 	assert.Less(t, elapsed.Milliseconds(), int64(2000)) // Should complete in under 2 seconds
+	assert.LessOrEqual(t, len(tracks), limit)
 
-	t.Logf("Searched songs with query '%s', offset %d in %v. Total: %d",
+	t.Logf("Searched tracks with query '%s', offset %d in %v. Total: %d",
 		query, offset, elapsed, total)
 }

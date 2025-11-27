@@ -3,9 +3,10 @@ package services
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"melodee/internal/models"
 	"melodee/internal/test"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRepository_SearchArtistsPaginated(t *testing.T) {
@@ -118,51 +119,51 @@ func TestRepository_SearchAlbumsPaginated(t *testing.T) {
 	assert.Equal(t, "album d", dummyResults[0].NameNormalized)
 }
 
-func TestRepository_SearchSongsPaginated(t *testing.T) {
+func TestRepository_SearchTracksPaginated(t *testing.T) {
 	db, tearDown := test.GetTestDB(t)
 	defer tearDown()
 
 	repo := NewRepository(db)
 
-	// Create test songs
-	songs := []models.Track{
-		{Name: "Song A", NameNormalized: "song a"},
-		{Name: "Song B", NameNormalized: "song b"},
-		{Name: "Song C", NameNormalized: "song c"},
-		{Name: "Song D", NameNormalized: "song d"},
-		{Name: "Song E", NameNormalized: "song e"},
-		{Name: "Song F", NameNormalized: "song f"},
+	// Create test tracks
+	tracks := []models.Track{
+		{Name: "Track A", NameNormalized: "track a"},
+		{Name: "Track B", NameNormalized: "track b"},
+		{Name: "Track C", NameNormalized: "track c"},
+		{Name: "Track D", NameNormalized: "track d"},
+		{Name: "Track E", NameNormalized: "track e"},
+		{Name: "Track F", NameNormalized: "track f"},
 	}
 
-	for i := range songs {
-		err := db.Create(&songs[i]).Error
+	for i := range tracks {
+		err := db.Create(&tracks[i]).Error
 		assert.NoError(t, err)
 	}
 
 	// Test pagination: first page, limit 4
-	songsPage1, total, err := repo.SearchSongsPaginated("", 4, 0)
+	tracksPage1, total, err := repo.SearchTracksPaginated("", 4, 0)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(len(songs)), total)
-	assert.Len(t, songsPage1, 4)
+	assert.Equal(t, int64(len(tracks)), total)
+	assert.Len(t, tracksPage1, 4)
 
 	// Test pagination: second page, limit 4 (last page with 2 items)
-	songsPage2, total, err := repo.SearchSongsPaginated("", 4, 4)
+	tracksPage2, total, err := repo.SearchTracksPaginated("", 4, 4)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(len(songs)), total)
-	assert.Len(t, songsPage2, 2)
+	assert.Equal(t, int64(len(tracks)), total)
+	assert.Len(t, tracksPage2, 2)
 
 	// Test search functionality
-	searchResults, total, err := repo.SearchSongsPaginated("nonexistent", 10, 0)
+	searchResults, total, err := repo.SearchTracksPaginated("nonexistent", 10, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(0), total)
 	assert.Len(t, searchResults, 0)
 
 	// Test with actual search term
-	specificResults, total, err := repo.SearchSongsPaginated("Song C", 10, 0)
+	specificResults, total, err := repo.SearchTracksPaginated("Track C", 10, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), total)
 	assert.Len(t, specificResults, 1)
-	assert.Equal(t, "song c", specificResults[0].NameNormalized)
+	assert.Equal(t, "track c", specificResults[0].NameNormalized)
 }
 
 func TestRepository_GetPlaylistsWithUser(t *testing.T) {

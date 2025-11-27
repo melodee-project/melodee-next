@@ -3,8 +3,9 @@ package services
 import (
 	"fmt"
 
-	"gorm.io/gorm"
 	"melodee/internal/models"
+
+	"gorm.io/gorm"
 )
 
 // Repository handles database operations for models
@@ -99,6 +100,29 @@ func (r *Repository) GetPlaylistsWithUser(limit, offset int) ([]models.Playlist,
 	return playlists, total, nil
 }
 
+// AddTrackToPlaylist inserts a track reference into a playlist
+func (r *Repository) AddTrackToPlaylist(playlistTrack *models.PlaylistTrack) error {
+	return r.db.Create(playlistTrack).Error
+}
+
+// GetPlaylistWithTracks retrieves a playlist with ordered tracks including related metadata
+func (r *Repository) GetPlaylistWithTracks(id int32) (*models.Playlist, error) {
+	var playlist models.Playlist
+	err := r.db.
+		Preload("User").
+		Preload("Tracks", func(db *gorm.DB) *gorm.DB {
+			return db.Order("position ASC").
+				Preload("Track").
+				Preload("Track.Artist").
+				Preload("Track.Album")
+		}).
+		First(&playlist, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &playlist, nil
+}
+
 // Artist operations
 func (r *Repository) CreateArtist(artist *models.Artist) error {
 	return r.db.Create(artist).Error
@@ -120,29 +144,29 @@ func (r *Repository) CreateAlbum(album *models.Album) error {
 
 func (r *Repository) GetAlbumByID(id int64) (*models.Album, error) {
 	var album models.Album
-	err := r.db.Preload("Artist").First(&album, id).Error
+	err := r.db.Preload("Artist").Preload("Tracks").First(&album, id).Error
 	if err != nil {
 		return nil, err
 	}
 	return &album, nil
 }
 
-// Song operations
-func (r *Repository) CreateSong(song *models.Track) error {
-	return r.db.Create(song).Error
+// Track operations
+func (r *Repository) CreateTrack(track *models.Track) error {
+	return r.db.Create(track).Error
 }
 
-func (r *Repository) GetSongByID(id int64) (*models.Track, error) {
-	var song models.Track
-	err := r.db.Preload("Album").Preload("Artist").First(&song, id).Error
+func (r *Repository) GetTrackByID(id int64) (*models.Track, error) {
+	var track models.Track
+	err := r.db.Preload("Album").Preload("Artist").First(&track, id).Error
 	if err != nil {
 		return nil, err
 	}
-	return &song, nil
+	return &track, nil
 }
 
 // Search operations
-// SearchEntities searches for artists, albums, and songs based on the query and type
+// SearchEntities searches for artists, albums, and tracks based on the query and type
 func (r *Repository) SearchEntities(query string, entityType string, limit, offset int) ([]interface{}, int64, error) {
 	var results []interface{}
 	var total int64
@@ -188,29 +212,29 @@ func (r *Repository) SearchEntities(query string, entityType string, limit, offs
 			results = append(results, album)
 		}
 
-	case "song", "songs":
-		// Search for songs
-		var songs []models.Track
+	case "song", "songs", "track", "tracks":
+		// Search for tracks
+		var tracks []models.Track
 		err := r.db.Model(&models.Track{}).
 			Where("name_normalized ILIKE ?", normalizedQuery).
 			Count(&total).
 			Limit(limit).Offset(offset).
 			Order("name_normalized ASC, id ASC").
-			Preload("Album"). // Preload associated album
+			Preload("Album").  // Preload associated album
 			Preload("Artist"). // Preload associated artist
-			Find(&songs).Error
+			Find(&tracks).Error
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to search songs: %w", err)
+			return nil, 0, fmt.Errorf("failed to search tracks: %w", err)
 		}
 
 		// Convert to interface slice
-		for _, song := range songs {
-			results = append(results, song)
+		for _, track := range tracks {
+			results = append(results, track)
 		}
 
 	case "any", "all", "":
 		// Search across all entity types - this will require multiple queries
-		// We'll search artists, albums, and songs separately and combine results if needed
+		// We'll search artists, albums, and tracks separately and combine results if needed
 		return r.searchAllEntities(query, limit, offset)
 
 	default:
@@ -229,11 +253,11 @@ func (r *Repository) searchAllEntities(query string, limit, offset int) ([]inter
 	var total int64
 
 	// Count total across all entities
-	var artistCount, albumCount, songCount int64
+	var artistCount, albumCount, trackCount int64
 	r.db.Model(&models.Artist{}).Where("name_normalized ILIKE ?", normalizedQuery).Count(&artistCount)
 	r.db.Model(&models.Album{}).Where("name_normalized ILIKE ?", normalizedQuery).Count(&albumCount)
-	r.db.Model(&models.Track{}).Where("name_normalized ILIKE ?", normalizedQuery).Count(&songCount)
-	total = artistCount + albumCount + songCount
+	r.db.Model(&models.Track{}).Where("name_normalized ILIKE ?", normalizedQuery).Count(&trackCount)
+	total = artistCount + albumCount + trackCount
 
 	// For offset/limit pagination, we would need to implement a more complex solution
 	// For now, let's get results from each type up to the limit
@@ -266,17 +290,17 @@ func (r *Repository) searchAllEntities(query string, limit, offset int) ([]inter
 		results = append(results, album)
 	}
 
-	// Get songs
-	var songs []models.Track
+	// Get tracks
+	var tracks []models.Track
 	r.db.Where("name_normalized ILIKE ?", normalizedQuery).
 		Limit(artistLimit).Offset(0).
 		Order("name_normalized ASC, id ASC").
 		Preload("Album").
 		Preload("Artist").
-		Find(&songs)
+		Find(&tracks)
 
-	for _, song := range songs {
-		results = append(results, song)
+	for _, track := range tracks {
+		results = append(results, track)
 	}
 
 	return results, total, nil
@@ -329,9 +353,9 @@ func (r *Repository) SearchAlbumsPaginated(query string, limit, offset int) ([]m
 	return albums, total, nil
 }
 
-// SearchSongsPaginated searches for songs with pagination
-func (r *Repository) SearchSongsPaginated(query string, limit, offset int) ([]models.Track, int64, error) {
-	var songs []models.Track
+// SearchTracksPaginated searches for tracks with pagination
+func (r *Repository) SearchTracksPaginated(query string, limit, offset int) ([]models.Track, int64, error) {
+	var tracks []models.Track
 	var total int64
 
 	normalizedQuery := fmt.Sprintf("%%%s%%", query)
@@ -345,11 +369,11 @@ func (r *Repository) SearchSongsPaginated(query string, limit, offset int) ([]mo
 		Order("name_normalized ASC, id ASC"). // Consistent ordering as per spec
 		Preload("Album").
 		Preload("Artist").
-		Find(&songs).Error
+		Find(&tracks).Error
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to search songs: %w", err)
+		return nil, 0, fmt.Errorf("failed to search tracks: %w", err)
 	}
 
-	return songs, total, nil
+	return tracks, total, nil
 }

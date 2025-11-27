@@ -147,9 +147,9 @@ func (s *Server) setupMiddleware() {
 
 	// CORS middleware with configuration
 	corsConfig := cors.Config{
-		AllowOrigins: strings.Join(s.cfg.Server.CORS.AllowOrigins, ","),
-		AllowMethods: strings.Join(s.cfg.Server.CORS.AllowMethods, ","),
-		AllowHeaders: strings.Join(s.cfg.Server.CORS.AllowHeaders, ","),
+		AllowOrigins:     strings.Join(s.cfg.Server.CORS.AllowOrigins, ","),
+		AllowMethods:     strings.Join(s.cfg.Server.CORS.AllowMethods, ","),
+		AllowHeaders:     strings.Join(s.cfg.Server.CORS.AllowHeaders, ","),
 		AllowCredentials: s.cfg.Server.CORS.AllowCredentials,
 	}
 	s.app.Use(cors.New(corsConfig))
@@ -329,13 +329,13 @@ func (s *Server) setupInternalRoutes() {
 	artistsV1.Get("/:id/albums", artistsV1Handler.GetArtistAlbums)
 	artistsV1.Get("/:id/songs", artistsV1Handler.GetArtistSongs)
 
-	songsV1Handler := handlers.NewSongsV1Handler(s.repo)
-	songsV1 := protected.Group("/v1/Songs")
-	songsV1.Get("/", songsV1Handler.GetSongs)
-	songsV1.Get("/:id", songsV1Handler.GetSong)
-	songsV1.Get("/recent", songsV1Handler.GetRecentSongs)
-	songsV1.Post("/starred/:id/:isStarred", songsV1Handler.ToggleSongStarred)
-	songsV1.Post("/setrating/:id/:rating", songsV1Handler.SetSongRating)
+	tracksV1Handler := handlers.NewTracksV1Handler(s.repo)
+	tracksV1 := protected.Group("/v1/Tracks")
+	tracksV1.Get("/", tracksV1Handler.GetTracks)
+	tracksV1.Get("/:id", tracksV1Handler.GetTrack)
+	tracksV1.Get("/recent", tracksV1Handler.GetRecentTracks)
+	tracksV1.Post("/starred/:id/:isStarred", tracksV1Handler.ToggleTrackStarred)
+	tracksV1.Post("/setrating/:id/:rating", tracksV1Handler.SetTrackRating)
 
 	// Search
 	searchHandler := handlers.NewSearchHandler(s.repo)
@@ -347,7 +347,7 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	// Create OpenSubsonic API group with /rest prefix (standard for OpenSubsonic)
 	rest := s.app.Group("/rest")
 
-	// OpenSubsonic authentication middleware 
+	// OpenSubsonic authentication middleware
 	openSubsonicAuth := open_subsonic_middleware.NewOpenSubsonicAuthMiddleware(s.dbManager.GetGormDB(), s.cfg.JWT.Secret)
 
 	// Initialize FFmpeg processor
@@ -423,7 +423,7 @@ func (s *Server) setupOpenSubsonicRoutes() {
 func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Server.Host, s.cfg.Server.Port)
 	log.Printf("Starting Melodee server on %s", addr)
-	
+
 	// Migrations are handled via init-scripts/001_schema.sql
 
 	return s.app.Listen(addr)
@@ -474,7 +474,7 @@ func main() {
 	// Handle graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	
+
 	// Start the server in a goroutine
 	go func() {
 		if err := server.Start(); err != nil {

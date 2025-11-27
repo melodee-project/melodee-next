@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
 	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // SearchHandler handles search-related requests
@@ -22,11 +23,11 @@ func NewSearchHandler(repo *services.Repository) *SearchHandler {
 	}
 }
 
-// Search performs a search across artists, albums, and songs
+// Search performs a search across artists, albums, and tracks
 func (h *SearchHandler) Search(c *fiber.Ctx) error {
 	// Get query parameters
-	entityType := c.Query("type", "any") // artist, album, song, or any
-	query := c.Query("q")               // search query
+	entityType := c.Query("type", "any") // artist, album, track, or any
+	query := c.Query("q")                // search query
 	offset, err := strconv.Atoi(c.Query("offset", "0"))
 	if err != nil || offset < 0 {
 		offset = 0
@@ -73,17 +74,17 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 			"pagination": paginationMeta,
 		})
 
-	case "song", "songs":
-		songs, total, err := h.repo.SearchSongsPaginated(query, limit, offset)
+	case "song", "songs", "track", "tracks":
+		tracks, total, err := h.repo.SearchTracksPaginated(query, limit, offset)
 		if err != nil {
-			return utils.SendInternalServerError(c, "Failed to search songs")
+			return utils.SendInternalServerError(c, "Failed to search tracks")
 		}
 
 		// Calculate pagination metadata according to OpenAPI spec
 		paginationMeta := pagination.CalculateWithOffset(total, offset, limit)
 
 		return c.JSON(fiber.Map{
-			"data":       songs,
+			"data":       tracks,
 			"pagination": paginationMeta,
 		})
 
@@ -101,9 +102,9 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 			return utils.SendInternalServerError(c, "Failed to search albums")
 		}
 
-		songs, total, err := h.repo.SearchSongsPaginated(query, limit/3+1, offset)
+		tracks, total, err := h.repo.SearchTracksPaginated(query, limit/3+1, offset)
 		if err != nil {
-			return utils.SendInternalServerError(c, "Failed to search songs")
+			return utils.SendInternalServerError(c, "Failed to search tracks")
 		}
 
 		// Calculate pagination metadata according to OpenAPI spec
@@ -113,12 +114,12 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 			"data": fiber.Map{
 				"artists": artists,
 				"albums":  albums,
-				"songs":   songs,
+				"songs":   tracks, // keep key for backward compatibility
 			},
 			"pagination": paginationMeta,
 		})
 
 	default:
-		return utils.SendError(c, http.StatusBadRequest, "Invalid search type. Use 'artist', 'album', 'song', or 'any'")
+		return utils.SendError(c, http.StatusBadRequest, "Invalid search type. Use 'artist', 'album', 'track', or 'any'")
 	}
 }

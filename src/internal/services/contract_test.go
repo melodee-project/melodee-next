@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"melodee/internal/models"
+	"melodee/internal/services"
 	"melodee/internal/test"
 
 	"github.com/gofiber/fiber/v2"
@@ -51,8 +52,8 @@ func TestAuthContract(t *testing.T) {
 	app := fiber.New()
 
 	// Initialize services
-	repo := NewRepository(db)
-	authService := NewAuthService(db, "test-jwt-secret-key-change-in-production")
+	repo := services.NewRepository(db)
+	authService := services.NewAuthService(db, "test-jwt-secret-key-change-in-production")
 
 	// Create test user
 	password := "ValidPass123!"
@@ -219,8 +220,8 @@ func TestUserManagementContract(t *testing.T) {
 	app := fiber.New()
 
 	// Initialize services
-	repo := NewRepository(db)
-	authService := NewAuthService(db, "test-jwt-secret-key-change-in-production")
+	repo := services.NewRepository(db)
+	authService := services.NewAuthService(db, "test-jwt-secret-key-change-in-production")
 
 	// Create admin user for testing
 	adminPassword := "ValidPass123!"
@@ -336,8 +337,8 @@ func TestLibraryManagementContract(t *testing.T) {
 	app := fiber.New()
 
 	// Initialize services
-	repo := NewRepository(db)
-	authService := NewAuthService(db, "test-jwt-secret-key-change-in-production")
+	repo := services.NewRepository(db)
+	authService := services.NewAuthService(db, "test-jwt-secret-key-change-in-production")
 
 	// Create admin user for testing
 	adminPassword := "ValidPass123!"
@@ -454,8 +455,8 @@ func TestPlaylistContract(t *testing.T) {
 	app := fiber.New()
 
 	// Initialize services
-	repo := NewRepository(db)
-	authService := NewAuthService(db, "test-jwt-secret-key-change-in-production")
+	repo := services.NewRepository(db)
+	authService := services.NewAuthService(db, "test-jwt-secret-key-change-in-production")
 
 	// Create test user
 	userPassword := "ValidPass123!"
@@ -572,7 +573,7 @@ func TestSearchContract(t *testing.T) {
 	app := fiber.New()
 
 	// Initialize services
-	repo := NewRepository(db)
+	repo := services.NewRepository(db)
 
 	// Set up routes for testing
 	searchHandler := &SearchHandler{repo: repo}

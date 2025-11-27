@@ -154,15 +154,15 @@ type Track struct {
 	SortName       string    `gorm:"size:255" json:"sort_name"`
 	AlbumID        int64     `gorm:"index:idx_tracks_album_id_hash,hash;index:idx_tracks_album_id_sort_order;not null" json:"album_id"`
 	ArtistID       int64     `gorm:"index:idx_tracks_artist_id_hash,hash;index:idx_tracks_artist_id_album_id;not null" json:"artist_id"` // Denormalized for performance
-	Duration       int64     `json:"duration"`                                                                                            // duration in milliseconds
-	BitRate        int32     `json:"bit_rate"`                                                                                            // in kbps
+	Duration       int64     `json:"duration"`                                                                                           // duration in milliseconds
+	BitRate        int32     `json:"bit_rate"`                                                                                           // in kbps
 	BitDepth       int32     `json:"bit_depth"`
 	SampleRate     int32     `json:"sample_rate"` // in Hz
 	Channels       int32     `json:"channels"`
 	CreatedAt      time.Time `json:"created_at"`
-	Tags           []byte    `gorm:"type:jsonb;index:idx_tracks_tags_gin" json:"tags"`            // Stored as JSONB
-	Directory      string    `gorm:"size:512;not null" json:"directory"`                          // Relative path from library base
-	FileName       string    `gorm:"not null" json:"file_name"`                                   // Just the filename for optimized storage
+	Tags           []byte    `gorm:"type:jsonb;index:idx_tracks_tags_gin" json:"tags"`             // Stored as JSONB
+	Directory      string    `gorm:"size:512;not null" json:"directory"`                           // Relative path from library base
+	FileName       string    `gorm:"not null" json:"file_name"`                                    // Just the filename for optimized storage
 	RelativePath   string    `gorm:"not null;index:idx_tracks_relative_path" json:"relative_path"` // directory + file_name
 	CRCHash        string    `gorm:"size:255;not null" json:"crc_hash"`
 	SortOrder      int32     `gorm:"default:0;index:idx_tracks_sort_order" json:"sort_order"`
@@ -199,7 +199,8 @@ type Playlist struct {
 	CoverArtID *int32    `json:"cover_art_id"` // foreign key to images table
 
 	// Relationships
-	User *User `gorm:"foreignKey:UserID" json:"user"`
+	User   *User           `gorm:"foreignKey:UserID" json:"user"`
+	Tracks []PlaylistTrack `gorm:"foreignKey:PlaylistID" json:"tracks,omitempty"`
 }
 
 func (Playlist) TableName() string {
@@ -424,7 +425,7 @@ type RadioStation struct {
 	StreamURL       string    `gorm:"not null" json:"stream_url"`
 	HomePageURL     string    `json:"home_page_url"`
 	CreatedByUserID *int64    `json:"created_by_user_id"`
-	TrackCount       int32     `json:"song_count"`
+	TrackCount      int32     `json:"song_count"`
 	IsEnabled       bool      `gorm:"default:true" json:"is_enabled"`
 	CreatedAt       time.Time `json:"created_at"`
 }

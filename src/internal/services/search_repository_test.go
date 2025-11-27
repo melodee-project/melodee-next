@@ -3,11 +3,10 @@ package services
 import (
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/bcrypt"
 	"melodee/internal/models"
 	"melodee/internal/test"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestRepositorySearchArtistsPaginated tests the SearchArtistsPaginated method with filters, pagination, and ordering
@@ -241,8 +240,8 @@ func TestRepositorySearchAlbumsPaginated(t *testing.T) {
 	})
 }
 
-// TestRepositorySearchSongsPaginated tests the SearchSongsPaginated method with filters, pagination, and ordering
-func TestRepositorySearchSongsPaginated(t *testing.T) {
+// TestRepositorySearchTracksPaginated tests the SearchTracksPaginated method with filters, pagination, and ordering
+func TestRepositorySearchTracksPaginated(t *testing.T) {
 	db, tearDown := test.SetupTestEnvironment(t)
 	defer tearDown()
 
@@ -265,8 +264,8 @@ func TestRepositorySearchSongsPaginated(t *testing.T) {
 	err = repo.CreateAlbum(album)
 	assert.NoError(t, err)
 
-	// Create test songs for search
-	testSongs := []*models.Track{
+	// Create test tracks for search
+	testTracks := []*models.Track{
 		{
 			Name:           "Yesterday",
 			NameNormalized: "yesterday",
@@ -293,32 +292,32 @@ func TestRepositorySearchSongsPaginated(t *testing.T) {
 		},
 	}
 
-	// Create all test songs
-	for _, song := range testSongs {
-		err := repo.CreateSong(song)
+	// Create all test tracks
+	for _, track := range testTracks {
+		err := repo.CreateTrack(track)
 		assert.NoError(t, err)
-		assert.NotZero(t, song.ID)
+		assert.NotZero(t, track.ID)
 	}
 
-	t.Run("Search all songs with pagination", func(t *testing.T) {
-		// Search for all songs (using a common letter)
-		songs, total, err := repo.SearchSongsPaginated("e", 10, 0) // Songs with 'e'
+	t.Run("Search all tracks with pagination", func(t *testing.T) {
+		// Search for all tracks (using a common letter)
+		tracks, total, err := repo.SearchTracksPaginated("e", 10, 0) // Tracks with 'e'
 		assert.NoError(t, err)
-		assert.GreaterOrEqual(t, len(songs), 3) // Multiple songs contain 'e'
+		assert.GreaterOrEqual(t, len(tracks), 3) // Multiple tracks contain 'e'
 		assert.GreaterOrEqual(t, total, int64(3))
 	})
 
 	t.Run("Search with specific term", func(t *testing.T) {
 		// Search for "yesterday"
-		songs, total, err := repo.SearchSongsPaginated("yesterday", 10, 0)
+		tracks, total, err := repo.SearchTracksPaginated("yesterday", 10, 0)
 		assert.NoError(t, err)
-		assert.GreaterOrEqual(t, len(songs), 1) // Should find "Yesterday"
+		assert.GreaterOrEqual(t, len(tracks), 1) // Should find "Yesterday"
 		assert.GreaterOrEqual(t, total, int64(1))
 
 		// Verify the result contains "Yesterday"
 		foundYesterday := false
-		for _, song := range songs {
-			if song.NameNormalized == "yesterday" {
+		for _, track := range tracks {
+			if track.NameNormalized == "yesterday" {
 				foundYesterday = true
 				break
 			}
@@ -328,32 +327,32 @@ func TestRepositorySearchSongsPaginated(t *testing.T) {
 
 	t.Run("Search with pagination and ordering", func(t *testing.T) {
 		// Search and get first 2 results
-		songs1, total, err := repo.SearchSongsPaginated("", 2, 0) // Get first 2 songs
+		tracks1, total, err := repo.SearchTracksPaginated("", 2, 0) // Get first 2 tracks
 		assert.NoError(t, err)
-		assert.Equal(t, 2, len(songs1))
+		assert.Equal(t, 2, len(tracks1))
 		assert.GreaterOrEqual(t, total, int64(4))
 
 		// Get the next 2 results
-		songs2, total, err := repo.SearchSongsPaginated("", 2, 2) // Get next 2 songs
+		tracks2, total, err := repo.SearchTracksPaginated("", 2, 2) // Get next 2 tracks
 		assert.NoError(t, err)
-		assert.Equal(t, 2, len(songs2))
+		assert.Equal(t, 2, len(tracks2))
 		assert.GreaterOrEqual(t, total, int64(4))
 
 		// Verify ordering is consistent (by name_normalized ASC, then id ASC)
-		assert.True(t, songs2[0].NameNormalized >= songs1[1].NameNormalized)
+		assert.True(t, tracks2[0].NameNormalized >= tracks1[1].NameNormalized)
 	})
 
-	t.Run("Verify song associations are preloaded", func(t *testing.T) {
-		// Search for a song and verify album and artist associations are preloaded
-		songs, _, err := repo.SearchSongsPaginated("yesterday", 10, 0)
+	t.Run("Verify track associations are preloaded", func(t *testing.T) {
+		// Search for a track and verify album and artist associations are preloaded
+		tracks, _, err := repo.SearchTracksPaginated("yesterday", 10, 0)
 		assert.NoError(t, err)
 
-		if len(songs) > 0 {
+		if len(tracks) > 0 {
 			// Verify the album and artist associations are loaded
-			assert.NotZero(t, songs[0].Album.ID)
-			assert.Equal(t, album.Name, songs[0].Album.Name)
-			assert.NotZero(t, songs[0].Artist.ID)
-			assert.Equal(t, artist.Name, songs[0].Artist.Name)
+			assert.NotZero(t, tracks[0].Album.ID)
+			assert.Equal(t, album.Name, tracks[0].Album.Name)
+			assert.NotZero(t, tracks[0].Artist.ID)
+			assert.Equal(t, artist.Name, tracks[0].Artist.Name)
 		}
 	})
 }
@@ -388,7 +387,7 @@ func TestSearchEntities(t *testing.T) {
 		AlbumID:        album.ID,
 		ArtistID:       artist.ID,
 	}
-	err = repo.CreateSong(song)
+	err = repo.CreateTrack(song)
 	assert.NoError(t, err)
 
 	t.Run("Search artists by type", func(t *testing.T) {

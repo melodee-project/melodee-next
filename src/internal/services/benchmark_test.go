@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"melodee/internal/models"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"melodee/internal/models"
 )
 
 // setupBenchmarkDB creates an in-memory SQLite database for benchmarking
@@ -19,7 +20,7 @@ func setupBenchmarkDB() (*gorm.DB, func(), error) {
 	// Auto-migrate all models
 	err = db.AutoMigrate(
 		&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{},
-		&models.Playlist{}, &models.PlaylistTrack{}, &models.UserSong{}, &models.UserAlbum{},
+		&models.Playlist{}, &models.PlaylistTrack{}, &models.UserTrack{}, &models.UserAlbum{},
 		&models.UserArtist{}, &models.UserPin{}, &models.Bookmark{}, &models.Player{},
 		&models.PlayQueue{}, &models.SearchHistory{}, &models.Share{}, &models.ShareActivity{},
 		&models.LibraryScanHistory{}, &models.Setting{}, &models.ArtistRelation{}, &models.RadioStation{},

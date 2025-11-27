@@ -3,11 +3,11 @@ package services
 import (
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/bcrypt"
 	"melodee/internal/models"
 	"melodee/internal/test"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestDBBackedRepository tests the repository with an actual database connection
@@ -75,11 +75,9 @@ func TestDBBackedRepository(t *testing.T) {
 
 		// Test Create Playlist
 		playlist := &models.Playlist{
-			Name:      "Test Playlist",
-			Public:    true,
-			UserID:    user.ID,
-			CreatedAt: nil, // Will be set by GORM
-			ChangedAt: nil, // Will be set by GORM
+			Name:   "Test Playlist",
+			Public: true,
+			UserID: user.ID,
 		}
 
 		err = repo.CreatePlaylist(playlist)
@@ -167,43 +165,43 @@ func TestDBBackedRepository(t *testing.T) {
 		assert.Equal(t, artist.Name, retrievedAlbum.Artist.Name) // Check preloaded association
 	})
 
-	t.Run("Song operations", func(t *testing.T) {
-		// First create an artist and album to associate with the song
+	t.Run("Track operations", func(t *testing.T) {
+		// First create an artist and album to associate with the track
 		artist := &models.Artist{
-			Name:           "Song Artist",
-			NameNormalized: "Song Artist",
-			DirectoryCode:  "SA",
+			Name:           "Track Artist",
+			NameNormalized: "Track Artist",
+			DirectoryCode:  "TA",
 		}
 		err := repo.CreateArtist(artist)
 		assert.NoError(t, err)
 
 		album := &models.Album{
-			Name:           "Song Album",
-			NameNormalized: "Song Album",
+			Name:           "Track Album",
+			NameNormalized: "Track Album",
 			ArtistID:       artist.ID,
 		}
 		err = repo.CreateAlbum(album)
 		assert.NoError(t, err)
 
-		// Test Create Song
-		song := &models.Track{
-			Name:           "Test Song",
-			NameNormalized: "Test Song",
+		// Test Create Track
+		track := &models.Track{
+			Name:           "Test Track",
+			NameNormalized: "Test Track",
 			AlbumID:        album.ID,
 			ArtistID:       artist.ID,
 		}
 
-		err = repo.CreateSong(song)
+		err = repo.CreateTrack(track)
 		assert.NoError(t, err)
-		assert.NotZero(t, song.ID)
+		assert.NotZero(t, track.ID)
 
-		// Test Get Song By ID
-		retrievedSong, err := repo.GetSongByID(song.ID)
+		// Test Get Track By ID
+		retrievedTrack, err := repo.GetTrackByID(track.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, song.Name, retrievedSong.Name)
-		assert.Equal(t, song.AlbumID, retrievedSong.AlbumID)
-		assert.Equal(t, album.Name, retrievedSong.Album.Name) // Check preloaded association
-		assert.Equal(t, artist.Name, retrievedSong.Artist.Name) // Check preloaded association
+		assert.Equal(t, track.Name, retrievedTrack.Name)
+		assert.Equal(t, track.AlbumID, retrievedTrack.AlbumID)
+		assert.Equal(t, album.Name, retrievedTrack.Album.Name)   // Check preloaded association
+		assert.Equal(t, artist.Name, retrievedTrack.Artist.Name) // Check preloaded association
 	})
 
 	t.Run("Search operations", func(t *testing.T) {
@@ -248,11 +246,8 @@ func TestDBBackedRepository(t *testing.T) {
 		artists, total, err = repo.SearchArtistsPaginated("artist", 10, 0)
 		assert.NoError(t, err)
 		if len(artists) >= 2 {
-			// Should be sorted alphabetically by name_normalized (Alpha Artist should come before Zebra Artist)
-			if len(artists) >= 2 {
-				assert.True(t, artists[0].NameNormalized <= artists[1].NameNormalized, 
-					"Artists should be sorted alphabetically by name_normalized")
-			}
+			assert.True(t, artists[0].NameNormalized <= artists[1].NameNormalized,
+				"Artists should be sorted alphabetically by name_normalized")
 		}
 
 		// Test search with limit and offset
@@ -338,8 +333,8 @@ func TestRepositoryErrorHandling(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("Get non-existent song", func(t *testing.T) {
-		_, err := repo.GetSongByID(999999) // Non-existent ID
+	t.Run("Get non-existent track", func(t *testing.T) {
+		_, err := repo.GetTrackByID(999999) // Non-existent ID
 		assert.Error(t, err)
 	})
 }

@@ -11,7 +11,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"melodee/internal/database"
 	"melodee/internal/handlers"
 	"melodee/internal/middleware"
 	"melodee/internal/models"
@@ -79,31 +78,31 @@ func TestRegressionWithLargeDatasets(t *testing.T) {
 
 		// Create albums for each artist
 		album := &models.Album{
-			Name:         "Test Album " + string(rune(i+65)),
+			Name:           "Test Album " + string(rune(i+65)),
 			NameNormalized: "test album " + string(rune(i+65)),
-			ArtistID:     artist.ID,
-			AlbumStatus:  "Ok",
+			ArtistID:       artist.ID,
+			AlbumStatus:    "Ok",
 		}
 		err = repo.CreateAlbum(album)
 		assert.NoError(t, err)
 
-		// Create songs for each album
-		song := &models.Track{
-			Name:           "Test Song " + string(rune(i+65)),
-			NameNormalized: "test song " + string(rune(i+65)),
+		// Create tracks for each album
+		track := &models.Track{
+			Name:           "Test Track " + string(rune(i+65)),
+			NameNormalized: "test track " + string(rune(i+65)),
 			AlbumID:        album.ID,
 			ArtistID:       artist.ID,
 		}
-		err = repo.CreateSong(song)
+		err = repo.CreateTrack(track)
 		assert.NoError(t, err)
 	}
 
 	// Create 50 playlists to test pagination
 	for i := 0; i < 50; i++ {
 		playlist := &models.Playlist{
-			UserID:    regularUser.ID,
-			Name:      "Test Playlist " + string(rune(i+65)),
-			Public:    i%10 == 0, // Make some public
+			UserID: regularUser.ID,
+			Name:   "Test Playlist " + string(rune(i+65)),
+			Public: i%10 == 0, // Make some public
 		}
 		err = repo.CreatePlaylist(playlist)
 		assert.NoError(t, err)
@@ -147,7 +146,7 @@ func TestRegressionWithLargeDatasets(t *testing.T) {
 	// Test pagination with large dataset by creating a mock handler
 	// that doesn't require authentication to test the pagination logic
 	paginationApp := fiber.New()
-	
+
 	paginationApp.Get("/test-pagination", func(c *fiber.Ctx) error {
 		page, pageSize := pagination.GetPaginationParams(c, 1, 10)
 		offset := pagination.CalculateOffset(page, pageSize)
@@ -179,15 +178,15 @@ func TestRegressionWithLargeDatasets(t *testing.T) {
 	resp, err = paginationApp.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NoError(t, err)
-	
+
 	// Verify pagination structure matches expectations
 	assert.Contains(t, result, "data")
 	assert.Contains(t, result, "pagination")
-	
+
 	pagination, ok := result["pagination"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, float64(1000), pagination["totalCount"])

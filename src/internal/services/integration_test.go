@@ -183,7 +183,7 @@ func TestArtistAlbumSongIntegration(t *testing.T) {
 		CRCHash:        "abcd1234",
 	}
 
-	err = repo.CreateSong(song)
+	err = repo.CreateTrack(song)
 	assert.NoError(t, err)
 	assert.NotZero(t, song.ID)
 	assert.NotEqual(t, uuid.Nil, song.APIKey)
@@ -260,18 +260,18 @@ func TestPlaylistIntegration(t *testing.T) {
 		CRCHash:        "efgh5678",
 	}
 
-	err = repo.CreateSong(song)
+	err = repo.CreateTrack(song)
 	assert.NoError(t, err)
 
 	// Create a playlist
 	playlist := &models.Playlist{
-		Name:      "Test Playlist",
-		UserID:    user.ID,
-		APIKey:    uuid.New(),
+		Name:       "Test Playlist",
+		UserID:     user.ID,
+		APIKey:     uuid.New(),
 		TrackCount: 0,
-		Duration:  0,
-		CreatedAt: time.Now(),
-		ChangedAt: time.Now(),
+		Duration:   0,
+		CreatedAt:  time.Now(),
+		ChangedAt:  time.Now(),
 	}
 
 	err = repo.CreatePlaylist(playlist)
@@ -281,7 +281,7 @@ func TestPlaylistIntegration(t *testing.T) {
 	// Add the song to the playlist
 	playlistSong := &models.PlaylistTrack{
 		PlaylistID: playlist.ID,
-		TrackID:     song.ID,
+		TrackID:    song.ID,
 		Position:   1,
 		CreatedAt:  time.Now(),
 	}
