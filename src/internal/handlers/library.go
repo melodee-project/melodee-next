@@ -52,7 +52,6 @@ type LibraryState struct {
 	SongCount       int32            `json:"song_count"`
 	AlbumCount      int32            `json:"album_count"`
 	Duration        int64            `json:"duration"` // in milliseconds
-	BasePath        string           `json:"base_path"`
 	QuarantineItems []QuarantineItem `json:"quarantine_items,omitempty"`
 	ProcessingJobs  []ProcessingJob  `json:"processing_jobs,omitempty"`
 }
@@ -118,7 +117,6 @@ func (h *LibraryHandler) GetLibraryStates(c *fiber.Ctx) error {
 			SongCount:       lib.SongCount,
 			AlbumCount:      lib.AlbumCount,
 			Duration:        lib.Duration,
-			BasePath:        lib.BasePath,
 			InboundCount:    inboundCount,
 			StagingCount:    stagingCount,
 			ProductionCount: productionCount,
@@ -170,7 +168,6 @@ func (h *LibraryHandler) GetLibraryState(c *fiber.Ctx) error {
 		SongCount:       library.SongCount,
 		AlbumCount:      library.AlbumCount,
 		Duration:        library.Duration,
-		BasePath:        library.BasePath,
 		InboundCount:    inboundCount,
 		StagingCount:    stagingCount,
 		ProductionCount: productionCount,
@@ -542,9 +539,8 @@ func (h *LibraryHandler) getQuarantineItemCount(libraryPath string) int64 {
 
 // UpdateLibraryRequest represents a request to update a library
 type UpdateLibraryRequest struct {
-	Name     *string `json:"name"`
-	Path     *string `json:"path"`
-	BasePath *string `json:"base_path"`
+	Name *string `json:"name"`
+	Path *string `json:"path"`
 }
 
 // UpdateLibrary handles updating a library's details
@@ -571,9 +567,6 @@ func (h *LibraryHandler) UpdateLibrary(c *fiber.Ctx) error {
 	}
 	if req.Path != nil {
 		library.Path = *req.Path
-	}
-	if req.BasePath != nil {
-		library.BasePath = *req.BasePath
 	}
 
 	// Save changes

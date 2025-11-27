@@ -9,18 +9,18 @@ import (
 
 // User represents the users table
 type User struct {
-	ID                   int64      `gorm:"primaryKey;autoIncrement" json:"id"`
-	APIKey               uuid.UUID  `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
-	Username             string     `gorm:"size:255;uniqueIndex;not null" json:"username"`
-	Email                string     `gorm:"size:255" json:"email"`
-	PasswordHash         string     `gorm:"size:255;not null" json:"-"` // Don't expose password hash in JSON
-	IsAdmin              bool       `gorm:"default:false" json:"is_admin"`
-	FailedLoginAttempts  int        `gorm:"default:0" json:"-"` // Number of consecutive failed login attempts
-	LockedUntil          *time.Time `json:"locked_until,omitempty"` // Time until which the account is locked
-	PasswordResetToken   *string    `gorm:"size:255" json:"-"` // Hash of the password reset token
-	PasswordResetExpiry  *time.Time `json:"-"` // When the password reset token expires
-	CreatedAt            time.Time  `json:"created_at"`
-	LastLoginAt          *time.Time `json:"last_login_at"`
+	ID                  int64      `gorm:"primaryKey;autoIncrement" json:"id"`
+	APIKey              uuid.UUID  `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	Username            string     `gorm:"size:255;uniqueIndex;not null" json:"username"`
+	Email               string     `gorm:"size:255" json:"email"`
+	PasswordHash        string     `gorm:"size:255;not null" json:"-"` // Don't expose password hash in JSON
+	IsAdmin             bool       `gorm:"default:false" json:"is_admin"`
+	FailedLoginAttempts int        `gorm:"default:0" json:"-"`     // Number of consecutive failed login attempts
+	LockedUntil         *time.Time `json:"locked_until,omitempty"` // Time until which the account is locked
+	PasswordResetToken  *string    `gorm:"size:255" json:"-"`      // Hash of the password reset token
+	PasswordResetExpiry *time.Time `json:"-"`                      // When the password reset token expires
+	CreatedAt           time.Time  `json:"created_at"`
+	LastLoginAt         *time.Time `json:"last_login_at"`
 }
 
 // BeforeCreate sets the API key before creating a user
@@ -33,42 +33,41 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 
 // Library represents the libraries table
 type Library struct {
-	ID           int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name         string    `gorm:"size:255;not null" json:"name"`
-	Path         string    `gorm:"not null" json:"path"`
-	Type         string    `gorm:"size:50;not null;check:type IN ('inbound', 'staging', 'production')" json:"type"`
-	IsLocked     bool      `gorm:"default:false" json:"is_locked"`
-	CreatedAt    time.Time `json:"created_at"`
-	SongCount    int32     `gorm:"default:0" json:"song_count"`
-	AlbumCount   int32     `gorm:"default:0" json:"album_count"`
-	Duration     int64     `gorm:"default:0" json:"duration"` // duration in milliseconds
-	BasePath     string    `gorm:"size:512;not null" json:"base_path"`
+	ID         int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name       string    `gorm:"size:255;not null" json:"name"`
+	Path       string    `gorm:"not null" json:"path"`
+	Type       string    `gorm:"size:50;not null;check:type IN ('inbound', 'staging', 'production')" json:"type"`
+	IsLocked   bool      `gorm:"default:false" json:"is_locked"`
+	CreatedAt  time.Time `json:"created_at"`
+	SongCount  int32     `gorm:"default:0" json:"song_count"`
+	AlbumCount int32     `gorm:"default:0" json:"album_count"`
+	Duration   int64     `gorm:"default:0" json:"duration"` // duration in milliseconds
 }
 
 // Artist represents the artists table
 type Artist struct {
-	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id"`
-	APIKey          uuid.UUID  `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
-	IsLocked        bool       `gorm:"default:false" json:"is_locked"`
-	Name            string     `gorm:"size:255;not null" json:"name"`
-	NameNormalized  string     `gorm:"size:255;not null;index:idx_artists_name_normalized_gin,gin" json:"name_normalized"` // For efficient searching
-	DirectoryCode   string     `gorm:"size:20;index" json:"directory_code"` // Directory code for filesystem performance
-	SortName        string     `gorm:"size:255" json:"sort_name"`
-	AlternateNames  []string   `gorm:"type:text[]" json:"alternate_names"`
-	SongCountCached int32      `gorm:"default:0" json:"song_count_cached"` // Pre-calculated for performance
-	AlbumCountCached int32     `gorm:"default:0" json:"album_count_cached"` // Pre-calculated for performance
-	DurationCached  int64      `gorm:"default:0" json:"duration_cached"` // Pre-calculated for performance
-	CreatedAt       time.Time  `json:"created_at"`
-	LastScannedAt   *time.Time `json:"last_scanned_at"`
-	Tags            []byte     `gorm:"type:jsonb" json:"tags"` // Stored as JSONB
-	MusicBrainzID   *uuid.UUID `gorm:"type:uuid;index" json:"musicbrainz_id"`
-	SpotifyID       string     `gorm:"size:255" json:"spotify_id"`
-	LastFmID        string     `gorm:"size:255" json:"lastfm_id"`
-	DiscogsID       string     `gorm:"size:255" json:"discogs_id"`
-	ITunesID        string     `gorm:"size:255" json:"itunes_id"`
-	AMGID           string     `gorm:"size:255" json:"amg_id"`
-	WikidataID      string     `gorm:"size:255" json:"wikidata_id"`
-	SortOrder       int32      `gorm:"default:0" json:"sort_order"`
+	ID               int64      `gorm:"primaryKey;autoIncrement" json:"id"`
+	APIKey           uuid.UUID  `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	IsLocked         bool       `gorm:"default:false" json:"is_locked"`
+	Name             string     `gorm:"size:255;not null" json:"name"`
+	NameNormalized   string     `gorm:"size:255;not null;index:idx_artists_name_normalized_gin,gin" json:"name_normalized"` // For efficient searching
+	DirectoryCode    string     `gorm:"size:20;index" json:"directory_code"`                                                // Directory code for filesystem performance
+	SortName         string     `gorm:"size:255" json:"sort_name"`
+	AlternateNames   []string   `gorm:"type:text[]" json:"alternate_names"`
+	SongCountCached  int32      `gorm:"default:0" json:"song_count_cached"`  // Pre-calculated for performance
+	AlbumCountCached int32      `gorm:"default:0" json:"album_count_cached"` // Pre-calculated for performance
+	DurationCached   int64      `gorm:"default:0" json:"duration_cached"`    // Pre-calculated for performance
+	CreatedAt        time.Time  `json:"created_at"`
+	LastScannedAt    *time.Time `json:"last_scanned_at"`
+	Tags             []byte     `gorm:"type:jsonb" json:"tags"` // Stored as JSONB
+	MusicBrainzID    *uuid.UUID `gorm:"type:uuid;index" json:"musicbrainz_id"`
+	SpotifyID        string     `gorm:"size:255" json:"spotify_id"`
+	LastFmID         string     `gorm:"size:255" json:"lastfm_id"`
+	DiscogsID        string     `gorm:"size:255" json:"discogs_id"`
+	ITunesID         string     `gorm:"size:255" json:"itunes_id"`
+	AMGID            string     `gorm:"size:255" json:"amg_id"`
+	WikidataID       string     `gorm:"size:255" json:"wikidata_id"`
+	SortOrder        int32      `gorm:"default:0" json:"sort_order"`
 
 	// Relationships
 	Albums []Album `gorm:"foreignKey:ArtistID" json:"-"`
@@ -92,7 +91,7 @@ type Album struct {
 	AlternateNames      []string   `gorm:"type:text[]" json:"alternate_names"`
 	ArtistID            int64      `gorm:"index:idx_albums_artist_id_covering,where:album_status='Ok';not null" json:"artist_id"`
 	SongCountCached     int32      `gorm:"default:0" json:"song_count_cached"` // Pre-calculated for performance
-	DurationCached      int64      `gorm:"default:0" json:"duration_cached"` // duration in milliseconds
+	DurationCached      int64      `gorm:"default:0" json:"duration_cached"`   // duration in milliseconds
 	CreatedAt           time.Time  `json:"created_at"`
 	Tags                []byte     `gorm:"type:jsonb;index:idx_albums_tags_gin" json:"tags"` // Stored as JSONB
 	ReleaseDate         *time.Time `json:"release_date"`
@@ -133,25 +132,25 @@ func (a *Album) BeforeCreate(tx *gorm.DB) error {
 
 // Song represents the songs table
 type Song struct {
-	ID          int64      `gorm:"primaryKey;autoIncrement" json:"id"`
-	APIKey      uuid.UUID  `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
-	Name        string     `gorm:"size:255;not null" json:"name"`
-	NameNormalized string  `gorm:"size:255;not null;index:idx_songs_name_normalized_gin,gin" json:"name_normalized"`
-	SortName    string     `gorm:"size:255" json:"sort_name"`
-	AlbumID     int64      `gorm:"index:idx_songs_album_id_hash,hash;index:idx_songs_album_id_sort_order;not null" json:"album_id"`
-	ArtistID    int64      `gorm:"index:idx_songs_artist_id_hash,hash;index:idx_songs_artist_id_album_id;not null" json:"artist_id"` // Denormalized for performance
-	Duration    int64      `json:"duration"` // duration in milliseconds
-	BitRate     int32      `json:"bit_rate"` // in kbps
-	BitDepth    int32      `json:"bit_depth"`
-	SampleRate  int32      `json:"sample_rate"` // in Hz
-	Channels    int32      `json:"channels"`
-	CreatedAt   time.Time  `json:"created_at"`
-	Tags        []byte     `gorm:"type:jsonb;index:idx_songs_tags_gin" json:"tags"` // Stored as JSONB
-	Directory   string     `gorm:"size:512;not null" json:"directory"` // Relative path from library base
-	FileName    string     `gorm:"not null" json:"file_name"` // Just the filename for optimized storage
-	RelativePath string    `gorm:"not null;index:idx_songs_relative_path" json:"relative_path"` // directory + file_name
-	CRCHash     string     `gorm:"size:255;not null" json:"crc_hash"`
-	SortOrder   int32      `gorm:"default:0;index:idx_songs_sort_order" json:"sort_order"`
+	ID             int64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	APIKey         uuid.UUID `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	Name           string    `gorm:"size:255;not null" json:"name"`
+	NameNormalized string    `gorm:"size:255;not null;index:idx_songs_name_normalized_gin,gin" json:"name_normalized"`
+	SortName       string    `gorm:"size:255" json:"sort_name"`
+	AlbumID        int64     `gorm:"index:idx_songs_album_id_hash,hash;index:idx_songs_album_id_sort_order;not null" json:"album_id"`
+	ArtistID       int64     `gorm:"index:idx_songs_artist_id_hash,hash;index:idx_songs_artist_id_album_id;not null" json:"artist_id"` // Denormalized for performance
+	Duration       int64     `json:"duration"`                                                                                         // duration in milliseconds
+	BitRate        int32     `json:"bit_rate"`                                                                                         // in kbps
+	BitDepth       int32     `json:"bit_depth"`
+	SampleRate     int32     `json:"sample_rate"` // in Hz
+	Channels       int32     `json:"channels"`
+	CreatedAt      time.Time `json:"created_at"`
+	Tags           []byte    `gorm:"type:jsonb;index:idx_songs_tags_gin" json:"tags"`             // Stored as JSONB
+	Directory      string    `gorm:"size:512;not null" json:"directory"`                          // Relative path from library base
+	FileName       string    `gorm:"not null" json:"file_name"`                                   // Just the filename for optimized storage
+	RelativePath   string    `gorm:"not null;index:idx_songs_relative_path" json:"relative_path"` // directory + file_name
+	CRCHash        string    `gorm:"size:255;not null" json:"crc_hash"`
+	SortOrder      int32     `gorm:"default:0;index:idx_songs_sort_order" json:"sort_order"`
 
 	// Relationships
 	Album  *Album  `gorm:"foreignKey:AlbumID" json:"album"`
@@ -168,17 +167,17 @@ func (s *Song) BeforeCreate(tx *gorm.DB) error {
 
 // Playlist represents the playlists table
 type Playlist struct {
-	ID            int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	APIKey        uuid.UUID `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
-	UserID        int64     `gorm:"index;not null" json:"user_id"`
-	Name          string    `gorm:"size:255;not null" json:"name"`
-	Comment       string    `json:"comment"`
-	Public        bool      `gorm:"default:false;index:idx_playlists_public_where" json:"public"`
-	CreatedAt     time.Time `json:"created_at"`
-	ChangedAt     time.Time `json:"changed_at"`
-	Duration      int64     `json:"duration"` // duration in milliseconds
-	SongCount     int32     `json:"song_count"`
-	CoverArtID    *int32    `json:"cover_art_id"` // foreign key to images table
+	ID         int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	APIKey     uuid.UUID `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	UserID     int64     `gorm:"index;not null" json:"user_id"`
+	Name       string    `gorm:"size:255;not null" json:"name"`
+	Comment    string    `json:"comment"`
+	Public     bool      `gorm:"default:false;index:idx_playlists_public_where" json:"public"`
+	CreatedAt  time.Time `json:"created_at"`
+	ChangedAt  time.Time `json:"changed_at"`
+	Duration   int64     `json:"duration"` // duration in milliseconds
+	SongCount  int32     `json:"song_count"`
+	CoverArtID *int32    `json:"cover_art_id"` // foreign key to images table
 
 	// Relationships
 	User *User `gorm:"foreignKey:UserID" json:"user"`
@@ -209,61 +208,61 @@ type PlaylistSong struct {
 
 // UserSong represents user interactions with songs
 type UserSong struct {
-	ID           int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID       int64     `gorm:"index:idx_user_songs_user_id;not null" json:"user_id"`
-	SongID       int64     `gorm:"index:idx_user_songs_song_id;not null" json:"song_id"`
-	PlayedCount  int32     `gorm:"default:0;index:idx_user_songs_played_count" json:"played_count"`
+	ID           int32      `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID       int64      `gorm:"index:idx_user_songs_user_id;not null" json:"user_id"`
+	SongID       int64      `gorm:"index:idx_user_songs_song_id;not null" json:"song_id"`
+	PlayedCount  int32      `gorm:"default:0;index:idx_user_songs_played_count" json:"played_count"`
 	LastPlayedAt *time.Time `gorm:"index:idx_user_songs_last_played" json:"last_played_at"`
-	IsStarred    bool      `gorm:"default:false;index:idx_user_songs_starred" json:"is_starred"`
-	IsHated      bool      `gorm:"default:false;index:idx_user_songs_hated" json:"is_hated"` // When true, don't include in randomization
+	IsStarred    bool       `gorm:"default:false;index:idx_user_songs_starred" json:"is_starred"`
+	IsHated      bool       `gorm:"default:false;index:idx_user_songs_hated" json:"is_hated"` // When true, don't include in randomization
 	StarredAt    *time.Time `json:"starred_at"`
-	Rating       int8      `gorm:"check:rating >= 0 AND rating <= 5;default:0;index:idx_user_songs_rating" json:"rating"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `gorm:"index:idx_user_songs_updated_at" json:"updated_at"`
+	Rating       int8       `gorm:"check:rating >= 0 AND rating <= 5;default:0;index:idx_user_songs_rating" json:"rating"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `gorm:"index:idx_user_songs_updated_at" json:"updated_at"`
 
 	// Constraints: UNIQUE(user_id, song_id)
 }
 
 // UserAlbum represents user interactions with albums
 type UserAlbum struct {
-	ID           int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID       int64     `gorm:"index:idx_user_albums_user_id;not null" json:"user_id"`
-	AlbumID      int64     `gorm:"index:idx_user_albums_album_id;not null" json:"album_id"`
-	PlayedCount  int32     `gorm:"default:0;index:idx_user_albums_played_count" json:"played_count"`
+	ID           int32      `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID       int64      `gorm:"index:idx_user_albums_user_id;not null" json:"user_id"`
+	AlbumID      int64      `gorm:"index:idx_user_albums_album_id;not null" json:"album_id"`
+	PlayedCount  int32      `gorm:"default:0;index:idx_user_albums_played_count" json:"played_count"`
 	LastPlayedAt *time.Time `gorm:"index:idx_user_albums_last_played" json:"last_played_at"`
-	IsStarred    bool      `gorm:"default:false;index:idx_user_albums_starred" json:"is_starred"`
-	IsHated      bool      `gorm:"default:false;index:idx_user_albums_hated" json:"is_hated"` // When true, don't include in randomization
+	IsStarred    bool       `gorm:"default:false;index:idx_user_albums_starred" json:"is_starred"`
+	IsHated      bool       `gorm:"default:false;index:idx_user_albums_hated" json:"is_hated"` // When true, don't include in randomization
 	StarredAt    *time.Time `json:"starred_at"`
-	Rating       int8      `gorm:"check:rating >= 0 AND rating <= 5;default:0;index:idx_user_albums_rating" json:"rating"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `gorm:"index:idx_user_albums_updated_at" json:"updated_at"`
+	Rating       int8       `gorm:"check:rating >= 0 AND rating <= 5;default:0;index:idx_user_albums_rating" json:"rating"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `gorm:"index:idx_user_albums_updated_at" json:"updated_at"`
 
 	// Constraints: UNIQUE(user_id, album_id)
 }
 
 // UserArtist represents user interactions with artists
 type UserArtist struct {
-	ID        int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID    int64     `gorm:"index:idx_user_artists_user_id;not null" json:"user_id"`
-	ArtistID  int64     `gorm:"index:idx_user_artists_artist_id;not null" json:"artist_id"`
-	IsStarred bool      `gorm:"default:false;index:idx_user_artists_starred" json:"is_starred"`
-	IsHated   bool      `gorm:"default:false;index:idx_user_artists_hated" json:"is_hated"` // When true, don't include in randomization
+	ID        int32      `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID    int64      `gorm:"index:idx_user_artists_user_id;not null" json:"user_id"`
+	ArtistID  int64      `gorm:"index:idx_user_artists_artist_id;not null" json:"artist_id"`
+	IsStarred bool       `gorm:"default:false;index:idx_user_artists_starred" json:"is_starred"`
+	IsHated   bool       `gorm:"default:false;index:idx_user_artists_hated" json:"is_hated"` // When true, don't include in randomization
 	StarredAt *time.Time `json:"starred_at"`
-	Rating    int8      `gorm:"check:rating >= 0 AND rating <= 5;default:0;index:idx_user_artists_rating" json:"rating"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `gorm:"index:idx_user_artists_updated_at" json:"updated_at"`
+	Rating    int8       `gorm:"check:rating >= 0 AND rating <= 5;default:0;index:idx_user_artists_rating" json:"rating"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `gorm:"index:idx_user_artists_updated_at" json:"updated_at"`
 
 	// Constraints: UNIQUE(user_id, artist_id)
 }
 
 // UserPin represents pinned content
 type UserPin struct {
-	ID        int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID    int64     `gorm:"not null" json:"user_id"`
-	SongID    *int64    `json:"song_id"`
-	AlbumID   *int64    `json:"album_id"`
-	ArtistID  *int64    `json:"artist_id"`
-	PinnedAt  time.Time `json:"pinned_at"`
+	ID       int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID   int64     `gorm:"not null" json:"user_id"`
+	SongID   *int64    `json:"song_id"`
+	AlbumID  *int64    `json:"album_id"`
+	ArtistID *int64    `json:"artist_id"`
+	PinnedAt time.Time `json:"pinned_at"`
 
 	// Only one of SongID, AlbumID, or ArtistID should be set
 }
@@ -300,63 +299,63 @@ type Player struct {
 
 // PlayQueue represents play queues
 type PlayQueue struct {
-	ID           int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID       int64     `gorm:"not null" json:"user_id"`
-	SongID       int64     `gorm:"not null" json:"song_id"`
-	SongAPIKey   uuid.UUID `gorm:"type:uuid;not null" json:"song_api_key"` // To not expose internal song IDs to API consumers
-	IsCurrentSong bool     `gorm:"default:false" json:"is_current_song"`
-	ChangedBy    string    `gorm:"size:255;not null" json:"changed_by"`
-	Position     float64   `gorm:"default:0" json:"position"`
-	PlayQueueID  int32     `gorm:"not null" json:"play_queue_id"` // To manage order in the queue
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID            int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID        int64     `gorm:"not null" json:"user_id"`
+	SongID        int64     `gorm:"not null" json:"song_id"`
+	SongAPIKey    uuid.UUID `gorm:"type:uuid;not null" json:"song_api_key"` // To not expose internal song IDs to API consumers
+	IsCurrentSong bool      `gorm:"default:false" json:"is_current_song"`
+	ChangedBy     string    `gorm:"size:255;not null" json:"changed_by"`
+	Position      float64   `gorm:"default:0" json:"position"`
+	PlayQueueID   int32     `gorm:"not null" json:"play_queue_id"` // To manage order in the queue
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // SearchHistory represents user search history
 type SearchHistory struct {
-	ID         int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID     *int64    `gorm:"index:idx_search_histories_user_id" json:"user_id"`
-	SearchTerm string    `gorm:"size:500;not null;index:idx_search_histories_search_term_gin,gin" json:"search_term"`
-	SearchType string    `gorm:"size:50;not null;check:search_type IN ('artist', 'album', 'song', 'any');index:idx_search_histories_search_type" json:"search_type"`
-	ResultsCount int32   `gorm:"default:0;index:idx_search_histories_results_count" json:"results_count"`
-	CreatedAt  time.Time `gorm:"index:idx_search_histories_created_at" json:"created_at"`
+	ID           int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID       *int64    `gorm:"index:idx_search_histories_user_id" json:"user_id"`
+	SearchTerm   string    `gorm:"size:500;not null;index:idx_search_histories_search_term_gin,gin" json:"search_term"`
+	SearchType   string    `gorm:"size:50;not null;check:search_type IN ('artist', 'album', 'song', 'any');index:idx_search_histories_search_type" json:"search_type"`
+	ResultsCount int32     `gorm:"default:0;index:idx_search_histories_results_count" json:"results_count"`
+	CreatedAt    time.Time `gorm:"index:idx_search_histories_created_at" json:"created_at"`
 }
 
 // Share represents shared content
 type Share struct {
-	ID                    int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID                int64     `gorm:"not null" json:"user_id"`
-	Name                  string    `gorm:"size:255" json:"name"`
-	Description           string    `json:"description"`
-	ExpiresAt             *time.Time `json:"expires_at"`
-	MaxStreamingMinutes   int32     `json:"max_streaming_minutes"`
-	MaxStreamingCount     int32     `json:"max_streaming_count"`
-	AllowStreaming        bool      `gorm:"default:true" json:"allow_streaming"`
-	AllowDownload         bool      `gorm:"default:false" json:"allow_download"`
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
+	ID                  int32      `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID              int64      `gorm:"not null" json:"user_id"`
+	Name                string     `gorm:"size:255" json:"name"`
+	Description         string     `json:"description"`
+	ExpiresAt           *time.Time `json:"expires_at"`
+	MaxStreamingMinutes int32      `json:"max_streaming_minutes"`
+	MaxStreamingCount   int32      `json:"max_streaming_count"`
+	AllowStreaming      bool       `gorm:"default:true" json:"allow_streaming"`
+	AllowDownload       bool       `gorm:"default:false" json:"allow_download"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }
 
 // ShareActivity represents share usage tracking
 type ShareActivity struct {
-	ID        int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	ShareID   int32     `gorm:"not null" json:"share_id"`
-	UserID    *int64    `json:"user_id"` // User who accessed (null if anonymous)
-	IPAddress string    `gorm:"size:45" json:"ip_address"`
+	ID         int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	ShareID    int32     `gorm:"not null" json:"share_id"`
+	UserID     *int64    `json:"user_id"` // User who accessed (null if anonymous)
+	IPAddress  string    `gorm:"size:45" json:"ip_address"`
 	AccessedAt time.Time `json:"accessed_at"`
-	UserAgent string    `json:"user_agent"`
+	UserAgent  string    `json:"user_agent"`
 }
 
 // LibraryScanHistory represents library scanning history
 type LibraryScanHistory struct {
-	ID            int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	LibraryID     int32     `gorm:"not null" json:"library_id"`
-	Status        string    `gorm:"size:50;not null;check:status IN ('started', 'in_progress', 'completed', 'failed')" json:"status"`
-	Message       string    `json:"message"`
-	TotalFiles    int32     `json:"total_files"`
-	ProcessedFiles int32    `json:"processed_files"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	LibraryID      int32     `gorm:"not null" json:"library_id"`
+	Status         string    `gorm:"size:50;not null;check:status IN ('started', 'in_progress', 'completed', 'failed')" json:"status"`
+	Message        string    `json:"message"`
+	TotalFiles     int32     `json:"total_files"`
+	ProcessedFiles int32     `json:"processed_files"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // Setting represents application configuration
@@ -372,35 +371,35 @@ type Setting struct {
 
 // ArtistRelation represents artist relationships
 type ArtistRelation struct {
-	ID             int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	FromArtistID   int64     `gorm:"not null" json:"from_artist_id"`
-	ToArtistID     int64     `gorm:"not null" json:"to_artist_id"`
-	RelationType   string    `gorm:"size:100;not null" json:"relation_type"` // e.g., 'member', 'collaborator', 'influenced_by'
-	RelationStart  *time.Time `json:"relation_start"` // When the relationship started
-	RelationEnd    *time.Time `json:"relation_end"` // When the relationship ended
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-	IsLocked       bool      `gorm:"default:false" json:"is_locked"`
-	SortOrder      int32     `gorm:"default:0" json:"sort_order"`
-	APIKey         uuid.UUID `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
-	Tags           []byte    `gorm:"type:jsonb" json:"tags"` // Stored as JSONB
-	Notes          string    `json:"notes"`
-	Description    string    `json:"description"`
+	ID            int32      `gorm:"primaryKey;autoIncrement" json:"id"`
+	FromArtistID  int64      `gorm:"not null" json:"from_artist_id"`
+	ToArtistID    int64      `gorm:"not null" json:"to_artist_id"`
+	RelationType  string     `gorm:"size:100;not null" json:"relation_type"` // e.g., 'member', 'collaborator', 'influenced_by'
+	RelationStart *time.Time `json:"relation_start"`                         // When the relationship started
+	RelationEnd   *time.Time `json:"relation_end"`                           // When the relationship ended
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	IsLocked      bool       `gorm:"default:false" json:"is_locked"`
+	SortOrder     int32      `gorm:"default:0" json:"sort_order"`
+	APIKey        uuid.UUID  `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	Tags          []byte     `gorm:"type:jsonb" json:"tags"` // Stored as JSONB
+	Notes         string     `json:"notes"`
+	Description   string     `json:"description"`
 
 	// Constraints: UNIQUE(from_artist_id, to_artist_id, relation_type)
 }
 
 // RadioStation represents radio stations
 type RadioStation struct {
-	ID               int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	APIKey           uuid.UUID `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
-	Name             string    `gorm:"size:255;not null" json:"name"`
-	StreamURL        string    `gorm:"not null" json:"stream_url"`
-	HomePageURL      string    `json:"home_page_url"`
-	CreatedByUserID  *int64    `json:"created_by_user_id"`
-	SongCount        int32     `json:"song_count"`
-	IsEnabled        bool      `gorm:"default:true" json:"is_enabled"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID              int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	APIKey          uuid.UUID `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	Name            string    `gorm:"size:255;not null" json:"name"`
+	StreamURL       string    `gorm:"not null" json:"stream_url"`
+	HomePageURL     string    `json:"home_page_url"`
+	CreatedByUserID *int64    `json:"created_by_user_id"`
+	SongCount       int32     `json:"song_count"`
+	IsEnabled       bool      `gorm:"default:true" json:"is_enabled"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // BeforeCreate sets the API key before creating a radio station
@@ -413,10 +412,10 @@ func (r *RadioStation) BeforeCreate(tx *gorm.DB) error {
 
 // Contributor represents song contributors like composers, performers, etc.
 type Contributor struct {
-	ID       int32     `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name     string    `gorm:"size:255;not null" json:"name"`
-	Type     string    `gorm:"size:100;not null" json:"type"` // e.g., 'performer', 'composer', 'producer'
-	SortName string    `gorm:"size:255" json:"sort_name"`
+	ID        int32     `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name      string    `gorm:"size:255;not null" json:"name"`
+	Type      string    `gorm:"size:100;not null" json:"type"` // e.g., 'performer', 'composer', 'producer'
+	SortName  string    `gorm:"size:255" json:"sort_name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

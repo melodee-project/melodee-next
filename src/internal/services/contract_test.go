@@ -3,14 +3,17 @@ package services
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/assert"
+	"melodee/internal/models"
 	"melodee/internal/test"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
 // ContractTest defines the structure for API contract testing
@@ -57,12 +60,12 @@ func TestAuthContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	user := &models.User{
-		Username: "contract-test-user",
-		Email:    "contract@test.com",
-		APIKey:   uuid.New(),
+		Username:     "contract-test-user",
+		Email:        "contract@test.com",
+		APIKey:       uuid.New(),
 		PasswordHash: hashedPassword,
 	}
-	
+
 	err = repo.CreateUser(user)
 	assert.NoError(t, err)
 
@@ -86,9 +89,9 @@ func TestAuthContract(t *testing.T) {
 				"refresh_token": "string",
 				"expires_in":    "number", // in seconds
 				"user": map[string]interface{}{
-					"id":        "number", // int64
-					"username":  "string",
-					"is_admin":  "boolean",
+					"id":       "number", // int64
+					"username": "string",
+					"is_admin": "boolean",
 				},
 			},
 		},
@@ -128,25 +131,25 @@ func TestAuthContract(t *testing.T) {
 			// Create test request
 			req := httptest.NewRequest(testCase.Method, testCase.Endpoint, bytes.NewBuffer(jsonData))
 			req.Header.Set("Content-Type", "application/json")
-			
+
 			// Execute request
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
-			
+
 			// Check status code
 			assert.Equal(t, testCase.ExpectedStatus, resp.StatusCode)
-			
+
 			// Read response body
 			responseBody := make([]byte, resp.ContentLength)
 			_, err = resp.Body.Read(responseBody)
 			assert.NoError(t, err)
-			
+
 			// If expecting a specific schema, validate it
 			if testCase.ExpectedSchema != nil {
 				var responseJson map[string]interface{}
 				err := json.Unmarshal(responseBody, &responseJson)
 				assert.NoError(t, err)
-				
+
 				validateResponseSchema(t, responseJson, testCase.ExpectedSchema)
 			}
 		})
@@ -159,11 +162,11 @@ func validateResponseSchema(t *testing.T, response, schema interface{}) {
 	case map[string]interface{}:
 		respMap, ok := response.(map[string]interface{})
 		assert.True(t, ok, "expected response to be a map, got %T", response)
-		
+
 		for key, expectedType := range s {
 			value, exists := respMap[key]
 			assert.True(t, exists, "expected field '%s' to exist in response", key)
-			
+
 			if expectedTypeStr, isString := expectedType.(string); isString {
 				// Validate type
 				switch expectedTypeStr {
@@ -218,32 +221,32 @@ func TestUserManagementContract(t *testing.T) {
 	// Initialize services
 	repo := NewRepository(db)
 	authService := NewAuthService(db, "test-jwt-secret-key-change-in-production")
-	
+
 	// Create admin user for testing
 	adminPassword := "ValidPass123!"
 	hashedAdminPassword, err := authService.HashPassword(adminPassword)
 	assert.NoError(t, err)
 
 	adminUser := &models.User{
-		Username: "admin-contract-test",
-		Email:    "admin-contract@test.com",
-		IsAdmin:  true,
-		APIKey:   uuid.New(),
+		Username:     "admin-contract-test",
+		Email:        "admin-contract@test.com",
+		IsAdmin:      true,
+		APIKey:       uuid.New(),
 		PasswordHash: hashedAdminPassword,
 	}
-	
+
 	err = repo.CreateUser(adminUser)
 	assert.NoError(t, err)
 
 	// Set up routes for testing
 	authHandler := &AuthHandler{authService: authService}
 	userHandler := &UserHandler{repo: repo, authService: authService}
-	
+
 	// We need auth middleware for protected routes
 	app.Post("/api/auth/login", authHandler.Login)
-	app.Get("/api/users", userHandler.GetUsers) // This would need auth middleware in real implementation
+	app.Get("/api/users", userHandler.GetUsers)    // This would need auth middleware in real implementation
 	app.Post("/api/users", userHandler.CreateUser) // This would need auth middleware in real implementation
-	
+
 	// Define contract test cases for user management endpoints
 	contractTests := []ContractTest{
 		{
@@ -259,19 +262,19 @@ func TestUserManagementContract(t *testing.T) {
 			ExpectedStatus: http.StatusOK,
 			ExpectedSchema: map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":           "number",
-					"username":     "string",
-					"email":        "string",
-					"is_admin":     "boolean",
-					"created_at":   "string", // ISO date format
+					"id":         "number",
+					"username":   "string",
+					"email":      "string",
+					"is_admin":   "boolean",
+					"created_at": "string", // ISO date format
 				},
 			},
 		},
 		{
-			Name:     "Get users returns correct structure",
-			Method:   "GET",
-			Endpoint: "/api/users",
-			Request:  nil, // No request body for GET
+			Name:           "Get users returns correct structure",
+			Method:         "GET",
+			Endpoint:       "/api/users",
+			Request:        nil, // No request body for GET
 			ExpectedStatus: http.StatusOK,
 			ExpectedSchema: map[string]interface{}{
 				"data": "array",
@@ -300,23 +303,23 @@ func TestUserManagementContract(t *testing.T) {
 			// Execute request
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
-			
+
 			// Check status code
 			assert.Equal(t, testCase.ExpectedStatus, resp.StatusCode)
-			
+
 			// Read response body
 			responseBody := make([]byte, resp.ContentLength)
 			_, err = resp.Body.Read(responseBody)
 			if err != nil && err.Error() != "EOF" {
 				assert.NoError(t, err)
 			}
-			
+
 			// If expecting a specific schema, validate it
 			if testCase.ExpectedSchema != nil && len(responseBody) > 0 {
 				var responseJson map[string]interface{}
 				err := json.Unmarshal(responseBody, &responseJson)
 				assert.NoError(t, err)
-				
+
 				validateResponseSchema(t, responseJson, testCase.ExpectedSchema)
 			}
 		})
@@ -335,30 +338,30 @@ func TestLibraryManagementContract(t *testing.T) {
 	// Initialize services
 	repo := NewRepository(db)
 	authService := NewAuthService(db, "test-jwt-secret-key-change-in-production")
-	
+
 	// Create admin user for testing
 	adminPassword := "ValidPass123!"
 	hashedAdminPassword, err := authService.HashPassword(adminPassword)
 	assert.NoError(t, err)
 
 	adminUser := &models.User{
-		Username: "admin-lib-test",
-		Email:    "admin-lib@test.com",
-		IsAdmin:  true,
-		APIKey:   uuid.New(),
+		Username:     "admin-lib-test",
+		Email:        "admin-lib@test.com",
+		IsAdmin:      true,
+		APIKey:       uuid.New(),
 		PasswordHash: hashedAdminPassword,
 	}
-	
+
 	err = repo.CreateUser(adminUser)
 	assert.NoError(t, err)
 
 	// Set up routes for testing
 	libraryHandler := &LibraryHandler{repo: repo, authService: authService}
-	
+
 	// For testing purposes, let's directly test the handler functions
 	app.Get("/api/libraries", libraryHandler.GetLibraries)
 	app.Post("/api/libraries", libraryHandler.CreateLibrary)
-	
+
 	// Define contract test cases for library management endpoints
 	contractTests := []ContractTest{
 		{
@@ -366,31 +369,30 @@ func TestLibraryManagementContract(t *testing.T) {
 			Method:   "POST",
 			Endpoint: "/api/libraries",
 			Request: map[string]interface{}{
-				"name":     "Test Library",
-				"path":     "/test/path",
-				"type":     "production",
-				"base_path": "/test/base",
+				"name": "Test Library",
+				"path": "/test/path",
+				"type": "production",
 			},
 			ExpectedStatus: http.StatusOK,
 			ExpectedSchema: map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":         "number",
-					"name":       "string",
-					"path":       "string",
-					"type":       "string", // "inbound", "staging", "production"
-					"is_locked":  "boolean",
-					"created_at": "string",
-					"song_count": "number",
+					"id":          "number",
+					"name":        "string",
+					"path":        "string",
+					"type":        "string", // "inbound", "staging", "production"
+					"is_locked":   "boolean",
+					"created_at":  "string",
+					"song_count":  "number",
 					"album_count": "number",
-					"duration":   "number",
+					"duration":    "number",
 				},
 			},
 		},
 		{
-			Name:     "Get libraries returns correct structure",
-			Method:   "GET",
-			Endpoint: "/api/libraries",
-			Request:  nil,
+			Name:           "Get libraries returns correct structure",
+			Method:         "GET",
+			Endpoint:       "/api/libraries",
+			Request:        nil,
 			ExpectedStatus: http.StatusOK,
 			ExpectedSchema: map[string]interface{}{
 				"data": "array",
@@ -419,23 +421,23 @@ func TestLibraryManagementContract(t *testing.T) {
 			// Execute request
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
-			
+
 			// Check status code
 			assert.Equal(t, testCase.ExpectedStatus, resp.StatusCode)
-			
+
 			// Read response body
 			responseBody := make([]byte, resp.ContentLength)
 			_, err = resp.Body.Read(responseBody)
 			if err != nil && err.Error() != "EOF" {
 				assert.NoError(t, err)
 			}
-			
+
 			// If expecting a specific schema, validate it
 			if testCase.ExpectedSchema != nil && len(responseBody) > 0 {
 				var responseJson map[string]interface{}
 				err := json.Unmarshal(responseBody, &responseJson)
 				assert.NoError(t, err)
-				
+
 				validateResponseSchema(t, responseJson, testCase.ExpectedSchema)
 			}
 		})
@@ -454,28 +456,28 @@ func TestPlaylistContract(t *testing.T) {
 	// Initialize services
 	repo := NewRepository(db)
 	authService := NewAuthService(db, "test-jwt-secret-key-change-in-production")
-	
+
 	// Create test user
 	userPassword := "ValidPass123!"
 	hashedUserPassword, err := authService.HashPassword(userPassword)
 	assert.NoError(t, err)
 
 	user := &models.User{
-		Username: "playlist-contract-test",
-		Email:    "playlist-contract@test.com",
-		APIKey:   uuid.New(),
+		Username:     "playlist-contract-test",
+		Email:        "playlist-contract@test.com",
+		APIKey:       uuid.New(),
 		PasswordHash: hashedUserPassword,
 	}
-	
+
 	err = repo.CreateUser(user)
 	assert.NoError(t, err)
 
 	// Set up routes for testing
 	playlistHandler := &PlaylistHandler{repo: repo}
-	
+
 	app.Get("/api/playlists", playlistHandler.GetPlaylists)
 	app.Post("/api/playlists", playlistHandler.CreatePlaylist)
-	
+
 	// Define contract test cases for playlist endpoints
 	contractTests := []ContractTest{
 		{
@@ -491,24 +493,24 @@ func TestPlaylistContract(t *testing.T) {
 			ExpectedStatus: http.StatusOK,
 			ExpectedSchema: map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":           "number",
-					"api_key":      "string",
-					"name":         "string",
-					"description":  "string",
-					"owner_id":     "number",
-					"is_public":    "boolean",
-					"song_count":   "number",
-					"duration":     "number",
-					"created_at":   "string",
-					"changed_at":   "string",
+					"id":          "number",
+					"api_key":     "string",
+					"name":        "string",
+					"description": "string",
+					"owner_id":    "number",
+					"is_public":   "boolean",
+					"song_count":  "number",
+					"duration":    "number",
+					"created_at":  "string",
+					"changed_at":  "string",
 				},
 			},
 		},
 		{
-			Name:     "Get playlists returns correct structure",
-			Method:   "GET",
-			Endpoint: "/api/playlists",
-			Request:  nil,
+			Name:           "Get playlists returns correct structure",
+			Method:         "GET",
+			Endpoint:       "/api/playlists",
+			Request:        nil,
 			ExpectedStatus: http.StatusOK,
 			ExpectedSchema: map[string]interface{}{
 				"data": "array",
@@ -537,23 +539,23 @@ func TestPlaylistContract(t *testing.T) {
 			// Execute request
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
-			
+
 			// Check status code
 			assert.Equal(t, testCase.ExpectedStatus, resp.StatusCode)
-			
+
 			// Read response body
 			responseBody := make([]byte, resp.ContentLength)
 			_, err = resp.Body.Read(responseBody)
 			if err != nil && err.Error() != "EOF" {
 				assert.NoError(t, err)
 			}
-			
+
 			// If expecting a specific schema, validate it
 			if testCase.ExpectedSchema != nil && len(responseBody) > 0 {
 				var responseJson map[string]interface{}
 				err := json.Unmarshal(responseBody, &responseJson)
 				assert.NoError(t, err)
-				
+
 				validateResponseSchema(t, responseJson, testCase.ExpectedSchema)
 			}
 		})
@@ -571,19 +573,19 @@ func TestSearchContract(t *testing.T) {
 
 	// Initialize services
 	repo := NewRepository(db)
-	
+
 	// Set up routes for testing
 	searchHandler := &SearchHandler{repo: repo}
-	
+
 	app.Get("/api/search", searchHandler.Search)
-	
+
 	// Define contract test cases for search endpoint
 	contractTests := []ContractTest{
 		{
-			Name:     "Search with query returns correct structure",
-			Method:   "GET",
-			Endpoint: "/api/search?q=test&type=any&limit=10&offset=0",
-			Request:  nil,
+			Name:           "Search with query returns correct structure",
+			Method:         "GET",
+			Endpoint:       "/api/search?q=test&type=any&limit=10&offset=0",
+			Request:        nil,
 			ExpectedStatus: http.StatusOK,
 			ExpectedSchema: map[string]interface{}{
 				"data": map[string]interface{}{ // data contains results grouped by type
@@ -599,10 +601,10 @@ func TestSearchContract(t *testing.T) {
 			},
 		},
 		{
-			Name:     "Search without query returns error",
-			Method:   "GET",
-			Endpoint: "/api/search",
-			Request:  nil,
+			Name:           "Search without query returns error",
+			Method:         "GET",
+			Endpoint:       "/api/search",
+			Request:        nil,
 			ExpectedStatus: http.StatusBadRequest,
 			ExpectedSchema: map[string]interface{}{
 				"error": "string",
@@ -624,23 +626,23 @@ func TestSearchContract(t *testing.T) {
 			// Execute request
 			resp, err := app.Test(req)
 			assert.NoError(t, err)
-			
+
 			// Check status code
 			assert.Equal(t, testCase.ExpectedStatus, resp.StatusCode)
-			
+
 			// Read response body
 			responseBody := make([]byte, resp.ContentLength)
 			_, err = resp.Body.Read(responseBody)
 			if err != nil && err.Error() != "EOF" {
 				assert.NoError(t, err)
 			}
-			
+
 			// If expecting a specific schema, validate it
 			if testCase.ExpectedSchema != nil && len(responseBody) > 0 {
 				var responseJson map[string]interface{}
 				err := json.Unmarshal(responseBody, &responseJson)
 				assert.NoError(t, err)
-				
+
 				validateResponseSchema(t, responseJson, testCase.ExpectedSchema)
 			}
 		})
@@ -658,16 +660,16 @@ func TestHealthCheckContract(t *testing.T) {
 
 	// Initialize health service
 	healthHandler := &HealthHandler{dbManager: test.GetTestDBManager(t)}
-	
+
 	// Set up route for testing
 	app.Get("/healthz", healthHandler.HealthCheck)
-	
+
 	// Define contract test case for health check endpoint
 	testCase := ContractTest{
-		Name:     "Health check returns correct structure",
-		Method:   "GET",
-		Endpoint: "/healthz",
-		Request:  nil,
+		Name:           "Health check returns correct structure",
+		Method:         "GET",
+		Endpoint:       "/healthz",
+		Request:        nil,
 		ExpectedStatus: http.StatusOK,
 		ExpectedSchema: map[string]interface{}{
 			"status": "string", // "ok", "degraded", "down"
@@ -689,23 +691,23 @@ func TestHealthCheckContract(t *testing.T) {
 		// Execute request
 		resp, err := app.Test(req)
 		assert.NoError(t, err)
-		
+
 		// Check status code
 		assert.Equal(t, testCase.ExpectedStatus, resp.StatusCode)
-		
+
 		// Read response body
 		responseBody := make([]byte, resp.ContentLength)
 		_, err = resp.Body.Read(responseBody)
 		if err != nil && err.Error() != "EOF" {
 			assert.NoError(t, err)
 		}
-		
+
 		// If expecting a specific schema, validate it
 		if testCase.ExpectedSchema != nil && len(responseBody) > 0 {
 			var responseJson map[string]interface{}
 			err := json.Unmarshal(responseBody, &responseJson)
 			assert.NoError(t, err)
-			
+
 			validateResponseSchema(t, responseJson, testCase.ExpectedSchema)
 		}
 	})

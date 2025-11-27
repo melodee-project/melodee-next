@@ -142,14 +142,13 @@ func (h *TaskHandler) HandleLibraryScan(ctx context.Context, t *asynq.Task) erro
 func (h *TaskHandler) scanLibrary(ctx context.Context, libraryID int32, force bool) error {
 	// Get library from database
 	var library struct {
-		ID       int32  `gorm:"column:id"`
-		Name     string `gorm:"column:name"`
-		Path     string `gorm:"column:path"`
-		Type     string `gorm:"column:type"`
-		BasePath string `gorm:"column:base_path"`
+		ID   int32  `gorm:"column:id"`
+		Name string `gorm:"column:name"`
+		Path string `gorm:"column:path"`
+		Type string `gorm:"column:type"`
 	}
 
-	if err := h.db.Table("libraries").Where("id = ?", libraryID).First(&library).Error; err != nil {
+	if err := h.db.Table("melodee_libraries").Where("id = ?", libraryID).First(&library).Error; err != nil {
 		return fmt.Errorf("failed to get library: %w", err)
 	}
 
@@ -283,7 +282,7 @@ func (h *TaskHandler) scanInboundLibrary(ctx context.Context, libraryID int32, p
 		// This gives users visibility into how many files are available to process
 	}
 
-	if err := h.db.Table("libraries").Where("id = ?", libraryID).Updates(updateData).Error; err != nil {
+	if err := h.db.Table("melodee_libraries").Where("id = ?", libraryID).Updates(updateData).Error; err != nil {
 		return fmt.Errorf("failed to update library statistics: %w", err)
 	}
 

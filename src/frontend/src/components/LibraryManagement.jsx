@@ -8,7 +8,7 @@ function LibraryManagement() {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'inbound', 'staging', 'production', 'quarantine'
   const [message, setMessage] = useState('');
   const [editingLibrary, setEditingLibrary] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', path: '', base_path: '' });
+  const [editForm, setEditForm] = useState({ name: '', path: '' });
 
   useEffect(() => {
     fetchLibraryStats();
@@ -129,8 +129,7 @@ function LibraryManagement() {
     setEditingLibrary(library);
     setEditForm({
       name: library.name,
-      path: library.path,
-      base_path: library.base_path || library.basePath || ''
+      path: library.path
     });
   };
 
@@ -148,7 +147,7 @@ function LibraryManagement() {
 
   const handleCancelEdit = () => {
     setEditingLibrary(null);
-    setEditForm({ name: '', path: '', base_path: '' });
+    setEditForm({ name: '', path: '' });
   };
 
   if (loading) {
@@ -200,16 +199,7 @@ function LibraryManagement() {
                   value={editForm.path}
                   onChange={(e) => setEditForm({ ...editForm, path: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Base Path</label>
-                <input
-                  type="text"
-                  value={editForm.base_path}
-                  onChange={(e) => setEditForm({ ...editForm, base_path: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., /mnt/music or C:\Music or /nfs/media"
                 />
               </div>
             </div>
@@ -357,7 +347,7 @@ function LibraryManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={() => handleEditLibrary(lib)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 underline"
+                        className="px-3 py-1 bg-blue-600 dark:bg-blue-600 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-500 font-medium"
                       >
                         Edit
                       </button>

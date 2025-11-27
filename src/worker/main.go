@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +12,7 @@ import (
 	"melodee/internal/config"
 	"melodee/internal/database"
 	"melodee/internal/directory"
+	"melodee/internal/logging"
 	"melodee/internal/media"
 )
 
@@ -34,7 +34,7 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 		return nil, nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Initialize database
+	// Initialize database first
 	dbManager, err := database.NewDatabaseManager(
 		&config.DatabaseConfig{
 			Host:            cfg.Database.Host,
@@ -48,11 +48,18 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 			ConnMaxLifetime: cfg.Database.ConnMaxLifetime,
 			ConnMaxIdleTime: cfg.Database.ConnMaxIdleTime,
 		},
-		nil, // logger
+		nil, // logger - will be initialized below
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	// Initialize logging with database storage
+	logStorage := logging.NewLogStorage(dbManager.GetGormDB())
+	logging.InitGlobalLogger(logging.InfoLevel, "json", logStorage)
+	logging.Info("Worker logging initialized with database storage")
+	logging.Infof("Worker starting up - redis: %s, workers: %d, buffer: %d",
+		cfg.Redis.Address, cfg.Processing.ScanWorkers, cfg.Processing.ScanBufferSize)
 
 	// Initialize directory code generator
 	directoryConfig := directory.DefaultDirectoryCodeConfig()
@@ -78,6 +85,8 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 
 	// Initialize Asynq server with Redis connection
 	redisAddr := cfg.Redis.Address
+	logging.Infof("Connecting to Redis at %s", redisAddr)
+
 	srv := asynq.NewServer(
 		asynq.RedisClientOpt{Addr: redisAddr},
 		asynq.Config{
@@ -91,6 +100,8 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 		},
 	)
 
+	logging.Info("Asynq server configured with concurrency=10, queues: critical:6, default:3, bulk:1, maintenance:2")
+
 	// Register task handlers using a ServeMux with handler that has dependencies
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(media.TypeLibraryScan, taskHandler.HandleLibraryScan)
@@ -99,6 +110,10 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 	mux.HandleFunc(media.TypeDirectoryRecalculate, media.HandleDirectoryRecalculate)
 	mux.HandleFunc(media.TypeMetadataWriteback, media.HandleMetadataWriteback)
 	mux.HandleFunc(media.TypeMetadataEnhance, media.HandleMetadataEnhance)
+
+	logging.Infof("Registered 6 task handlers: %s, %s, %s, %s, %s, %s",
+		media.TypeLibraryScan, media.TypeLibraryProcess, media.TypeLibraryMoveOK,
+		media.TypeDirectoryRecalculate, media.TypeMetadataWriteback, media.TypeMetadataEnhance)
 
 	return &WorkerServer{
 		srv:          srv,
@@ -112,10 +127,11 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 
 // Start starts the worker server
 func (w *WorkerServer) Start(mux *asynq.ServeMux) error {
-	log.Println("Starting worker server...")
+	logging.Info("Starting Asynq worker server...")
 
 	// Start the server
 	if err := w.srv.Run(mux); err != nil {
+		logging.Errorf("Failed to start worker server: %v", err)
 		return fmt.Errorf("failed to start worker server: %w", err)
 	}
 
@@ -124,15 +140,19 @@ func (w *WorkerServer) Start(mux *asynq.ServeMux) error {
 
 // Shutdown gracefully shuts down the worker server
 func (w *WorkerServer) Shutdown() {
-	log.Println("Shutting down worker server...")
+	logging.Info("Shutting down worker server...")
 	w.srv.Shutdown()
+	logging.Info("Worker server shut down complete")
 }
 
 // Main entry point for the worker service
 func main() {
+	fmt.Println("===== Melodee Worker Starting =====")
+
 	worker, mux, err := NewWorkerServer()
 	if err != nil {
-		log.Fatal("Failed to create worker server:", err)
+		logging.Errorf("Failed to create worker server: %v", err)
+		os.Exit(1)
 	}
 
 	// Set up signal handling for graceful shutdown
@@ -142,12 +162,14 @@ func main() {
 	// Start the worker in a goroutine
 	go func() {
 		if err := worker.Start(mux); err != nil {
-			log.Fatal("Worker server error:", err)
+			logging.Errorf("Worker server error: %v", err)
+			os.Exit(1)
 		}
 	}()
 
 	// Wait for shutdown signal
-	<-sigCh
-	log.Println("Received shutdown signal")
+	sig := <-sigCh
+	logging.Infof("Received shutdown signal: %s", sig.String())
 	worker.Shutdown()
+	fmt.Println("===== Melodee Worker Stopped =====")
 }

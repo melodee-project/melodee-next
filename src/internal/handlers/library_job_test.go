@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/bcrypt"
-	"github.com/google/uuid"
 	"melodee/internal/models"
 	"melodee/internal/services"
 	"melodee/internal/test"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestLibraryHandler_GetLibrariesStats(t *testing.T) {
@@ -43,18 +44,14 @@ func TestLibraryHandler_GetLibrariesStats(t *testing.T) {
 
 	// Create test libraries
 	library1 := &models.Library{
-		Name:         "Test Library 1",
-		Type:         "production",
-		Path:         "/music/test1",
-		IsLocked:     false,
-		SongCount:    100,
-		AlbumCount:   50,
-		Duration:     3600000, // 1 hour in milliseconds
-		SizeBytes:    1073741824, // 1GB
-		ArtistCount:  20,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-		BasePath:     "/music/test1",
+		Name:       "Test Library 1",
+		Type:       "production",
+		Path:       "/music/test1",
+		IsLocked:   false,
+		SongCount:  100,
+		AlbumCount: 50,
+		Duration:   3600000, // 1 hour in milliseconds
+		CreatedAt:  time.Now(),
 	}
 
 	err = db.Create(library1).Error
@@ -142,18 +139,14 @@ func TestLibraryHandler_LibraryOperations(t *testing.T) {
 
 	// Create test library
 	library := &models.Library{
-		Name:         "Test Library",
-		Type:         "production",
-		Path:         "/music/test",
-		IsLocked:     false,
-		SongCount:    50,
-		AlbumCount:   25,
-		Duration:     1800000, // 30 minutes in milliseconds
-		SizeBytes:    536870912, // 512MB
-		ArtistCount:  10,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-		BasePath:     "/music/test",
+		Name:       "Test Library",
+		Type:       "production",
+		Path:       "/music/test",
+		IsLocked:   false,
+		SongCount:  50,
+		AlbumCount: 25,
+		Duration:   1800000, // 30 minutes in milliseconds
+		CreatedAt:  time.Now(),
 	}
 
 	err = db.Create(library).Error

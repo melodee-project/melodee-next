@@ -34,8 +34,7 @@ CREATE TABLE IF NOT EXISTS melodee_libraries (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     song_count INTEGER DEFAULT 0,
     album_count INTEGER DEFAULT 0,
-    duration BIGINT DEFAULT 0,
-    base_path VARCHAR(512) NOT NULL
+    duration BIGINT DEFAULT 0
 );
 
 -- Settings Table

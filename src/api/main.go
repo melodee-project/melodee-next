@@ -78,6 +78,7 @@ func (s *APIServer) setupRoutes() {
 	authHandler := handlers.NewAuthHandler(s.authService)
 	userHandler := handlers.NewUserHandler(s.repo, s.authService)
 	playlistHandler := handlers.NewPlaylistHandler(s.repo)
+	jobsHandler := handlers.NewJobsHandler(asynqInspector, asynqClient)
 	searchHandler := handlers.NewSearchHandler(s.repo)      // Add search handler
 	healthHandler := handlers.NewHealthHandler(s.dbManager) // Pass the dbManager
 	settingsHandler := handlers.NewSettingsHandler(s.repo)
@@ -168,10 +169,21 @@ func (s *APIServer) setupRoutes() {
 
 	// Admin routes (admin only)
 	admin := protected.Group("/admin", middleware.NewAuthMiddleware(s.authService).AdminOnly())
+
+	// Job monitoring routes
+	admin.Get("/jobs/active", jobsHandler.GetActiveJobs)
+	admin.Get("/jobs/pending", jobsHandler.GetPendingJobs)
+	admin.Get("/jobs/scheduled", jobsHandler.GetScheduledJobs)
+	admin.Get("/jobs/stats", jobsHandler.GetQueueStats)
+	admin.Post("/jobs/cancel/:id", jobsHandler.CancelJob)
+	admin.Post("/jobs/run", jobsHandler.RunTask)
+
+	// DLQ (Dead Letter Queue) routes
 	admin.Get("/jobs/dlq", dlqHandler.GetDLQItems)
 	admin.Post("/jobs/dlq/requeue", dlqHandler.RequeueDLQItems)
 	admin.Post("/jobs/dlq/purge", dlqHandler.PurgeDLQItems)
 	admin.Get("/jobs/dlq/:id", dlqHandler.GetJobById)
+
 	admin.Get("/capacity", capacityHandler.GetAllCapacityStatuses)
 	admin.Get("/capacity/:id", capacityHandler.GetCapacityForLibrary)
 

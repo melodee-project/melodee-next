@@ -94,10 +94,19 @@ export const playlistService = {
 
 // Admin-related API endpoints
 export const adminService = {
+  // Job monitoring
+  getActiveJobs: () => apiService.get('/admin/jobs/active'),
+  getPendingJobs: () => apiService.get('/admin/jobs/pending'),
+  getScheduledJobs: () => apiService.get('/admin/jobs/scheduled'),
+  getJobStats: () => apiService.get('/admin/jobs/stats'),
+  cancelJob: (id) => apiService.post(`/admin/jobs/cancel/${id}`),
+  runTask: (taskType, queue, payload) => apiService.post('/admin/jobs/run', { task_type: taskType, queue, payload }),
+  
+  // DLQ (Dead Letter Queue)
   getDLQItems: () => apiService.get('/admin/jobs/dlq'),
-  requeueDLQItems: (jobIds) => apiService.post('/admin/jobs/requeue', { job_ids: jobIds }),
-  purgeDLQItems: (jobIds) => apiService.post('/admin/jobs/purge', { job_ids: jobIds }),
-  getJobById: (id) => apiService.get(`/admin/jobs/${id}`),
+  requeueDLQItems: (jobIds) => apiService.post('/admin/jobs/dlq/requeue', { job_ids: jobIds }),
+  purgeDLQItems: (jobIds) => apiService.post('/admin/jobs/dlq/purge', { job_ids: jobIds }),
+  getJobById: (id) => apiService.get(`/admin/jobs/dlq/${id}`),
   getSettings: () => apiService.get('/settings'), // Note: Per INTERNAL_API_ROUTES.md, it's /settings not /admin/settings
   updateSetting: (key, value) => apiService.put('/settings', { key, value }), // Per spec, it updates single key
   getShares: () => apiService.get('/shares'),

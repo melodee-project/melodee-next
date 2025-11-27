@@ -5,7 +5,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ThemeSelector from './components/ThemeSelector';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './components/AdminDashboard';
-import DLQManagement from './components/DLQManagement';
+import JobMonitor from './components/JobMonitor';
 import LogViewer from './components/LogViewer';
 import UserManagement from './components/UserManagement';
 import SettingsManagement from './components/SettingsManagement';
@@ -15,7 +15,7 @@ import QuarantineManagement from './components/QuarantineManagement';
 import PlaylistManagement from './components/PlaylistManagement';
 import { 
   LayoutDashboard, 
-  AlertTriangle, 
+  Briefcase,
   FileText, 
   Users, 
   Settings, 
@@ -77,7 +77,7 @@ function Layout({ children }) {
             </Link>
             <ul className="hidden md:flex space-x-4 lg:space-x-6">
               <li><Link to="/admin" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><LayoutDashboard className="w-4 h-4" />Dashboard</Link></li>
-              <li><Link to="/admin/dlq" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><AlertTriangle className="w-4 h-4" />DLQ</Link></li>
+              <li><Link to="/admin/jobs" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Briefcase className="w-4 h-4" />Jobs</Link></li>
               <li><Link to="/admin/logs" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><FileText className="w-4 h-4" />Logs</Link></li>
               <li><Link to="/admin/users" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Users className="w-4 h-4" />Users</Link></li>
               <li><Link to="/admin/settings" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Settings className="w-4 h-4" />Settings</Link></li>
@@ -131,13 +131,14 @@ function App() {
               </Layout>
             </ProtectedRoute>
           } />
-          <Route path="/admin/dlq" element={
+          <Route path="/admin/jobs" element={
             <AdminRoute>
               <Layout>
-                <DLQManagement />
+                <JobMonitor />
               </Layout>
             </AdminRoute>
           } />
+          <Route path="/admin/dlq" element={<Navigate to="/admin/jobs" replace />} />
           <Route path="/admin/logs" element={
             <AdminRoute>
               <Layout>
