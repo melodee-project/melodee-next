@@ -397,7 +397,7 @@ func HandleDirectoryRecalculate(ctx context.Context, t *asynq.Task) error {
 
 // MetadataWritebackPayload represents the payload for metadata writeback
 type MetadataWritebackPayload struct {
-	SongIDs []int64 `json:"track_ids"`
+	TrackIDs []int64 `json:"track_ids"`
 }
 
 // HandleMetadataWriteback writes metadata changes back to files
@@ -407,14 +407,14 @@ func HandleMetadataWriteback(ctx context.Context, t *asynq.Task) error {
 		return fmt.Errorf("failed to unmarshal metadata writeback payload: %w", err)
 	}
 
-	log.Printf("Writing back metadata for %d songs", len(p.SongIDs))
+	log.Printf("Writing back metadata for %d tracks", len(p.TrackIDs))
 
 	// In a real implementation, this would:
 	// 1. Fetch updated metadata from DB
 	// 2. Write it back to media files
 	// 3. Handle conflicts according to metadata rules
 
-	log.Printf("Metadata writeback completed for %d songs", len(p.SongIDs))
+	log.Printf("Metadata writeback completed for %d tracks", len(p.TrackIDs))
 
 	return nil
 }
@@ -556,9 +556,9 @@ func (ms *MediaService) EnqueueDirectoryRecalculate(client *asynq.Client, artist
 }
 
 // EnqueueMetadataWriteback creates and enqueues a metadata writeback job
-func (ms *MediaService) EnqueueMetadataWriteback(client *asynq.Client, songIDs []int64) error {
+func (ms *MediaService) EnqueueMetadataWriteback(client *asynq.Client, trackIDs []int64) error {
 	payload, err := json.Marshal(MetadataWritebackPayload{
-		SongIDs: songIDs,
+		TrackIDs: trackIDs,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata writeback payload: %w", err)
@@ -566,9 +566,9 @@ func (ms *MediaService) EnqueueMetadataWriteback(client *asynq.Client, songIDs [
 
 	task := asynq.NewTask(TypeMetadataWriteback, payload)
 
-	// Use deduplication key based on song IDs hash
-	// In a real implementation, we'd create a hash of the song IDs
-	dedupKey := fmt.Sprintf("metadata.writeback:%v", len(songIDs)) // Simplified
+	// Use deduplication key based on track IDs hash
+	// In a real implementation, we'd create a hash of the track IDs
+	dedupKey := fmt.Sprintf("metadata.writeback:%v", len(trackIDs)) // Simplified
 
 	_, err = client.Enqueue(task, asynq.TaskID(dedupKey), asynq.Timeout(2*time.Minute))
 	if err != nil {

@@ -104,9 +104,9 @@ export const adminService = {
   
   // DLQ (Dead Letter Queue)
   getDLQItems: () => apiService.get('/admin/jobs/dlq'),
-  requeueDLQItems: (jobIds) => apiService.post('/admin/jobs/dlq/requeue', { job_ids: jobIds }),
-  purgeDLQItems: (jobIds) => apiService.post('/admin/jobs/dlq/purge', { job_ids: jobIds }),
-  getJobById: (id) => apiService.get(`/admin/jobs/dlq/${id}`),
+  requeueDLQItems: (jobIds) => apiService.post('/admin/jobs/requeue', { job_ids: jobIds }),
+  purgeDLQItems: (jobIds) => apiService.post('/admin/jobs/purge', { job_ids: jobIds }),
+  getJobById: (id) => apiService.get(`/admin/jobs/${id}`),
   getSettings: () => apiService.get('/settings'), // Note: Per INTERNAL_API_ROUTES.md, it's /settings not /admin/settings
   updateSetting: (key, value) => apiService.put('/settings', { key, value }), // Per spec, it updates single key
   getShares: () => apiService.get('/shares'),
@@ -121,11 +121,12 @@ export const adminService = {
 
 // Library-related API endpoints
 export const libraryService = {
-  getStats: () => apiService.get('/library-stats'),
-  scanLibrary: (libraryId) => apiService.get(`/libraries/${libraryId}/scan`),
-  processInbound: (libraryId) => apiService.get(`/libraries/${libraryId}/process`),
-  moveOkAlbums: (libraryId) => apiService.get(`/libraries/${libraryId}/move-ok`),
+  getStats: () => apiService.get('/libraries/stats'),
+  scanLibrary: (libraryId) => apiService.post('/libraries/scan', { library_id: libraryId }),
+  processInbound: (libraryId) => apiService.post('/libraries/process', { library_id: libraryId }),
+  moveOkAlbums: (libraryId) => apiService.post('/libraries/move-ok', { library_id: libraryId }),
   getLibraries: () => apiService.get('/libraries'),
+  getLibrary: (id) => apiService.get(`/libraries/${id}`),
   updateLibrary: (id, data) => apiService.put(`/libraries/${id}`, data),
   getQuarantineItems: (params = {}) => apiService.get('/libraries/quarantine', { params }),
   resolveQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/resolve`),
@@ -141,19 +142,7 @@ export const healthService = {
   probeCapacityNow: () => apiService.post('/admin/capacity/probe-now'),
 };
 
-// Quarantine management endpoints
-export const quarantineService = {
-  getQuarantineItems: (params = {}) => apiService.get('/libraries/quarantine', { params }),
-  resolveQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/resolve`),
-  requeueQuarantineItem: (id) => apiService.post(`/libraries/quarantine/${id}/requeue`),
-  deleteQuarantineItem: (id) => apiService.delete(`/libraries/quarantine/${id}`)
-};
 
-// Metrics and health-related endpoints
-export const metricsService = {
-  getMetrics: () => apiService.get('/metrics'),
-  getHealth: () => apiService.get('/healthz'),
-};
 
 // Media-related API endpoints (OpenSubsonic compatibility helpers)
 // These are flagged as compatibility features for third-party client support

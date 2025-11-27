@@ -460,16 +460,16 @@ func (mp *MediaProcessor) promoteStagingItem(item models.Track) error {
 // selectProductionLibrary selects the appropriate production library for an item
 func (mp *MediaProcessor) selectProductionLibrary(item models.Track) (*models.Library, error) {
 	// Get the artist associated with this item to determine directory code
-	var song models.Track
-	if err := mp.db.Preload("Album.Artist").First(&song, item.ID).Error; err != nil {
-		return nil, fmt.Errorf("failed to find song: %w", err)
+	var track models.Track
+	if err := mp.db.Preload("Album.Artist").First(&track, item.ID).Error; err != nil {
+		return nil, fmt.Errorf("failed to find track: %w", err)
 	}
 
-	if song.Album == nil || song.Album.Artist == nil {
-		return nil, fmt.Errorf("song has no associated artist")
+	if track.Album == nil || track.Album.Artist == nil {
+		return nil, fmt.Errorf("track has no associated artist")
 	}
 
-	artist := song.Album.Artist
+	artist := track.Album.Artist
 
 	// Select library based on directory code
 	return mp.selectLibraryByDirectoryCode(artist.DirectoryCode)
@@ -718,8 +718,8 @@ func (mp *MediaProcessor) calculateProductionPath(item models.Track, library *mo
 
 // createProductionRecords creates production database records
 func (mp *MediaProcessor) createProductionRecords(item models.Track, libraryID int32, productionPath string) (int64, error) {
-	// Create a new production song record based on the staging item
-	productionSong := &models.Track{
+	// Create a new production track record based on the staging item
+	productionTrack := &models.Track{
 		Name:         item.Name,
 		Directory:    filepath.Dir(productionPath),
 		FileName:     filepath.Base(productionPath),
@@ -729,11 +729,11 @@ func (mp *MediaProcessor) createProductionRecords(item models.Track, libraryID i
 		// Other fields would be copied from staging item
 	}
 
-	if err := mp.db.Create(productionSong).Error; err != nil {
+	if err := mp.db.Create(productionTrack).Error; err != nil {
 		return 0, fmt.Errorf("failed to create production record: %w", err)
 	}
 
-	return productionSong.ID, nil
+	return productionTrack.ID, nil
 }
 
 // markStagingItemAsPromoted marks a staging item as promoted

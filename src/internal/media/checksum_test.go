@@ -244,29 +244,29 @@ func TestChecksumService_IsAlreadyProcessed(t *testing.T) {
 	assert.NoError(t, err)
 	tempFile.Close()
 
-	// Create a test song record
-	testSong := &models.Track{
+	// Create a test track record
+	testTrack := &models.Track{
 		CRCHash:      "some_hash_value",
 		RelativePath: tempFile.Name(),
 		Directory:    filepath.Dir(tempFile.Name()),
 		FileName:     filepath.Base(tempFile.Name()),
-		Name:         "Test Song",
+		Name:         "Test Track",
 	}
 
 	// Create checksum service
 	service := NewChecksumService(db, nil)
 
 	// Initially should not be processed
-	isProcessed, existingSong, err := service.IsAlreadyProcessed(tempFile.Name(), "different_hash")
+	isProcessed, existingTrack, err := service.IsAlreadyProcessed(tempFile.Name(), "different_hash")
 	assert.NoError(t, err)
 	assert.False(t, isProcessed)
-	assert.Nil(t, existingSong)
+	assert.Nil(t, existingTrack)
 
 	// Test with content-only check
-	isProcessed, existingSong, err = service.IsAlreadyProcessedByContentOnly("different_hash")
+	isProcessed, existingTrack, err = service.IsAlreadyProcessedByContentOnly("different_hash")
 	assert.NoError(t, err)
 	assert.False(t, isProcessed)
-	assert.Nil(t, existingSong)
+	assert.Nil(t, existingTrack)
 }
 
 func TestChecksumService_CalculateAndVerifyFile(t *testing.T) {

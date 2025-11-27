@@ -117,44 +117,44 @@ func (cs *ChecksumService) ValidateChecksum(filePath, expectedChecksum string) (
 
 // IsAlreadyProcessed checks if a file has already been processed (idempotency check)
 func (cs *ChecksumService) IsAlreadyProcessed(originalPath, checksum string) (bool, *models.Track, error) {
-	var existingSong models.Track
+	var existingTrack models.Track
 
 	// Look up by checksum in the database
-	if err := cs.db.Where("crc_hash = ? AND relative_path = ?", checksum, originalPath).First(&existingSong).Error; err != nil {
+	if err := cs.db.Where("crc_hash = ? AND relative_path = ?", checksum, originalPath).First(&existingTrack).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return false, nil, nil
 		}
 		return false, nil, err
 	}
 
-	return true, &existingSong, nil
+	return true, &existingTrack, nil
 }
 
 // IsAlreadyProcessedByContentOnly checks if a file with the same content (by checksum) has already been processed
 func (cs *ChecksumService) IsAlreadyProcessedByContentOnly(checksum string) (bool, *models.Track, error) {
-	var existingSong models.Track
+	var existingTrack models.Track
 
 	// Look up by just the checksum (same content anywhere)
-	if err := cs.db.Where("crc_hash = ?", checksum).First(&existingSong).Error; err != nil {
+	if err := cs.db.Where("crc_hash = ?", checksum).First(&existingTrack).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return false, nil, nil
 		}
 		return false, nil, err
 	}
 
-	return true, &existingSong, nil
+	return true, &existingTrack, nil
 }
 
 // MarkAsProcessed stores the checksum in the system to prevent re-processing
-func (cs *ChecksumService) MarkAsProcessed(filePath, checksum string, song *models.Track) error {
-	// The song model should already have the checksum set, but let's ensure it's stored properly
-	if song.CRCHash == "" {
-		song.CRCHash = checksum
+func (cs *ChecksumService) MarkAsProcessed(filePath, checksum string, track *models.Track) error {
+	// The track model should already have the checksum set, but let's ensure it's stored properly
+	if track.CRCHash == "" {
+		track.CRCHash = checksum
 	}
 
 	// If file already exists in database, prevent duplicate insertion
-	var existingSong models.Track
-	result := cs.db.Where("crc_hash = ? AND relative_path = ?", checksum, filePath).First(&existingSong)
+	var existingTrack models.Track
+	result := cs.db.Where("crc_hash = ? AND relative_path = ?", checksum, filePath).First(&existingTrack)
 
 	if result.Error == nil {
 		// Already exists, return early to maintain idempotency
@@ -165,8 +165,8 @@ func (cs *ChecksumService) MarkAsProcessed(filePath, checksum string, song *mode
 		return result.Error
 	}
 
-	// Otherwise, this is a new song, we can save it
-	return nil // Caller should handle saving the song
+	// Otherwise, this is a new track, we can save it
+	return nil // Caller should handle saving the track
 }
 
 // VerifyFileIntegrity verifies file integrity by checking content against stored checksum
@@ -340,14 +340,14 @@ func (cs *ChecksumService) GetConsistencyReport() (*ConsistencyReport, error) {
 		GeneratedAt: time.Now(),
 	}
 
-	// In a real system, this would query the database for all songs with checksums
+	// In a real system, this would query the database for all tracks with checksums
 	// and verify each file still exists and has the expected checksum
 
 	// This is a simplified version for demonstration
-	var songCount int64
-	cs.db.Model(&models.Track{}).Count(&songCount)
+	var trackCount int64
+	cs.db.Model(&models.Track{}).Count(&trackCount)
 
-	report.TotalFiles = int(songCount)
+	report.TotalFiles = int(trackCount)
 	report.VerifiedFiles = 0
 	report.CorruptedFiles = 0
 	report.MissingFiles = 0
