@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ThemeSelector from './components/ThemeSelector';
 import LoginPage from './pages/LoginPage';
+import StagingPage from './pages/StagingPage';
+import StagingDetailPage from './pages/StagingDetailPage';
 import AdminDashboard from './components/AdminDashboard';
 import JobMonitor from './components/JobMonitor';
 import LogViewer from './components/LogViewer';
@@ -23,6 +25,7 @@ import {
   Library, 
   AlertCircle, 
   Music,
+  FolderCheck,
   LogOut
 } from 'lucide-react';
 
@@ -77,6 +80,7 @@ function Layout({ children }) {
             </Link>
             <ul className="hidden md:flex space-x-4 lg:space-x-6">
               <li><Link to="/admin" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><LayoutDashboard className="w-4 h-4" />Dashboard</Link></li>
+              <li><Link to="/staging" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><FolderCheck className="w-4 h-4" />Staging</Link></li>
               <li><Link to="/admin/jobs" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Briefcase className="w-4 h-4" />Jobs</Link></li>
               <li><Link to="/admin/logs" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><FileText className="w-4 h-4" />Logs</Link></li>
               <li><Link to="/admin/users" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Users className="w-4 h-4" />Users</Link></li>
@@ -187,6 +191,20 @@ function App() {
                 <PlaylistManagement />
               </Layout>
             </AdminRoute>
+          } />
+          <Route path="/staging" element={
+            <ProtectedRoute>
+              <Layout>
+                <StagingPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/staging/:id" element={
+            <ProtectedRoute>
+              <Layout>
+                <StagingDetailPage />
+              </Layout>
+            </ProtectedRoute>
           } />
           <Route path="*" element={
             <ProtectedRoute>
