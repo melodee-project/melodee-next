@@ -105,6 +105,11 @@ func (r *Repository) AddTrackToPlaylist(playlistTrack *models.PlaylistTrack) err
 	return r.db.Create(playlistTrack).Error
 }
 
+// ClearPlaylistTracks removes all tracks from a playlist
+func (r *Repository) ClearPlaylistTracks(playlistID int32) error {
+	return r.db.Where("playlist_id = ?", playlistID).Delete(&models.PlaylistTrack{}).Error
+}
+
 // GetPlaylistWithTracks retrieves a playlist with ordered tracks including related metadata
 func (r *Repository) GetPlaylistWithTracks(id int32) (*models.Playlist, error) {
 	var playlist models.Playlist
@@ -376,4 +381,22 @@ func (r *Repository) SearchTracksPaginated(query string, limit, offset int) ([]m
 	}
 
 	return tracks, total, nil
+}
+
+// Library operations
+func (r *Repository) CreateLibrary(library *models.Library) error {
+	return r.db.Create(library).Error
+}
+
+func (r *Repository) GetLibraryByID(id int32) (*models.Library, error) {
+	var library models.Library
+	err := r.db.First(&library, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &library, nil
+}
+
+func (r *Repository) UpdateLibrary(library *models.Library) error {
+	return r.db.Save(library).Error
 }

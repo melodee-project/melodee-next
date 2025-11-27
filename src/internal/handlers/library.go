@@ -576,3 +576,48 @@ func (h *LibraryHandler) UpdateLibrary(c *fiber.Ctx) error {
 
 	return c.JSON(library)
 }
+
+// GetLibraries handles retrieving all libraries
+func (h *LibraryHandler) GetLibraries(c *fiber.Ctx) error {
+	var libraries []models.Library
+	if err := h.repo.GetDB().Find(&libraries).Error; err != nil {
+		return utils.SendInternalServerError(c, "Failed to retrieve libraries")
+	}
+
+	return c.JSON(libraries)
+}
+
+// CreateLibrary handles creating a new library
+func (h *LibraryHandler) CreateLibrary(c *fiber.Ctx) error {
+	var req struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+		Type string `json:"type"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate required fields
+	if req.Name == "" || req.Path == "" || req.Type == "" {
+		return utils.SendError(c, http.StatusBadRequest, "Name, path, and type are required")
+	}
+
+	// Validate library type
+	if req.Type != "inbound" && req.Type != "staging" && req.Type != "production" {
+		return utils.SendError(c, http.StatusBadRequest, "Library type must be 'inbound', 'staging', or 'production'")
+	}
+
+	library := &models.Library{
+		Name: req.Name,
+		Path: req.Path,
+		Type: req.Type,
+	}
+
+	if err := h.repo.CreateLibrary(library); err != nil {
+		return utils.SendInternalServerError(c, "Failed to create library")
+	}
+
+	return c.Status(http.StatusCreated).JSON(library)
+}

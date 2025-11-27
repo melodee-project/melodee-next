@@ -83,9 +83,39 @@
 - ✅ melodee/internal/processor
 - ✅ melodee/internal/handlers
 - ✅ melodee/internal/models
+- ✅ melodee/internal/services
 - ✅ melodee/open_subsonic/handlers
 
 **See**: `docs/BUILD_FIX_SUMMARY.md` for detailed build fix information
+
+## Recent Changes & Fixes
+
+### Contract Test Refactor (November 27, 2025)
+- **Issue**: `contract_test.go` was failing to compile because it referenced handlers that had moved from `services` to `handlers` package
+- **Solution**:
+  - Changed test package from `services` to `services_test`
+  - Updated imports to use `melodee/internal/handlers`, `melodee/internal/services`, and `melodee/internal/test`
+  - Instantiated handlers via exported constructors instead of direct struct initialization
+  - Wrapped request bodies with `io.NopCloser(bytes.NewBuffer(...))` to satisfy `io.ReadCloser` interface
+
+### Playlist Handler DTO Cleanup (November 27, 2025)
+- **Issue**: Playlist endpoints still used `SongIDs` in DTOs while the system now uses track terminology
+- **Changes**:
+  - Renamed `SongIDs` → `TrackIDs` in `CreatePlaylist` and `UpdatePlaylist` request DTOs
+  - Updated playlist handler to use `AddTrackToPlaylist` and `GetPlaylistWithTracks` repository methods
+  - Now returns hydrated playlist data with tracks instead of basic playlist object
+
+### Test Fixture Updates (November 27, 2025)
+- **Issues**: Tests still referenced legacy `UserSong` and `AlbumStatus` that were removed in earlier phases
+- **Changes**:
+  - Replaced `models.UserSong` with `models.UserTrack` in test migration calls
+  - Removed `AlbumStatus` field assignments from test fixture creation
+  - Updated integration tests to use proper playlist track relationship methods
+
+### Repository Method Additions (November 27, 2025)
+- **Added missing methods** to repository to support existing test functionality:
+  - `CreateLibrary`, `GetLibraryByID`, `UpdateLibrary` methods
+  - `ClearPlaylistTracks` method to remove all tracks from a playlist
 
 ## Executive Summary
 

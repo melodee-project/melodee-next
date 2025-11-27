@@ -103,7 +103,6 @@ func TestGetAlbumPerformance(t *testing.T) {
 		Name:         "Test Album",
 		NameNormalized: "test album",
 		ArtistID:     artist.ID,
-		AlbumStatus:  "Ok",
 		TrackCount:    0,
 		Duration:     0,
 	}
@@ -290,7 +289,6 @@ func BenchmarkGetAlbumPerformance(b *testing.B) {
 		Name:         "Test Album",
 		NameNormalized: "test album",
 		ArtistID:     artist.ID,
-		AlbumStatus:  "Ok",
 		TrackCount:    0,
 		Duration:     0,
 	}
@@ -480,7 +478,6 @@ func populateArtistsWithAlbumsAndSongsForPerformanceTest(db *gorm.DB, numArtists
 				Name:         fmt.Sprintf("Album %d for Artist %d", j, i),
 				NameNormalized: fmt.Sprintf("album %d for artist %d", j, i),
 				ArtistID:     artists[i].ID,
-				AlbumStatus:  "Ok",
 				TrackCount:    int64(songsPerAlbum),
 			})
 		}

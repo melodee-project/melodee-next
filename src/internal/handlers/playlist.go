@@ -103,7 +103,7 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 		Name     string `json:"name"`
 		Comment  string `json:"comment"`
 		Public   bool   `json:"public"`
-		SongIDs  []int64 `json:"track_ids"`
+		TrackIDs []int64 `json:"track_ids"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
@@ -124,15 +124,27 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 		return utils.SendInternalServerError(c, "Failed to create playlist")
 	}
 
-	return c.Status(http.StatusCreated).JSON(fiber.Map{
-		"id":         playlist.ID,
-		"name":       playlist.Name,
-		"comment":    playlist.Comment,
-		"public":     playlist.Public,
-		"user_id":    playlist.UserID,
-		"created_at": playlist.CreatedAt,
-		"changed_at": playlist.ChangedAt,
-	})
+	// Add tracks to the playlist if provided
+	if req.TrackIDs != nil && len(req.TrackIDs) > 0 {
+		for i, trackID := range req.TrackIDs {
+			playlistTrack := &models.PlaylistTrack{
+				PlaylistID: playlist.ID,
+				TrackID:    trackID,
+				Position:   int32(i + 1), // Position starts from 1
+			}
+			if err := h.repo.AddTrackToPlaylist(playlistTrack); err != nil {
+				return utils.SendInternalServerError(c, "Failed to add tracks to playlist")
+			}
+		}
+	}
+
+	// Get the playlist with tracks to return hydrated data
+	playlistWithTracks, err := h.repo.GetPlaylistWithTracks(playlist.ID)
+	if err != nil {
+		return utils.SendInternalServerError(c, "Failed to fetch playlist with tracks")
+	}
+
+	return c.Status(http.StatusCreated).JSON(playlistWithTracks)
 }
 
 // UpdatePlaylist handles updating a playlist
@@ -152,7 +164,7 @@ func (h *PlaylistHandler) UpdatePlaylist(c *fiber.Ctx) error {
 		Name     *string `json:"name,omitempty"`
 		Comment  *string `json:"comment,omitempty"`
 		Public   *bool   `json:"public,omitempty"`
-		SongIDs  *[]int64 `json:"track_ids,omitempty"`
+		TrackIDs *[]int64 `json:"track_ids,omitempty"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
@@ -185,13 +197,33 @@ func (h *PlaylistHandler) UpdatePlaylist(c *fiber.Ctx) error {
 		return utils.SendInternalServerError(c, "Failed to update playlist")
 	}
 
-	return c.JSON(fiber.Map{
-		"id":         playlist.ID,
-		"name":       playlist.Name,
-		"comment":    playlist.Comment,
-		"public":     playlist.Public,
-		"changed_at": playlist.ChangedAt,
-	})
+	// Update tracks in the playlist if provided
+	if req.TrackIDs != nil {
+		// First, clear existing tracks
+		if err := h.repo.ClearPlaylistTracks(playlist.ID); err != nil {
+			return utils.SendInternalServerError(c, "Failed to clear existing tracks")
+		}
+
+		// Add new tracks
+		for i, trackID := range *req.TrackIDs {
+			playlistTrack := &models.PlaylistTrack{
+				PlaylistID: playlist.ID,
+				TrackID:    trackID,
+				Position:   int32(i + 1), // Position starts from 1
+			}
+			if err := h.repo.AddTrackToPlaylist(playlistTrack); err != nil {
+				return utils.SendInternalServerError(c, "Failed to add tracks to playlist")
+			}
+		}
+	}
+
+	// Get the playlist with tracks to return hydrated data
+	playlistWithTracks, err := h.repo.GetPlaylistWithTracks(playlist.ID)
+	if err != nil {
+		return utils.SendInternalServerError(c, "Failed to fetch playlist with tracks")
+	}
+
+	return c.JSON(playlistWithTracks)
 }
 
 // DeletePlaylist handles deleting a playlist

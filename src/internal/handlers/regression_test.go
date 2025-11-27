@@ -29,7 +29,7 @@ func TestRegressionWithLargeDatasets(t *testing.T) {
 	// Auto-migrate models
 	err = db.AutoMigrate(
 		&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{},
-		&models.Playlist{}, &models.PlaylistTrack{}, &models.UserSong{}, &models.UserAlbum{},
+		&models.Playlist{}, &models.PlaylistTrack{}, &models.UserTrack{}, &models.UserAlbum{},
 		&models.UserArtist{}, &models.UserPin{}, &models.Bookmark{}, &models.Player{},
 		&models.PlayQueue{}, &models.SearchHistory{}, &models.Share{}, &models.ShareActivity{},
 		&models.LibraryScanHistory{}, &models.Setting{}, &models.ArtistRelation{}, &models.RadioStation{},
@@ -81,7 +81,6 @@ func TestRegressionWithLargeDatasets(t *testing.T) {
 			Name:           "Test Album " + string(rune(i+65)),
 			NameNormalized: "test album " + string(rune(i+65)),
 			ArtistID:       artist.ID,
-			AlbumStatus:    "Ok",
 		}
 		err = repo.CreateAlbum(album)
 		assert.NoError(t, err)

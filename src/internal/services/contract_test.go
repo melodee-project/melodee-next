@@ -1,12 +1,14 @@
-package services
+package services_test
 
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"melodee/internal/handlers"
 	"melodee/internal/models"
 	"melodee/internal/services"
 	"melodee/internal/test"
@@ -71,7 +73,7 @@ func TestAuthContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set up routes for testing
-	authHandler := &AuthHandler{authService: authService}
+	authHandler := handlers.NewAuthHandler(authService)
 	app.Post("/api/auth/login", authHandler.Login)
 
 	// Define contract test cases for auth endpoints
@@ -130,7 +132,7 @@ func TestAuthContract(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Create test request
-			req := httptest.NewRequest(testCase.Method, testCase.Endpoint, bytes.NewBuffer(jsonData))
+			req := httptest.NewRequest(testCase.Method, testCase.Endpoint, io.NopCloser(bytes.NewBuffer(jsonData)))
 			req.Header.Set("Content-Type", "application/json")
 
 			// Execute request
@@ -240,8 +242,8 @@ func TestUserManagementContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set up routes for testing
-	authHandler := &AuthHandler{authService: authService}
-	userHandler := &UserHandler{repo: repo, authService: authService}
+	authHandler := handlers.NewAuthHandler(authService)
+	userHandler := handlers.NewUserHandler(repo, authService)
 
 	// We need auth middleware for protected routes
 	app.Post("/api/auth/login", authHandler.Login)
@@ -295,7 +297,7 @@ func TestUserManagementContract(t *testing.T) {
 			if testCase.Request != nil {
 				jsonData, err := json.Marshal(testCase.Request)
 				assert.NoError(t, err)
-				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, bytes.NewBuffer(jsonData))
+				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, io.NopCloser(bytes.NewBuffer(jsonData)))
 				req.Header.Set("Content-Type", "application/json")
 			} else {
 				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, nil)
@@ -357,7 +359,7 @@ func TestLibraryManagementContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set up routes for testing
-	libraryHandler := &LibraryHandler{repo: repo, authService: authService}
+	libraryHandler := handlers.NewLibraryHandler(repo, nil, nil, nil)
 
 	// For testing purposes, let's directly test the handler functions
 	app.Get("/api/libraries", libraryHandler.GetLibraries)
@@ -413,7 +415,7 @@ func TestLibraryManagementContract(t *testing.T) {
 			if testCase.Request != nil {
 				jsonData, err := json.Marshal(testCase.Request)
 				assert.NoError(t, err)
-				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, bytes.NewBuffer(jsonData))
+				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, io.NopCloser(bytes.NewBuffer(jsonData)))
 				req.Header.Set("Content-Type", "application/json")
 			} else {
 				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, nil)
@@ -474,7 +476,7 @@ func TestPlaylistContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set up routes for testing
-	playlistHandler := &PlaylistHandler{repo: repo}
+	playlistHandler := handlers.NewPlaylistHandler(repo)
 
 	app.Get("/api/playlists", playlistHandler.GetPlaylists)
 	app.Post("/api/playlists", playlistHandler.CreatePlaylist)
@@ -531,7 +533,7 @@ func TestPlaylistContract(t *testing.T) {
 			if testCase.Request != nil {
 				jsonData, err := json.Marshal(testCase.Request)
 				assert.NoError(t, err)
-				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, bytes.NewBuffer(jsonData))
+				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, io.NopCloser(bytes.NewBuffer(jsonData)))
 				req.Header.Set("Content-Type", "application/json")
 			} else {
 				req = httptest.NewRequest(testCase.Method, testCase.Endpoint, nil)
@@ -576,7 +578,7 @@ func TestSearchContract(t *testing.T) {
 	repo := services.NewRepository(db)
 
 	// Set up routes for testing
-	searchHandler := &SearchHandler{repo: repo}
+	searchHandler := handlers.NewSearchHandler(repo)
 
 	app.Get("/api/search", searchHandler.Search)
 
@@ -620,7 +622,7 @@ func TestSearchContract(t *testing.T) {
 			if testCase.Request != nil {
 				jsonData, err := json.Marshal(testCase.Request)
 				assert.NoError(t, err)
-				req.Body = bytes.NewBuffer(jsonData)
+				req.Body = io.NopCloser(bytes.NewBuffer(jsonData))
 				req.Header.Set("Content-Type", "application/json")
 			}
 
@@ -652,15 +654,11 @@ func TestSearchContract(t *testing.T) {
 
 // TestHealthCheckContract tests health check endpoint contracts
 func TestHealthCheckContract(t *testing.T) {
-	// Create test database
-	db, tearDown := test.GetTestDB(t)
-	defer tearDown()
-
 	// Create Fiber app for testing
 	app := fiber.New()
 
 	// Initialize health service
-	healthHandler := &HealthHandler{dbManager: test.GetTestDBManager(t)}
+	healthHandler := handlers.NewHealthHandler(test.GetTestDBManager(t))
 
 	// Set up route for testing
 	app.Get("/healthz", healthHandler.HealthCheck)

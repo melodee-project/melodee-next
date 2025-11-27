@@ -189,11 +189,11 @@ func TestArtistAlbumSongIntegration(t *testing.T) {
 	assert.NotEqual(t, uuid.Nil, song.APIKey)
 
 	// Verify the relationships
-	albumWithSongs, err := repo.GetAlbumByID(album.ID)
+	albumWithTracks, err := repo.GetAlbumByID(album.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, album.Name, albumWithSongs.Name)
-	assert.Len(t, albumWithSongs.Songs, 1) // Should include the song we created
-	assert.Equal(t, song.Name, albumWithSongs.Songs[0].Name)
+	assert.Equal(t, album.Name, albumWithTracks.Name)
+	assert.Len(t, albumWithTracks.Tracks, 1) // Should include the track we created
+	assert.Equal(t, song.Name, albumWithTracks.Tracks[0].Name)
 
 	artistWithAlbums, err := repo.GetArtistByID(artist.ID)
 	assert.NoError(t, err)
@@ -278,22 +278,22 @@ func TestPlaylistIntegration(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotZero(t, playlist.ID)
 
-	// Add the song to the playlist
-	playlistSong := &models.PlaylistTrack{
+	// Add the track to the playlist
+	playlistTrack := &models.PlaylistTrack{
 		PlaylistID: playlist.ID,
 		TrackID:    song.ID,
 		Position:   1,
 		CreatedAt:  time.Now(),
 	}
 
-	err = repo.AddSongToPlaylist(playlistSong)
+	err = repo.AddTrackToPlaylist(playlistTrack)
 	assert.NoError(t, err)
 
-	// Retrieve the playlist with its songs
-	playlistWithSongs, err := repo.GetPlaylistWithSongs(playlist.ID)
+	// Retrieve the playlist with its tracks
+	playlistWithTracks, err := repo.GetPlaylistWithTracks(playlist.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, playlist.Name, playlistWithSongs.Name)
-	assert.Equal(t, user.ID, playlistWithSongs.UserID)
-	assert.Len(t, playlistWithSongs.Songs, 1)
-	assert.Equal(t, song.Name, playlistWithSongs.Songs[0].Name)
+	assert.Equal(t, playlist.Name, playlistWithTracks.Name)
+	assert.Equal(t, user.ID, playlistWithTracks.UserID)
+	assert.Len(t, playlistWithTracks.Tracks, 1)
+	assert.Equal(t, song.Name, playlistWithTracks.Tracks[0].Track.Name)
 }

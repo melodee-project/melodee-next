@@ -97,7 +97,7 @@ func TestSearchPerformance(t *testing.T) {
 
 	// Test search albums performance
 	start = time.Now()
-	albums, total, err := repo.SearchAlbumsPaginated(query, limit, offset)
+	_, _, err = repo.SearchAlbumsPaginated(query, limit, offset)
 	elapsed = time.Since(start)
 
 	assert.NoError(t, err)
