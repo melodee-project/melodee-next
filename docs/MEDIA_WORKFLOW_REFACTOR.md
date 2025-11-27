@@ -1078,14 +1078,14 @@ graph TD
 - Idempotent retry logic
 
 ### Risk: Disk Space
-**Impact**: Staging fills up with unreviewed items  
+**Impact**: Staging fills up with unreviewed items
 **Mitigation**:
 - Monitoring alerts at 80% capacity
 - Auto-reject oldest pending items at 90%
 - Admin notification dashboard
 
 ### Risk: Alpha Development Churn
-**Impact**: Breaking changes as we refine the workflow  
+**Impact**: Breaking changes as we refine the workflow
 **Mitigation**:
 - We're in alpha - breaking changes are expected!
 - Document breaking changes in commit messages
@@ -1108,13 +1108,13 @@ graph TD
   - Update all GORM models (12 tables)
   - Drop & recreate database
   - Update all SQL queries: Find/replace melodee_ → (empty)
-  
+
 - **SQLite Scan System**:
   - SQLite schema design (scanned_files table)
   - File walker with parallel metadata extraction
   - Batch insert logic (commit every 1000 rows)
   - Grouping algorithm (two-stage hash + year vote)
-  
+
 - **Testing**:
   - CLI test tool to verify scanning
   - Test with 10k+ files
@@ -1135,11 +1135,11 @@ graph TD
   - File moving with worker pool (rate-limited)
   - JSON sidecar writing
   - Create staging_items records
-  
+
 - **Remove Old Workflow**:
   - Delete old scan/process endpoints
   - Remove album_status field from models
-  
+
 - **Testing**:
   - CLI: scan → process → verify staging
   - Test with network storage (slow I/O)
@@ -1160,7 +1160,15 @@ graph TD
   - Scan details page (query scan DB, show invalid files)
   - Staging review UI (list, approve/reject)
   - Promotion endpoint + UI
-  
+
+- **Observability & Monitoring**:
+  - Progress tracking (scan, process, promote operations)
+  - Performance metrics display (processing times, throughput)
+  - Error monitoring and alert dashboard
+  - Business metrics (success rates, conversion rates)
+  - System health monitoring (storage, resources)
+  - Audit trail interface (operation logs, file movements)
+
 - **Integration Testing**:
   - End-to-end workflow test
   - Test with real music library
@@ -1233,7 +1241,7 @@ podman-compose -f docker-compose.dev.yml up -d db redis
 - `melodee_libraries` → `libraries`
 - `melodee_library_scan_histories` → `library_scan_histories`
 - `melodee_users` → `users`aylists`
-- `melodee_playlist_songs` → `playlist_songs`
+- `melodee_playlist_songs` → `playlist_tracks`
 - `melodee_shares` → `shares`
 - `melodee_settings` → `settings`
 - `melodee_log_entries` → `log_entries`
