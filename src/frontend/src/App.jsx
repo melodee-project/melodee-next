@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -14,18 +14,20 @@ import SettingsManagement from './components/SettingsManagement';
 import SharesManagement from './components/SharesManagement';
 import LibraryManagement from './components/LibraryManagement';
 import PlaylistManagement from './components/PlaylistManagement';
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   Briefcase,
-  FileText, 
-  Users, 
-  Settings, 
-  Share2, 
-  Library, 
-  AlertCircle, 
+  FileText,
+  Users,
+  Settings,
+  Share2,
+  Library,
+  AlertCircle,
   Music,
   FolderCheck,
-  LogOut
+  LogOut,
+  ChevronDown,
+  Database
 } from 'lucide-react';
 
 // ProtectedRoute component to restrict access to authenticated users
@@ -57,16 +59,42 @@ function Layout({ children }) {
   const { user, isAuthenticated, logout } = useAuth();
   const { currentTheme } = useTheme();
   const location = useLocation();
+  const [systemDropdownOpen, setSystemDropdownOpen] = useState(false);
+  const [dataDropdownOpen, setDataDropdownOpen] = useState(false);
+  const systemDropdownRef = useRef(null);
+  const dataDropdownRef = useRef(null);
 
   const handleLogout = () => {
     logout();
   };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (systemDropdownRef.current && !systemDropdownRef.current.contains(event.target)) {
+        setSystemDropdownOpen(false);
+      }
+      if (dataDropdownRef.current && !dataDropdownRef.current.contains(event.target)) {
+        setDataDropdownOpen(false);
+      }
+    }
+
+    if (systemDropdownOpen || dataDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [systemDropdownOpen, dataDropdownOpen]);
 
   // Get theme-specific classes
   const navbarClass = currentTheme?.colors?.navbar || 'bg-blue-700 dark:bg-gray-800';
   const navbarTextClass = currentTheme?.colors?.navbarText || 'text-white';
   const navbarHoverClass = currentTheme?.colors?.navbarHover || 'hover:text-blue-200 dark:hover:text-blue-300';
   const backgroundClass = currentTheme?.colors?.background || 'bg-gray-100 dark:bg-gray-900';
+  const dropdownBgClass = currentTheme?.colors?.navbarDropdownBg || 'bg-blue-700/80 dark:bg-gray-900/80';
+  const dropdownActiveClass = currentTheme?.colors?.navbarDropdownActiveBg || 'bg-white/10 shadow-sm';
+  const menuBgClass = currentTheme?.colors?.menuBg || 'bg-white dark:bg-slate-700';
+  const menuBorderClass = currentTheme?.colors?.menuBorder || 'border border-gray-200 dark:border-slate-600';
+  const menuItemHoverClass = currentTheme?.colors?.menuHoverBg || 'hover:bg-gray-100 dark:hover:bg-slate-600';
 
   const isActive = (pathPrefix) => location.pathname.startsWith(pathPrefix);
 
@@ -95,26 +123,6 @@ function Layout({ children }) {
               </li>
               <li>
                 <Link
-                  to="/staging"
-                  className={`transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md ${
-                    isActive('/staging') ? 'bg-white/10 shadow-sm' : ''
-                  } ${navbarTextClass} ${navbarHoverClass}`}
-                >
-                  <FolderCheck className="w-4 h-4" />Staging
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/admin/jobs"
-                  className={`transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md ${
-                    isActive('/admin/jobs') ? 'bg-white/10 shadow-sm' : ''
-                  } ${navbarTextClass} ${navbarHoverClass}`}
-                >
-                  <Briefcase className="w-4 h-4" />Jobs
-                </Link>
-              </li>
-              <li>
-                <Link
                   to="/admin/logs"
                   className={`transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md ${
                     isActive('/admin/logs') ? 'bg-white/10 shadow-sm' : ''
@@ -125,53 +133,110 @@ function Layout({ children }) {
               </li>
               <li>
                 <Link
-                  to="/admin/users"
+                  to="/staging"
                   className={`transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md ${
-                    isActive('/admin/users') ? 'bg-white/10 shadow-sm' : ''
+                    isActive('/staging') ? 'bg-white/10 shadow-sm' : ''
                   } ${navbarTextClass} ${navbarHoverClass}`}
                 >
-                  <Users className="w-4 h-4" />Users
+                  <FolderCheck className="w-4 h-4" />Staging
                 </Link>
               </li>
-              <li>
-                <Link
-                  to="/admin/settings"
-                  className={`transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md ${
-                    isActive('/admin/settings') ? 'bg-white/10 shadow-sm' : ''
+              {/* Data Dropdown */}
+              <li ref={dataDropdownRef} className="relative">
+                <button
+                  onClick={() => setDataDropdownOpen(!dataDropdownOpen)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors ${
+                    (isActive('/admin/users') || isActive('/admin/shares') || isActive('/admin/playlists'))
+                      ? dropdownActiveClass
+                      : dropdownBgClass
                   } ${navbarTextClass} ${navbarHoverClass}`}
                 >
-                  <Settings className="w-4 h-4" />Settings
-                </Link>
+                  <Database className="w-4 h-4" />Data <ChevronDown className="w-3 h-3 ml-1" />
+                </button>
+
+                {dataDropdownOpen && (
+                  <div className={`absolute left-0 mt-2 w-48 rounded-lg shadow-xl py-1 z-50 ${menuBgClass} ${menuBorderClass}`}>
+                    <Link
+                      to="/admin/users"
+                      className={`block px-4 py-2 text-sm transition-colors flex items-center gap-2 rounded-md text-gray-900 dark:text-white ${
+                        isActive('/admin/users') ? 'bg-blue-100 dark:bg-slate-600' : menuItemHoverClass
+                      }`}
+                      onClick={() => setDataDropdownOpen(false)}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Users</span>
+                    </Link>
+                    <Link
+                      to="/admin/shares"
+                      className={`block px-4 py-2 text-sm transition-colors flex items-center gap-2 rounded-md text-gray-900 dark:text-white ${
+                        isActive('/admin/shares') ? 'bg-blue-100 dark:bg-slate-600' : menuItemHoverClass
+                      }`}
+                      onClick={() => setDataDropdownOpen(false)}
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span>Shares</span>
+                    </Link>
+                    <Link
+                      to="/admin/playlists"
+                      className={`block px-4 py-2 text-sm transition-colors flex items-center gap-2 rounded-md text-gray-900 dark:text-white ${
+                        isActive('/admin/playlists') ? 'bg-blue-100 dark:bg-slate-600' : menuItemHoverClass
+                      }`}
+                      onClick={() => setDataDropdownOpen(false)}
+                    >
+                      <Music className="w-4 h-4" />
+                      <span>Playlists</span>
+                    </Link>
+                  </div>
+                )}
               </li>
-              <li>
-                <Link
-                  to="/admin/shares"
-                  className={`transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md ${
-                    isActive('/admin/shares') ? 'bg-white/10 shadow-sm' : ''
+
+              {/* System Dropdown */}
+              <li ref={systemDropdownRef} className="relative">
+                <button
+                  onClick={() => setSystemDropdownOpen(!systemDropdownOpen)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors ${
+                    (isActive('/admin/jobs') || isActive('/admin/libraries') || isActive('/admin/settings'))
+                      ? dropdownActiveClass
+                      : dropdownBgClass
                   } ${navbarTextClass} ${navbarHoverClass}`}
                 >
-                  <Share2 className="w-4 h-4" />Shares
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/admin/libraries"
-                  className={`transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md ${
-                    isActive('/admin/libraries') ? 'bg-white/10 shadow-sm' : ''
-                  } ${navbarTextClass} ${navbarHoverClass}`}
-                >
-                  <Library className="w-4 h-4" />Libraries
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/admin/playlists"
-                  className={`transition-colors flex items-center gap-1.5 px-2 py-1 rounded-md ${
-                    isActive('/admin/playlists') ? 'bg-white/10 shadow-sm' : ''
-                  } ${navbarTextClass} ${navbarHoverClass}`}
-                >
-                  <Music className="w-4 h-4" />Playlists
-                </Link>
+                  <Settings className="w-4 h-4" />System <ChevronDown className="w-3 h-3 ml-1" />
+                </button>
+
+                {systemDropdownOpen && (
+                  <div className={`absolute left-0 mt-2 w-48 rounded-lg shadow-xl py-1 z-50 ${menuBgClass} ${menuBorderClass}`}>
+                    <Link
+                      to="/admin/jobs"
+                      className={`block px-4 py-2 text-sm transition-colors flex items-center gap-2 rounded-md text-gray-900 dark:text-white ${
+                        isActive('/admin/jobs') ? 'bg-blue-100 dark:bg-slate-600' : menuItemHoverClass
+                      }`}
+                      onClick={() => setSystemDropdownOpen(false)}
+                    >
+                      <Briefcase className="w-4 h-4" />
+                      <span>Jobs</span>
+                    </Link>
+                    <Link
+                      to="/admin/libraries"
+                      className={`block px-4 py-2 text-sm transition-colors flex items-center gap-2 rounded-md text-gray-900 dark:text-white ${
+                        isActive('/admin/libraries') ? 'bg-blue-100 dark:bg-slate-600' : menuItemHoverClass
+                      }`}
+                      onClick={() => setSystemDropdownOpen(false)}
+                    >
+                      <Library className="w-4 h-4" />
+                      <span>Libraries</span>
+                    </Link>
+                    <Link
+                      to="/admin/settings"
+                      className={`block px-4 py-2 text-sm transition-colors flex items-center gap-2 rounded-md text-gray-900 dark:text-white ${
+                        isActive('/admin/settings') ? 'bg-blue-100 dark:bg-slate-600' : menuItemHoverClass
+                      }`}
+                      onClick={() => setSystemDropdownOpen(false)}
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </div>
+                )}
               </li>
             </ul>
             <div className="flex items-center space-x-4">

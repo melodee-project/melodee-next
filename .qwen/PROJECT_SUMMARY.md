@@ -1,35 +1,28 @@
 # Project Summary
 
 ## Overall Goal
-Implement all remaining work described in API_IMPLEMENTATION_PHASES.md, specifically Phase 5 (Performance, Pagination & Edge Cases) and Admin Frontend Alignment, ensuring all admin endpoints use the Melodee API (/api/...) and match the proposed contract shapes in the Appendix.
+Update the navigation menu in the Melodee application to match the specified order (Dashboard, Logs, Staging, Data dropdown, System dropdown) and ensure dropdown menus adapt to light/dark themes instead of using fixed black backgrounds.
 
 ## Key Knowledge
-- **Technology Stack**: Go backend with Fiber framework, React frontend, PostgreSQL database, GORM ORM, Asynq for job queues
-- **Architecture**: Combined server with internal Melodee API (/api/...) and OpenSubsonic API (/rest/...)
-- **Build Commands**: `env GO111MODULE=on go build ./src` (though some pre-existing issues may prevent complete build)
-- **Testing**: Go tests in `src/internal/handlers/*_test.go`, React tests with Jest/React Testing Library
-- **Documentation**: API_DEFINITIONS.md, INTERNAL_API_ROUTES.md, melodee-v1.0.0-openapi.yaml are key docs
-- **API Conventions**: Bounded pagination (max 200 items/page), rate limiting for expensive endpoints, admin-only authentication
+- **Technology Stack**: React frontend with Vite build system, Tailwind CSS for styling
+- **Navigation Structure**: Main navigation is in `/src/frontend/src/App.jsx` within the Layout component
+- **Theme System**: Uses ThemeContext with multiple themes (light, dark, ocean, forest, etc.) that have adaptive color schemes
+- **Build Commands**: `npm run dev` to run the frontend development server on port 5173
+- **Architecture**: Frontend communicates with backend API at http://localhost:8080 via proxy configuration
 
 ## Recent Actions
-- **[COMPLETED]** Added missing `/api/admin/jobs/{id}` endpoint with complete job detail response
-- **[COMPLETED]** Added comprehensive database indexes for performance (search, playlist, recent activity queries)
-- **[COMPLETED]** Implemented rate limiting for expensive endpoints (search limited to 30 requests/10min)
-- **[COMPLETED]** Updated DLQ handler to match Appendix contract shapes with proper pagination
-- **[COMPLETED]** Updated frontend apiService.js to use correct Melodee API endpoints
-- **[COMPLETED]** Added performance tests for pagination with large offsets/limits
-- **[COMPLETED]** Updated OpenAPI specification (melodee-v1.0.0-openapi.yaml) with new schemas and endpoints
-- **[COMPLETED]** Updated documentation (API_DEFINITIONS.md, INTERNAL_API_ROUTES.md) with admin API usage and known limitations
-- **[COMPLETED]** Updated Prometheus alerts and metrics documentation for both API families
+- **Navigation Reordering**: Successfully updated the navigation menu to include Staging item in the correct position (Dashboard, Logs, Staging, Data dropdown, System dropdown)
+- **Dropdown Styling**: Updated both Data and System dropdown menus to use theme-adaptive background and border colors instead of fixed black/dark backgrounds
+- **Consistent Styling**: Applied the FolderCheck icon for Staging with consistent styling matching other navigation items
+- **Theme Adaptation**: Dropdown items now properly adapt to current theme using `currentTheme?.colors?.background` and fallbacks based on theme mode
 
 ## Current Plan
-- **[DONE]** Phase 5 - Performance, Pagination & Edge Cases requirements implemented
-- **[DONE]** Admin Frontend Alignment with Melodee API completed
-- **[DONE]** Appendix endpoint shapes implemented for DLQ/jobs endpoints
-- **[DONE]** All documentation updated and checklists in API_IMPLEMENTATION_PHASES.md checked off
-- **[TODO]** Address pre-existing build issues unrelated to the implemented functionality (unused imports, etc.) in a separate pass
+- [DONE] Add Staging navigation item after Logs in the correct position
+- [DONE] Update dropdown styling to be adaptive to light/dark themes
+- [DONE] Test the navigation changes to ensure proper functionality
+- [DONE] Verify all navigation items maintain consistent styling with theme compatibility
 
 ---
 
 ## Summary Metadata
-**Update time**: 2025-11-24T02:39:59.611Z 
+**Update time**: 2025-11-27T17:30:58.719Z 
