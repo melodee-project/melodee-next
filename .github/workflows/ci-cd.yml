@@ -74,7 +74,7 @@ jobs:
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || starts_with(github.ref, 'refs/heads/release/'))
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
 
     permissions:
       contents: read
@@ -151,7 +151,7 @@ jobs:
   deploy-production:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: starts_with(github.ref, 'refs/heads/release/')
+    if: startsWith(github.ref, 'refs/heads/release/')
 
     steps:
       - name: Deploy to Production
