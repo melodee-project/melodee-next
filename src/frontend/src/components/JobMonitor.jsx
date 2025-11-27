@@ -41,7 +41,8 @@ function JobMonitor() {
         ]);
         
         console.log('Job stats response:', statsResp);
-        setStats(statsResp.data.data || statsResp.data || []);
+        const statsData = statsResp.data?.data || statsResp.data || [];
+        setStats(Array.isArray(statsData) ? statsData : []);
       } else {
         // Fetch active, pending, or scheduled jobs
         const endpoint = activeTab === 'active' ? 'getActiveJobs' : 
@@ -55,7 +56,8 @@ function JobMonitor() {
       if (activeTab !== 'overview') {
         const statsResp = await adminService.getJobStats();
         console.log('Job stats response:', statsResp);
-        setStats(statsResp.data.data || statsResp.data || []);
+        const statsData = statsResp.data?.data || statsResp.data || [];
+        setStats(Array.isArray(statsData) ? statsData : []);
       }
       
       if (initialLoad) {
@@ -130,7 +132,7 @@ function JobMonitor() {
 
   // Calculate counts for tabs
   const getTotalCount = (type) => {
-    if (!stats || stats.length === 0) return 0;
+    if (!stats || !Array.isArray(stats) || stats.length === 0) return 0;
     return stats.reduce((sum, stat) => sum + (stat[type] || 0), 0);
   };
 
@@ -165,6 +167,9 @@ function JobMonitor() {
           <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded border border-yellow-200 dark:border-yellow-800">
             <strong>No job queues found.</strong> Job queues will appear once jobs are enqueued. 
             The worker is connected, but no jobs have been submitted yet.
+            <br /><br />
+            <strong>Note:</strong> If staging cron is enabled, it runs on a schedule (e.g., "0 */1 * * *" for hourly).
+            Tasks will appear in "Scheduled Jobs" when the scheduler enqueues them for their next run time.
           </div>
         )}
       </div>

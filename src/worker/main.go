@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sync/atomic"
 	"syscall"
-	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
 
 	"melodee/internal/config"
@@ -24,14 +21,13 @@ import (
 
 // WorkerServer handles background job processing
 type WorkerServer struct {
-	srv               *asynq.Server
-	db                *gorm.DB
-	config            *config.AppConfig
-	mediaSvc          *media.MediaService
-	directorySvc      *directory.DirectoryCodeGenerator
-	pathResolver      *directory.PathTemplateResolver
-	stagingCron       *cron.Cron
-	stagingJobRunning *atomic.Bool
+	srv          *asynq.Server
+	db           *gorm.DB
+	config       *config.AppConfig
+	mediaSvc     *media.MediaService
+	directorySvc *directory.DirectoryCodeGenerator
+	pathResolver *directory.PathTemplateResolver
+	scheduler    *asynq.Scheduler
 }
 
 // NewWorkerServer creates a new worker server
@@ -144,92 +140,69 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 		media.TypeLibraryScan, media.TypeLibraryProcess, media.TypeLibraryMoveOK,
 		media.TypeDirectoryRecalculate, media.TypeMetadataWriteback, media.TypeMetadataEnhance)
 
-	// Initialize staging cron if enabled
-	var stagingCron *cron.Cron
-	var stagingJobRunning *atomic.Bool
-
+	// Initialize Asynq scheduler for periodic tasks
+	var scheduler *asynq.Scheduler
 	if cfg.StagingCron.Enabled {
 		logging.Infof("Staging cron is enabled with schedule: %s", cfg.StagingCron.Schedule)
-		stagingCron = cron.New(cron.WithChain(
-			cron.SkipIfStillRunning(&CronLogger{}), // Skip if previous run is still running
-		))
 
-		stagingJobRunning = &atomic.Bool{}
-		stagingJobRunning.Store(false)
+		scheduler = asynq.NewScheduler(
+			asynq.RedisClientOpt{Addr: redisAddr},
+			&asynq.SchedulerOpts{
+				LogLevel: asynq.InfoLevel,
+			},
+		)
 
-		// Add the staging job
-		_, err := stagingCron.AddFunc(cfg.StagingCron.Schedule, func() {
-			// Guard against overlapping runs
-			if !stagingJobRunning.CompareAndSwap(false, true) {
-				logging.Warn("Staging cron: previous run still in progress, skipping this tick")
-				return
-			}
-			defer stagingJobRunning.Store(false)
-
-			// Reload configuration so we always use latest staging_cron.* settings
-			runtimeCfg, err := config.LoadConfig()
-			if err != nil {
-				logging.Errorf("Staging cron: failed to reload config: %v", err)
-				return
-			}
-
-			logging.Info("Starting staging job from cron...")
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute) // Reasonable timeout for staging job
-			defer cancel()
-
-			// Enqueue an Asynq task so the job is visible in /admin/jobs
-			payload := map[string]interface{}{
-				"source":  "staging_cron",
-				"dry_run": runtimeCfg.StagingCron.DryRun,
-			}
-			payloadBytes, err := json.Marshal(payload)
-			if err != nil {
-				logging.Errorf("Staging cron: failed to marshal payload: %v", err)
-				return
-			}
-
-			// Use a dedicated queue for staging jobs so they appear in job views
-			asynqTask := asynq.NewTask(media.TypeStagingCron, payloadBytes)
-			client := asynq.NewClient(asynq.RedisClientOpt{Addr: runtimeCfg.Redis.Address})
-			defer client.Close()
-
-			info, err := client.EnqueueContext(ctx, asynqTask, asynq.Queue("maintenance"))
-			if err != nil {
-				logging.Errorf("Staging cron: failed to enqueue staging job task: %v", err)
-				return
-			}
-
-			logging.Infof("Staging cron: enqueued staging job task: id=%s queue=%s", info.ID, info.Queue)
-		})
-
+		// Create the staging cron task
+		payload := map[string]interface{}{
+			"source":  "staging_cron",
+			"dry_run": cfg.StagingCron.DryRun,
+		}
+		payloadBytes, err := json.Marshal(payload)
 		if err != nil {
-			logging.Errorf("Failed to add staging cron job: %v", err)
-			// Don't fail the whole worker, just disable the staging cron
+			logging.Errorf("Failed to marshal staging cron payload: %v", err)
 		} else {
-			stagingCron.Start()
-			logging.Info("Staging cron scheduled and started")
+			stagingTask := asynq.NewTask(media.TypeStagingCron, payloadBytes)
+
+			// Register the periodic task with the scheduler
+			entryID, err := scheduler.Register(
+				cfg.StagingCron.Schedule,
+				stagingTask,
+				asynq.Queue("maintenance"),
+				asynq.TaskID("staging-cron-periodic"),
+			)
+			if err != nil {
+				logging.Errorf("Failed to register staging cron task: %v", err)
+			} else {
+				logging.Infof("Staging cron registered successfully with entry ID: %s", entryID)
+			}
 		}
 	} else {
 		logging.Info("Staging cron is disabled")
-		stagingJobRunning = &atomic.Bool{}
-		stagingJobRunning.Store(false)
 	}
 
 	return &WorkerServer{
-		srv:               srv,
-		db:                dbManager.GetGormDB(),
-		config:            cfg,
-		mediaSvc:          mediaSvc,
-		directorySvc:      directorySvc,
-		pathResolver:      pathResolver,
-		stagingCron:       stagingCron,
-		stagingJobRunning: stagingJobRunning,
+		srv:          srv,
+		db:           dbManager.GetGormDB(),
+		config:       cfg,
+		mediaSvc:     mediaSvc,
+		directorySvc: directorySvc,
+		pathResolver: pathResolver,
+		scheduler:    scheduler,
 	}, mux, nil
 }
 
 // Start starts the worker server
 func (w *WorkerServer) Start(mux *asynq.ServeMux) error {
 	logging.Info("Starting Asynq worker server...")
+
+	// Start the scheduler if it exists
+	if w.scheduler != nil {
+		if err := w.scheduler.Start(); err != nil {
+			logging.Errorf("Failed to start scheduler: %v", err)
+			return fmt.Errorf("failed to start scheduler: %w", err)
+		}
+		logging.Info("Asynq scheduler started")
+	}
 
 	// Start the server
 	if err := w.srv.Run(mux); err != nil {
@@ -245,11 +218,11 @@ func (w *WorkerServer) Shutdown() {
 	logging.Info("Shutting down worker server...")
 	w.srv.Shutdown()
 
-	// Stop the staging cron if it exists
-	if w.stagingCron != nil {
-		logging.Info("Stopping staging cron...")
-		w.stagingCron.Stop()
-		logging.Info("Staging cron stopped")
+	// Stop the scheduler if it exists
+	if w.scheduler != nil {
+		logging.Info("Stopping scheduler...")
+		w.scheduler.Shutdown()
+		logging.Info("Scheduler stopped")
 	}
 
 	logging.Info("Worker server shut down complete")
@@ -282,17 +255,4 @@ func main() {
 	logging.Infof("Received shutdown signal: %s", sig.String())
 	worker.Shutdown()
 	fmt.Println("===== Melodee Worker Stopped =====")
-}
-
-// CronLogger implements the cron.Logger interface for use with the cron library
-type CronLogger struct{}
-
-// Info logs routine messages about cron's operation
-func (cl *CronLogger) Info(msg string, keysAndValues ...interface{}) {
-	logging.Info(fmt.Sprintf("Cron: %s (keysAndValues: %v)", msg, keysAndValues))
-}
-
-// Error logs an error condition
-func (cl *CronLogger) Error(err error, msg string, keysAndValues ...interface{}) {
-	logging.Errorf("Cron Error: %s - Error: %v (keysAndValues: %v)", msg, err, keysAndValues)
 }
