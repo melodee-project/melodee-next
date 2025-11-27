@@ -397,7 +397,7 @@ func HandleDirectoryRecalculate(ctx context.Context, t *asynq.Task) error {
 
 // MetadataWritebackPayload represents the payload for metadata writeback
 type MetadataWritebackPayload struct {
-	SongIDs []int64 `json:"song_ids"`
+	SongIDs []int64 `json:"track_ids"`
 }
 
 // HandleMetadataWriteback writes metadata changes back to files

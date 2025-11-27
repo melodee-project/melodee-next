@@ -258,7 +258,7 @@ type ArtistAlbum struct {
 	Artist    string `xml:"artist,attr"`
 	ArtistID  int    `xml:"artistId,attr"`
 	CoverArt  string `xml:"coverArt,attr,omitempty"`
-	SongCount int    `xml:"songCount,attr"`
+	TrackCount int    `xml:"songCount,attr"`
 	Duration  int64  `xml:"duration,attr,omitempty"`
 	PlayCount int    `xml:"playCount,attr,omitempty"`
 	Created   string `xml:"created,attr,omitempty"`
@@ -309,7 +309,7 @@ type Album struct {
 	Artist    string  `xml:"artist,attr"`
 	ArtistID  int     `xml:"artistId,attr"`
 	CoverArt  string  `xml:"coverArt,attr,omitempty"`
-	SongCount int     `xml:"songCount,attr"`
+	TrackCount int     `xml:"songCount,attr"`
 	Created   string  `xml:"created,attr"`
 	Duration  int     `xml:"duration,attr"`
 	Year      int     `xml:"year,attr,omitempty"`
@@ -352,7 +352,7 @@ type SearchAlbum struct {
 	Artist    string `xml:"artist,attr"`
 	ArtistID  int    `xml:"artistId,attr"`
 	CoverArt  string `xml:"coverArt,attr,omitempty"`
-	SongCount int    `xml:"songCount,attr"`
+	TrackCount int    `xml:"songCount,attr"`
 	Duration  int    `xml:"duration,attr,omitempty"`
 	PlayCount int    `xml:"playCount,attr,omitempty"`
 	Created   string `xml:"created,attr,omitempty"`
@@ -372,7 +372,7 @@ type Playlist struct {
 	Comment      string   `xml:"comment,attr,omitempty"`
 	Public       bool     `xml:"public,attr"`
 	Owner        string   `xml:"owner,attr"`
-	SongCount    int      `xml:"songCount,attr"`
+	TrackCount    int      `xml:"songCount,attr"`
 	Created      string   `xml:"created,attr"`
 	Changed      string   `xml:"changed,attr"`
 	Duration     int      `xml:"duration,attr"`

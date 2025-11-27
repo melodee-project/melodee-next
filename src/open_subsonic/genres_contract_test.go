@@ -31,7 +31,7 @@ func TestGenresEndpoint(t *testing.T) {
 	app := setupGenresTestApp(db, cfg, authMiddleware)
 
 	// Create test data with various genres in tags
-	testSongs := []models.Song{
+	testSongs := []models.Track{
 		{
 			Name:           "Song 1",
 			NameNormalized: "song 1",
@@ -293,7 +293,7 @@ func setupGenresTestDatabase(t *testing.T) *gorm.DB {
 	assert.NoError(t, err)
 
 	// Auto-migrate the models
-	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{}, &models.Playlist{})
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{}, &models.Playlist{})
 	assert.NoError(t, err)
 
 	// Create a test user for authentication

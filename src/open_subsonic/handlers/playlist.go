@@ -78,7 +78,7 @@ func (h *PlaylistHandler) GetPlaylists(c *fiber.Ctx) error {
 			Comment:   playlist.Comment,
 			Public:    playlist.Public,
 			Owner:     playlist.User.Username,
-			SongCount: int(playlist.SongCount),
+			TrackCount: int(playlist.TrackCount),
 			Created:   utils.FormatTime(playlist.CreatedAt),
 			Changed:   utils.FormatTime(playlist.ChangedAt),
 			Duration:  int(playlist.Duration / 1000), // Convert to seconds
@@ -112,8 +112,8 @@ func (h *PlaylistHandler) GetPlaylist(c *fiber.Ctx) error {
 	}
 
 	// Get the songs in the playlist
-	var playlistSongs []models.PlaylistSong
-	if err := h.db.Preload("Song.Album").Preload("Song.Artist").Where("playlist_id = ?", id).Order("position").Find(&playlistSongs).Error; err != nil {
+	var playlistTracks []models.PlaylistTrack
+	if err := h.db.Preload("Track.Album").Preload("Track.Artist").Where("playlist_id = ?", id).Order("position").Find(&playlistTracks).Error; err != nil {
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve playlist songs")
 	}
 
@@ -125,7 +125,7 @@ func (h *PlaylistHandler) GetPlaylist(c *fiber.Ctx) error {
 		Comment:   playlist.Comment,
 		Public:    playlist.Public,
 		Owner:     playlist.User.Username,
-		SongCount: int(playlist.SongCount),
+		TrackCount: int(playlist.TrackCount),
 		Created:   utils.FormatTime(playlist.CreatedAt),
 		Changed:   utils.FormatTime(playlist.ChangedAt),
 		Duration:  int(playlist.Duration / 1000), // Convert to seconds
@@ -135,26 +135,26 @@ func (h *PlaylistHandler) GetPlaylist(c *fiber.Ctx) error {
 		playlistResp.CoverArtID = int(*playlist.CoverArtID)
 	}
 	
-	// Add entries (songs) to the playlist
-	for _, playlistSong := range playlistSongs {
-		song := playlistSong.Song
+	// Add entries (tracks) to the playlist
+	for _, playlistTrack := range playlistTracks {
+		track := playlistTrack.Track
 		child := utils.Child{
-			ID:       int(song.ID),
-			Parent:   int(song.AlbumID),
+			ID:       int(track.ID),
+			Parent:   int(track.AlbumID),
 			IsDir:    false,
-			Title:    song.Name,
-			Album:    song.Album.Name,
-			Artist:   song.Artist.Name,
-			CoverArt: getCoverArtID("album", song.AlbumID), // Placeholder
-			Created:  utils.FormatTime(song.CreatedAt),
-			Duration: int(song.Duration / 1000), // Convert to seconds
-			BitRate:  int(song.BitRate),
-			Track:    int(song.SortOrder),
+			Title:    track.Name,
+			Album:    track.Album.Name,
+			Artist:   track.Artist.Name,
+			CoverArt: getCoverArtID("album", track.AlbumID), // Placeholder
+			Created:  utils.FormatTime(track.CreatedAt),
+			Duration: int(track.Duration / 1000), // Convert to seconds
+			BitRate:  int(track.BitRate),
+			Track:    int(track.SortOrder),
 			Genre:    "", // Would come from tags
 			Size:     0, // Would come from file system
-			ContentType: getContentType(song.FileName),
-			Suffix:      getSuffix(song.FileName),
-			Path:        song.RelativePath,
+			ContentType: getContentType(track.FileName),
+			Suffix:      getSuffix(track.FileName),
+			Path:        track.RelativePath,
 		}
 		playlistResp.Entries = append(playlistResp.Entries, child)
 	}
@@ -209,7 +209,7 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 		playlist.Name = name
 	}
 
-	// If song IDs are provided, update the playlist songs
+	// If track IDs are provided, update the playlist songs
 	if songIDsStr != "" {
 		songIDList, err := parseCommaSeparatedInts(songIDsStr)
 		if err != nil {
@@ -218,26 +218,26 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 
 		// Clear existing playlist songs
 		if !newPlaylist {
-			if err := h.db.Where("playlist_id = ?", playlist.ID).Delete(&models.PlaylistSong{}).Error; err != nil {
+			if err := h.db.Where("playlist_id = ?", playlist.ID).Delete(&models.PlaylistTrack{}).Error; err != nil {
 				return utils.SendOpenSubsonicError(c, 0, "Failed to clear existing playlist songs")
 			}
 		}
 
 		// Add new songs to the playlist
-		for pos, songID := range songIDList {
-			playlistSong := models.PlaylistSong{
+		for pos, trackID := range songIDList {
+			playlistTrack := models.PlaylistTrack{
 				PlaylistID: int32(playlist.ID),
-				SongID:     songID,
+				TrackID:     trackID,
 				Position:   int32(pos),
 			}
 
-			if err := h.db.Create(&playlistSong).Error; err != nil {
-				return utils.SendOpenSubsonicError(c, 0, "Failed to add song to playlist")
+			if err := h.db.Create(&playlistTrack).Error; err != nil {
+				return utils.SendOpenSubsonicError(c, 0, "Failed to add track to playlist")
 			}
 		}
 
-		// Update song count
-		playlist.SongCount = int32(len(songIDList))
+		// Update track count
+		playlist.TrackCount = int32(len(songIDList))
 	}
 
 	// Save the playlist
@@ -265,7 +265,7 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 		Name:      playlist.Name,
 		Public:    playlist.Public,
 		Owner:     ownerUser.Username, // Use actual owner's username
-		SongCount: int(playlist.SongCount),
+		TrackCount: int(playlist.TrackCount),
 		Created:   utils.FormatTime(playlist.CreatedAt),
 		Changed:   utils.FormatTime(playlist.ChangedAt),
 		Duration:  int(playlist.Duration / 1000), // Convert to seconds
@@ -302,7 +302,7 @@ func (h *PlaylistHandler) DeletePlaylist(c *fiber.Ctx) error {
 	}
 
 	// Delete the playlist and its associated songs
-	if err := h.db.Where("playlist_id = ?", playlistID).Delete(&models.PlaylistSong{}).Error; err != nil {
+	if err := h.db.Where("playlist_id = ?", playlistID).Delete(&models.PlaylistTrack{}).Error; err != nil {
 		return utils.SendOpenSubsonicError(c, 0, "Failed to delete playlist songs")
 	}
 

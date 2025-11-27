@@ -116,8 +116,8 @@ func (cs *ChecksumService) ValidateChecksum(filePath, expectedChecksum string) (
 }
 
 // IsAlreadyProcessed checks if a file has already been processed (idempotency check)
-func (cs *ChecksumService) IsAlreadyProcessed(originalPath, checksum string) (bool, *models.Song, error) {
-	var existingSong models.Song
+func (cs *ChecksumService) IsAlreadyProcessed(originalPath, checksum string) (bool, *models.Track, error) {
+	var existingSong models.Track
 
 	// Look up by checksum in the database
 	if err := cs.db.Where("crc_hash = ? AND relative_path = ?", checksum, originalPath).First(&existingSong).Error; err != nil {
@@ -131,8 +131,8 @@ func (cs *ChecksumService) IsAlreadyProcessed(originalPath, checksum string) (bo
 }
 
 // IsAlreadyProcessedByContentOnly checks if a file with the same content (by checksum) has already been processed
-func (cs *ChecksumService) IsAlreadyProcessedByContentOnly(checksum string) (bool, *models.Song, error) {
-	var existingSong models.Song
+func (cs *ChecksumService) IsAlreadyProcessedByContentOnly(checksum string) (bool, *models.Track, error) {
+	var existingSong models.Track
 
 	// Look up by just the checksum (same content anywhere)
 	if err := cs.db.Where("crc_hash = ?", checksum).First(&existingSong).Error; err != nil {
@@ -146,14 +146,14 @@ func (cs *ChecksumService) IsAlreadyProcessedByContentOnly(checksum string) (boo
 }
 
 // MarkAsProcessed stores the checksum in the system to prevent re-processing
-func (cs *ChecksumService) MarkAsProcessed(filePath, checksum string, song *models.Song) error {
+func (cs *ChecksumService) MarkAsProcessed(filePath, checksum string, song *models.Track) error {
 	// The song model should already have the checksum set, but let's ensure it's stored properly
 	if song.CRCHash == "" {
 		song.CRCHash = checksum
 	}
 
 	// If file already exists in database, prevent duplicate insertion
-	var existingSong models.Song
+	var existingSong models.Track
 	result := cs.db.Where("crc_hash = ? AND relative_path = ?", checksum, filePath).First(&existingSong)
 
 	if result.Error == nil {
@@ -345,7 +345,7 @@ func (cs *ChecksumService) GetConsistencyReport() (*ConsistencyReport, error) {
 
 	// This is a simplified version for demonstration
 	var songCount int64
-	cs.db.Model(&models.Song{}).Count(&songCount)
+	cs.db.Model(&models.Track{}).Count(&songCount)
 
 	report.TotalFiles = int(songCount)
 	report.VerifiedFiles = 0

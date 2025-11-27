@@ -266,7 +266,7 @@ func TestRepositorySearchSongsPaginated(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create test songs for search
-	testSongs := []*models.Song{
+	testSongs := []*models.Track{
 		{
 			Name:           "Yesterday",
 			NameNormalized: "yesterday",
@@ -382,7 +382,7 @@ func TestSearchEntities(t *testing.T) {
 	err = repo.CreateAlbum(album)
 	assert.NoError(t, err)
 
-	song := &models.Song{
+	song := &models.Track{
 		Name:           "Search Song",
 		NameNormalized: "search song",
 		AlbumID:        album.ID,

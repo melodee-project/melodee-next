@@ -29,8 +29,8 @@ func TestRegressionWithLargeDatasets(t *testing.T) {
 
 	// Auto-migrate models
 	err = db.AutoMigrate(
-		&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{},
-		&models.Playlist{}, &models.PlaylistSong{}, &models.UserSong{}, &models.UserAlbum{},
+		&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{},
+		&models.Playlist{}, &models.PlaylistTrack{}, &models.UserSong{}, &models.UserAlbum{},
 		&models.UserArtist{}, &models.UserPin{}, &models.Bookmark{}, &models.Player{},
 		&models.PlayQueue{}, &models.SearchHistory{}, &models.Share{}, &models.ShareActivity{},
 		&models.LibraryScanHistory{}, &models.Setting{}, &models.ArtistRelation{}, &models.RadioStation{},
@@ -88,7 +88,7 @@ func TestRegressionWithLargeDatasets(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Create songs for each album
-		song := &models.Song{
+		song := &models.Track{
 			Name:           "Test Song " + string(rune(i+65)),
 			NameNormalized: "test song " + string(rune(i+65)),
 			AlbumID:        album.ID,

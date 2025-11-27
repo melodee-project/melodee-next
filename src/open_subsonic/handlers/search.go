@@ -264,8 +264,8 @@ func (h *SearchHandler) searchAlbums(query string, offset, size int) ([]utils.Se
 		if album.DurationCached > 0 {
 			searchAlbum.Duration = int(album.DurationCached / 1000) // Convert to seconds
 		}
-		if int(album.SongCountCached) > 0 {
-			searchAlbum.SongCount = int(album.SongCountCached)
+		if int(album.TrackCountCached) > 0 {
+			searchAlbum.TrackCount = int(album.TrackCountCached)
 		}
 
 		result = append(result, searchAlbum)
@@ -283,7 +283,7 @@ func (h *SearchHandler) searchSongs(query string, offset, size int) ([]utils.Chi
 
 	// Use a custom struct to hold the join results
 	type SongWithDetails struct {
-		models.Song
+		models.Track
 		AlbumName  string `gorm:"column:album_name"`
 		ArtistName string `gorm:"column:artist_name"`
 	}
@@ -358,7 +358,7 @@ func (h *SearchHandler) countSearchSongs(query string) (int, error) {
 	var count int64
 	normalizedQuery := normalizeSearchQuery(query)
 	
-	err := h.db.Model(&models.Song{}).Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%").Count(&count).Error
+	err := h.db.Model(&models.Track{}).Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%").Count(&count).Error
 	return int(count), err
 }
 
@@ -426,7 +426,7 @@ type SearchAlbum struct {
 	Artist    string `xml:"artist,attr"`
 	ArtistID  int    `xml:"artistId,attr"`
 	CoverArt  string `xml:"coverArt,attr,omitempty"`
-	SongCount int    `xml:"songCount,attr"`
+	TrackCount int    `xml:"songCount,attr"`
 	Duration  int    `xml:"duration,attr,omitempty"`
 	PlayCount int    `xml:"playCount,attr,omitempty"`
 	Created   string `xml:"created,attr,omitempty"`

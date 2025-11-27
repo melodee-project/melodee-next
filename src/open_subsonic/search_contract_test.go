@@ -229,7 +229,7 @@ func TestSearchNormalization(t *testing.T) {
 	app := setupSearchTestApp(db, cfg, authMiddleware)
 
 	// Create test data with special names that need normalization
-	testSongs := []models.Song{
+	testSongs := []models.Track{
 		{Name: "The Song with & Ampersand", NameNormalized: "the song with  ampersand"},
 		{Name: "A Song with / Slash", NameNormalized: "a song with  slash"},
 		{Name: "An Article Example", NameNormalized: "article example"}, // "An" would be removed
@@ -303,7 +303,7 @@ func setupSearchTestDatabase(t *testing.T) *gorm.DB {
 	assert.NoError(t, err)
 
 	// Auto-migrate the models
-	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{})
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{})
 	assert.NoError(t, err)
 
 	return db
@@ -418,13 +418,13 @@ func createSearchTestData(t *testing.T, db *gorm.DB) {
 		Name:            "Led Zeppelin IV",
 		NameNormalized:  "led zeppelin iv",
 		ArtistID:        artist.ID,
-		SongCountCached: 8,
+		TrackCountCached: 8,
 		DurationCached:  2550 * 1000, // 2550 seconds * 1000 ms
 	}
 	err = db.Create(&album).Error
 	assert.NoError(t, err)
 
-	song := models.Song{
+	song := models.Track{
 		Name:           "Black Dog",
 		NameNormalized: "black dog",
 		AlbumID:        album.ID,

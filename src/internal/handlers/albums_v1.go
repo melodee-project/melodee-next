@@ -158,11 +158,11 @@ func (h *AlbumsV1Handler) GetAlbumSongs(c *fiber.Ctx) error {
 	offset := pagination.CalculateOffset(page, pageSize)
 
 	// Fetch songs for the album from the repository
-	var songs []models.Song
+	var songs []models.Track
 	var total int64
 
 	// Count total songs for this album
-	err = h.repo.GetDB().Model(&models.Song{}).Where("album_id = ?", albumID).Count(&total).Error
+	err = h.repo.GetDB().Model(&models.Track{}).Where("album_id = ?", albumID).Count(&total).Error
 	if err != nil {
 		return utils.SendInternalServerError(c, "Failed to count album songs")
 	}

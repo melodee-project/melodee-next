@@ -316,7 +316,7 @@ func (mp *MediaProcessor) createStagingRecords(metadata *MediaMetadata, stagingP
 
 	// In a real system, we would create staging records that track the file
 	// until it's promoted to production
-	stagingRecord := &models.Song{
+	stagingRecord := &models.Track{
 		Name: metadata.Name,
 		// Other fields would be populated from metadata
 		Directory:    filepath.Dir(stagingPath),
@@ -381,7 +381,7 @@ type MediaMetadata struct {
 // ProcessStaging promotes approved staging content to production
 func (mp *MediaProcessor) ProcessStaging() error {
 	// Get all items in staging that are ready for production
-	var stagingItems []models.Song // This would be a proper staging model
+	var stagingItems []models.Track // This would be a proper staging model
 	if err := mp.db.Where("relative_path LIKE ?", "staging/%").Find(&stagingItems).Error; err != nil {
 		return fmt.Errorf("failed to retrieve staging content: %w", err)
 	}
@@ -398,7 +398,7 @@ func (mp *MediaProcessor) ProcessStaging() error {
 }
 
 // promoteStagingItem promotes a single staging item to production
-func (mp *MediaProcessor) promoteStagingItem(item models.Song) error {
+func (mp *MediaProcessor) promoteStagingItem(item models.Track) error {
 	// Get the staging file path
 	stagingPath := filepath.Join(mp.config.StagingDir, item.RelativePath)
 
@@ -458,9 +458,9 @@ func (mp *MediaProcessor) promoteStagingItem(item models.Song) error {
 }
 
 // selectProductionLibrary selects the appropriate production library for an item
-func (mp *MediaProcessor) selectProductionLibrary(item models.Song) (*models.Library, error) {
+func (mp *MediaProcessor) selectProductionLibrary(item models.Track) (*models.Library, error) {
 	// Get the artist associated with this item to determine directory code
-	var song models.Song
+	var song models.Track
 	if err := mp.db.Preload("Album.Artist").First(&song, item.ID).Error; err != nil {
 		return nil, fmt.Errorf("failed to find song: %w", err)
 	}
@@ -691,7 +691,7 @@ func (mp *MediaProcessor) calculateLibrarySize(library *models.Library) (int64, 
 	// In a real implementation, this would calculate actual disk usage
 	// For now, we'll return a placeholder value based on file count
 	var count int64
-	if err := mp.db.Model(&models.Song{}).Where("directory LIKE ?", library.Path+"%").Count(&count).Error; err != nil {
+	if err := mp.db.Model(&models.Track{}).Where("directory LIKE ?", library.Path+"%").Count(&count).Error; err != nil {
 		return 0, err
 	}
 
@@ -709,7 +709,7 @@ func (mp *MediaProcessor) simpleHash(s string) uint32 {
 }
 
 // calculateProductionPath calculates the production path for an item
-func (mp *MediaProcessor) calculateProductionPath(item models.Song, library *models.Library) (string, error) {
+func (mp *MediaProcessor) calculateProductionPath(item models.Track, library *models.Library) (string, error) {
 	// For now, use a simple mapping
 	// In a real system, this would use the directory service with artist directory codes
 	productionPath := filepath.Join(library.Path, item.Directory, item.FileName)
@@ -717,9 +717,9 @@ func (mp *MediaProcessor) calculateProductionPath(item models.Song, library *mod
 }
 
 // createProductionRecords creates production database records
-func (mp *MediaProcessor) createProductionRecords(item models.Song, libraryID int32, productionPath string) (int64, error) {
+func (mp *MediaProcessor) createProductionRecords(item models.Track, libraryID int32, productionPath string) (int64, error) {
 	// Create a new production song record based on the staging item
-	productionSong := &models.Song{
+	productionSong := &models.Track{
 		Name:         item.Name,
 		Directory:    filepath.Dir(productionPath),
 		FileName:     filepath.Base(productionPath),
@@ -740,7 +740,7 @@ func (mp *MediaProcessor) createProductionRecords(item models.Song, libraryID in
 func (mp *MediaProcessor) markStagingItemAsPromoted(stagingID, productionID int64) error {
 	// Update the staging item to mark it as promoted
 	// In a real system, this might involve moving the record to a different table or updating status
-	return mp.db.Model(&models.Song{}).Where("id = ?", stagingID).Update("relative_path", fmt.Sprintf("promoted/%d", stagingID)).Error
+	return mp.db.Model(&models.Track{}).Where("id = ?", stagingID).Update("relative_path", fmt.Sprintf("promoted/%d", stagingID)).Error
 }
 
 // ProcessWithRetry attempts processing with configurable retry logic

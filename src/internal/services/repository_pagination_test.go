@@ -125,7 +125,7 @@ func TestRepository_SearchSongsPaginated(t *testing.T) {
 	repo := NewRepository(db)
 
 	// Create test songs
-	songs := []models.Song{
+	songs := []models.Track{
 		{Name: "Song A", NameNormalized: "song a"},
 		{Name: "Song B", NameNormalized: "song b"},
 		{Name: "Song C", NameNormalized: "song c"},

@@ -166,7 +166,7 @@ func TestPlaylistHandler_CreatePlaylist(t *testing.T) {
 		"name":    "Test Playlist",
 		"comment": "A test playlist",
 		"public":  false,
-		"song_ids": []int64{1, 2, 3},
+		"track_ids": []int64{1, 2, 3},
 	}
 	jsonPayload, _ := json.Marshal(payload)
 

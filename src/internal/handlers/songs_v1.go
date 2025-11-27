@@ -46,11 +46,11 @@ func (h *SongsV1Handler) GetSongs(c *fiber.Ctx) error {
 	}
 
 	// Fetch songs with pagination from the repository
-	var songs []models.Song
+	var songs []models.Track
 	var total int64
 
 	// Count total songs
-	err := h.repo.GetDB().Model(&models.Song{}).Count(&total).Error
+	err := h.repo.GetDB().Model(&models.Track{}).Count(&total).Error
 	if err != nil {
 		return utils.SendInternalServerError(c, "Failed to count songs")
 	}
@@ -84,12 +84,12 @@ func (h *SongsV1Handler) GetSong(c *fiber.Ctx) error {
 		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
-	songID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	trackID, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return utils.SendError(c, http.StatusBadRequest, "Invalid song ID")
 	}
 
-	song, err := h.repo.GetSongByID(songID)
+	song, err := h.repo.GetSongByID(trackID)
 	if err != nil {
 		return utils.SendNotFoundError(c, "Song")
 	}
@@ -115,7 +115,7 @@ func (h *SongsV1Handler) GetRecentSongs(c *fiber.Ctx) error {
 	}
 
 	// Fetch recent songs from the repository
-	var songs []models.Song
+	var songs []models.Track
 	err := h.repo.GetDB().
 		Limit(limit).
 		Order("created_at DESC, id DESC").
@@ -144,7 +144,7 @@ func (h *SongsV1Handler) ToggleSongStarred(c *fiber.Ctx) error {
 		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
-	songID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	trackID, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return utils.SendError(c, http.StatusBadRequest, "Invalid song ID")
 	}
@@ -156,7 +156,7 @@ func (h *SongsV1Handler) ToggleSongStarred(c *fiber.Ctx) error {
 	}
 
 	// Verify the song exists
-	_, err = h.repo.GetSongByID(songID)
+	_, err = h.repo.GetSongByID(trackID)
 	if err != nil {
 		return utils.SendNotFoundError(c, "Song")
 	}
@@ -166,7 +166,7 @@ func (h *SongsV1Handler) ToggleSongStarred(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"status": "updated",
-		"song_id": songID,
+		"track_id": trackID,
 		"is_starred": isStarred,
 		"user_id": currentUser.ID,
 	})
@@ -180,7 +180,7 @@ func (h *SongsV1Handler) SetSongRating(c *fiber.Ctx) error {
 		return utils.SendUnauthorizedError(c, "Authentication required")
 	}
 
-	songID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	trackID, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return utils.SendError(c, http.StatusBadRequest, "Invalid song ID")
 	}
@@ -196,7 +196,7 @@ func (h *SongsV1Handler) SetSongRating(c *fiber.Ctx) error {
 	}
 
 	// Verify the song exists
-	_, err = h.repo.GetSongByID(songID)
+	_, err = h.repo.GetSongByID(trackID)
 	if err != nil {
 		return utils.SendNotFoundError(c, "Song")
 	}
@@ -206,7 +206,7 @@ func (h *SongsV1Handler) SetSongRating(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"status": "updated",
-		"song_id": songID,
+		"track_id": trackID,
 		"rating": int32(rating),
 		"user_id": currentUser.ID,
 	})

@@ -128,12 +128,12 @@ func (r *Repository) GetAlbumByID(id int64) (*models.Album, error) {
 }
 
 // Song operations
-func (r *Repository) CreateSong(song *models.Song) error {
+func (r *Repository) CreateSong(song *models.Track) error {
 	return r.db.Create(song).Error
 }
 
-func (r *Repository) GetSongByID(id int64) (*models.Song, error) {
-	var song models.Song
+func (r *Repository) GetSongByID(id int64) (*models.Track, error) {
+	var song models.Track
 	err := r.db.Preload("Album").Preload("Artist").First(&song, id).Error
 	if err != nil {
 		return nil, err
@@ -190,8 +190,8 @@ func (r *Repository) SearchEntities(query string, entityType string, limit, offs
 
 	case "song", "songs":
 		// Search for songs
-		var songs []models.Song
-		err := r.db.Model(&models.Song{}).
+		var songs []models.Track
+		err := r.db.Model(&models.Track{}).
 			Where("name_normalized ILIKE ?", normalizedQuery).
 			Count(&total).
 			Limit(limit).Offset(offset).
@@ -232,7 +232,7 @@ func (r *Repository) searchAllEntities(query string, limit, offset int) ([]inter
 	var artistCount, albumCount, songCount int64
 	r.db.Model(&models.Artist{}).Where("name_normalized ILIKE ?", normalizedQuery).Count(&artistCount)
 	r.db.Model(&models.Album{}).Where("name_normalized ILIKE ?", normalizedQuery).Count(&albumCount)
-	r.db.Model(&models.Song{}).Where("name_normalized ILIKE ?", normalizedQuery).Count(&songCount)
+	r.db.Model(&models.Track{}).Where("name_normalized ILIKE ?", normalizedQuery).Count(&songCount)
 	total = artistCount + albumCount + songCount
 
 	// For offset/limit pagination, we would need to implement a more complex solution
@@ -267,7 +267,7 @@ func (r *Repository) searchAllEntities(query string, limit, offset int) ([]inter
 	}
 
 	// Get songs
-	var songs []models.Song
+	var songs []models.Track
 	r.db.Where("name_normalized ILIKE ?", normalizedQuery).
 		Limit(artistLimit).Offset(0).
 		Order("name_normalized ASC, id ASC").
@@ -330,14 +330,14 @@ func (r *Repository) SearchAlbumsPaginated(query string, limit, offset int) ([]m
 }
 
 // SearchSongsPaginated searches for songs with pagination
-func (r *Repository) SearchSongsPaginated(query string, limit, offset int) ([]models.Song, int64, error) {
-	var songs []models.Song
+func (r *Repository) SearchSongsPaginated(query string, limit, offset int) ([]models.Track, int64, error) {
+	var songs []models.Track
 	var total int64
 
 	normalizedQuery := fmt.Sprintf("%%%s%%", query)
 
 	err := r.db.
-		Model(&models.Song{}).
+		Model(&models.Track{}).
 		Where("name_normalized ILIKE ?", normalizedQuery).
 		Count(&total).
 		Offset(offset).

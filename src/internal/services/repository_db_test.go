@@ -186,7 +186,7 @@ func TestDBBackedRepository(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Test Create Song
-		song := &models.Song{
+		song := &models.Track{
 			Name:           "Test Song",
 			NameNormalized: "Test Song",
 			AlbumID:        album.ID,

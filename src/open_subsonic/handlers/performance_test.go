@@ -85,7 +85,7 @@ func TestGetAlbumPerformance(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		// Clean up test database
-		db.Migrator().DropTable(&models.Artist{}, &models.Album{}, &models.Song{})
+		db.Migrator().DropTable(&models.Artist{}, &models.Album{}, &models.Track{})
 	}()
 
 	// Create an artist
@@ -104,7 +104,7 @@ func TestGetAlbumPerformance(t *testing.T) {
 		NameNormalized: "test album",
 		ArtistID:     artist.ID,
 		AlbumStatus:  "Ok",
-		SongCount:    0,
+		TrackCount:    0,
 		Duration:     0,
 	}
 	err = db.Create(&album).Error
@@ -113,7 +113,7 @@ func TestGetAlbumPerformance(t *testing.T) {
 	// Populate with many songs for this album
 	numSongs := 1000
 	for i := 0; i < numSongs; i++ {
-		song := models.Song{
+		song := models.Track{
 			Name:         fmt.Sprintf("Song %d", i),
 			NameNormalized: fmt.Sprintf("song %d", i),
 			AlbumID:      album.ID,
@@ -130,7 +130,7 @@ func TestGetAlbumPerformance(t *testing.T) {
 	}
 
 	// Update album counts
-	album.SongCount = int64(numSongs)
+	album.TrackCount = int64(numSongs)
 	err = db.Save(&album).Error
 	require.NoError(t, err)
 
@@ -156,7 +156,7 @@ func TestSearch3Performance(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		// Clean up test database
-		db.Migrator().DropTable(&models.Artist{}, &models.Album{}, &models.Song{})
+		db.Migrator().DropTable(&models.Artist{}, &models.Album{}, &models.Track{})
 	}()
 
 	// Populate with many artists, albums, and songs
@@ -270,7 +270,7 @@ func BenchmarkGetAlbumPerformance(b *testing.B) {
 	}
 	defer func() {
 		// Clean up test database
-		db.Migrator().DropTable(&models.Artist{}, &models.Album{}, &models.Song{})
+		db.Migrator().DropTable(&models.Artist{}, &models.Album{}, &models.Track{})
 	}()
 
 	// Create an artist
@@ -291,7 +291,7 @@ func BenchmarkGetAlbumPerformance(b *testing.B) {
 		NameNormalized: "test album",
 		ArtistID:     artist.ID,
 		AlbumStatus:  "Ok",
-		SongCount:    0,
+		TrackCount:    0,
 		Duration:     0,
 	}
 	err = db.Create(&album).Error
@@ -302,7 +302,7 @@ func BenchmarkGetAlbumPerformance(b *testing.B) {
 	// Populate with many songs for this album
 	numSongs := 1000
 	for i := 0; i < numSongs; i++ {
-		song := models.Song{
+		song := models.Track{
 			Name:         fmt.Sprintf("Song %d", i),
 			NameNormalized: fmt.Sprintf("song %d", i),
 			AlbumID:      album.ID,
@@ -319,7 +319,7 @@ func BenchmarkGetAlbumPerformance(b *testing.B) {
 	}
 
 	// Update album counts
-	album.SongCount = int64(numSongs)
+	album.TrackCount = int64(numSongs)
 	err = db.Save(&album).Error
 	if err != nil {
 		b.Fatal("Failed to update album count:", err)
@@ -356,7 +356,7 @@ func BenchmarkSearch3Performance(b *testing.B) {
 	}
 	defer func() {
 		// Clean up test database
-		db.Migrator().DropTable(&models.Artist{}, &models.Album{}, &models.Song{})
+		db.Migrator().DropTable(&models.Artist{}, &models.Album{}, &models.Track{})
 	}()
 
 	// Populate with many artists, albums, and songs
@@ -406,7 +406,7 @@ func setupRealTestDatabase(t *testing.T) (*gorm.DB, error) {
 	}
 
 	// Run migrations
-	err = db.AutoMigrate(&models.Artist{}, &models.Album{}, &models.Song{})
+	err = db.AutoMigrate(&models.Artist{}, &models.Album{}, &models.Track{})
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +426,7 @@ func setupRealTestDatabaseForBenchmark(b *testing.B) (*gorm.DB, error) {
 	}
 
 	// Run migrations
-	err = db.AutoMigrate(&models.Artist{}, &models.Album{}, &models.Song{})
+	err = db.AutoMigrate(&models.Artist{}, &models.Album{}, &models.Track{})
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +481,7 @@ func populateArtistsWithAlbumsAndSongsForPerformanceTest(db *gorm.DB, numArtists
 				NameNormalized: fmt.Sprintf("album %d for artist %d", j, i),
 				ArtistID:     artists[i].ID,
 				AlbumStatus:  "Ok",
-				SongCount:    int64(songsPerAlbum),
+				TrackCount:    int64(songsPerAlbum),
 			})
 		}
 	}
@@ -492,12 +492,12 @@ func populateArtistsWithAlbumsAndSongsForPerformanceTest(db *gorm.DB, numArtists
 	}
 
 	// Create songs for each album
-	songs := make([]models.Song, 0, len(albums)*songsPerAlbum)
+	songs := make([]models.Track, 0, len(albums)*songsPerAlbum)
 	albumIdx := 0
 	for i := 0; i < numArtists; i++ {
 		for j := 0; j < albumsPerArtist; j++ {
 			for k := 0; k < songsPerAlbum; k++ {
-				songs = append(songs, models.Song{
+				songs = append(songs, models.Track{
 					Name:         fmt.Sprintf("Song %d from Album %d Artist %d", k, j, i),
 					NameNormalized: fmt.Sprintf("song %d from album %d artist %d", k, j, i),
 					AlbumID:      albums[albumIdx].ID,

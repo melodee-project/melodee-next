@@ -169,7 +169,7 @@ func TestArtistAlbumSongIntegration(t *testing.T) {
 	assert.NotEqual(t, uuid.Nil, album.APIKey)
 
 	// Create a song for the album
-	song := &models.Song{
+	song := &models.Track{
 		Name:           "Integration Test Song",
 		NameNormalized: "integration test song",
 		AlbumID:        album.ID,
@@ -248,7 +248,7 @@ func TestPlaylistIntegration(t *testing.T) {
 	err = repo.CreateAlbum(album)
 	assert.NoError(t, err)
 
-	song := &models.Song{
+	song := &models.Track{
 		Name:           "Playlist Test Song",
 		NameNormalized: "playlist test song",
 		AlbumID:        album.ID,
@@ -268,7 +268,7 @@ func TestPlaylistIntegration(t *testing.T) {
 		Name:      "Test Playlist",
 		UserID:    user.ID,
 		APIKey:    uuid.New(),
-		SongCount: 0,
+		TrackCount: 0,
 		Duration:  0,
 		CreatedAt: time.Now(),
 		ChangedAt: time.Now(),
@@ -279,9 +279,9 @@ func TestPlaylistIntegration(t *testing.T) {
 	assert.NotZero(t, playlist.ID)
 
 	// Add the song to the playlist
-	playlistSong := &models.PlaylistSong{
+	playlistSong := &models.PlaylistTrack{
 		PlaylistID: playlist.ID,
-		SongID:     song.ID,
+		TrackID:     song.ID,
 		Position:   1,
 		CreatedAt:  time.Now(),
 	}

@@ -245,7 +245,7 @@ func TestChecksumService_IsAlreadyProcessed(t *testing.T) {
 	tempFile.Close()
 
 	// Create a test song record
-	testSong := &models.Song{
+	testSong := &models.Track{
 		CRCHash:      "some_hash_value",
 		RelativePath: tempFile.Name(),
 		Directory:    filepath.Dir(tempFile.Name()),

@@ -256,7 +256,7 @@ func setupComprehensiveTestDatabase(t *testing.T, tempDir string) *gorm.DB {
 	assert.NoError(t, err)
 
 	// Auto-migrate the models
-	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{}, &models.Playlist{})
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{}, &models.Playlist{})
 	assert.NoError(t, err)
 
 	// Create a test user for authentication
@@ -291,7 +291,7 @@ func setupComprehensiveTestDatabase(t *testing.T, tempDir string) *gorm.DB {
 		err = os.WriteFile(testFilePath, []byte("fake audio content"), 0644)
 		assert.NoError(t, err)
 
-		song := models.Song{
+		song := models.Track{
 			Name:           "Test Song",
 			NameNormalized: "test song",
 			AlbumID:        album.ID,

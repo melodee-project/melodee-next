@@ -209,7 +209,7 @@ func (h *ArtistsV1Handler) GetArtistSongs(c *fiber.Ctx) error {
 	offset := pagination.CalculateOffset(page, pageSize)
 
 	// Build query for songs by the artist, with optional title filter
-	query := h.repo.GetDB().Model(&models.Song{}).Where("artist_id = ?", artistID)
+	query := h.repo.GetDB().Model(&models.Track{}).Where("artist_id = ?", artistID)
 	if titleFilter != "" {
 		normalizedFilter := "%" + titleFilter + "%"
 		query = query.Where("name_normalized ILIKE ?", normalizedFilter)
@@ -223,7 +223,7 @@ func (h *ArtistsV1Handler) GetArtistSongs(c *fiber.Ctx) error {
 	}
 
 	// Fetch songs with pagination
-	var songs []models.Song
+	var songs []models.Track
 	err = query.
 		Offset(offset).
 		Limit(pageSize).

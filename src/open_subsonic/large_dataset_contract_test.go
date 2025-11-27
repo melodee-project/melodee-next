@@ -241,7 +241,7 @@ func TestLargeDatasetSearchWithPagination(t *testing.T) {
 		err = db.Create(&album).Error
 		assert.NoError(t, err)
 
-		song := models.Song{
+		song := models.Track{
 			Name:           fmt.Sprintf("Special Song %d", i),
 			NameNormalized: fmt.Sprintf("special song %d", i),
 			AlbumID:        album.ID,
@@ -310,7 +310,7 @@ func setupLargeDatasetTestDatabase(t *testing.T) *gorm.DB {
 	assert.NoError(t, err)
 
 	// Auto-migrate the models
-	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{})
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{})
 	assert.NoError(t, err)
 
 	return db
@@ -433,7 +433,7 @@ func createLargeDatasetTestData(t *testing.T, db *gorm.DB, numArtists, albumsPer
 				NameNormalized: fmt.Sprintf("album %d by artist %d", albumIdx, artistIdx),
 				ArtistID:     artist.ID,
 				AlbumStatus:  "Ok", // Only include albums that are Ok status
-				SongCount:    int64(songsPerAlbum),
+				TrackCount:    int64(songsPerAlbum),
 			})
 		}
 	}
@@ -441,12 +441,12 @@ func createLargeDatasetTestData(t *testing.T, db *gorm.DB, numArtists, albumsPer
 	assert.NoError(t, err)
 
 	// Create songs for each album
-	songs := make([]models.Song, 0, len(albums)*songsPerAlbum)
+	songs := make([]models.Track, 0, len(albums)*songsPerAlbum)
 	albumIdx := 0
 	for artistIdx := 0; artistIdx < numArtists; artistIdx++ {
 		for albumIdxWithinArtist := 0; albumIdxWithinArtist < albumsPerArtist; albumIdxWithinArtist++ {
 			for songIdx := 0; songIdx < songsPerAlbum; songIdx++ {
-				songs = append(songs, models.Song{
+				songs = append(songs, models.Track{
 					Name:           fmt.Sprintf("Song %d from Album %d by Artist %d", songIdx, albumIdxWithinArtist, artistIdx),
 					NameNormalized: fmt.Sprintf("song %d from album %d by artist %d", songIdx, albumIdxWithinArtist, artistIdx),
 					AlbumID:        albums[albumIdx].ID,

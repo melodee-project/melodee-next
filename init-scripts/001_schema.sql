@@ -5,10 +5,8 @@
 -- Required Extensions (already created in init_db.sh)
 -- uuid-ossp, pg_trgm, btree_gin
 
--- Note: GORM uses "melodee_" prefix for all tables
-
 -- Users Table
-CREATE TABLE IF NOT EXISTS melodee_users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     api_key UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
     username VARCHAR(255) UNIQUE NOT NULL,
@@ -22,23 +20,23 @@ CREATE TABLE IF NOT EXISTS melodee_users (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_login_at TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_melodee_users_api_key ON melodee_users (api_key);
+CREATE INDEX IF NOT EXISTS idx_users_api_key ON users (api_key);
 
 -- Libraries Table
-CREATE TABLE IF NOT EXISTS melodee_libraries (
+CREATE TABLE IF NOT EXISTS libraries (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     path TEXT NOT NULL,
     type VARCHAR(50) NOT NULL CHECK (type IN ('inbound', 'staging', 'production')),
     is_locked BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    song_count INTEGER DEFAULT 0,
+    track_count INTEGER DEFAULT 0,
     album_count INTEGER DEFAULT 0,
     duration BIGINT DEFAULT 0
 );
 
 -- Settings Table
-CREATE TABLE IF NOT EXISTS melodee_settings (
+CREATE TABLE IF NOT EXISTS settings (
     id SERIAL PRIMARY KEY,
     key VARCHAR(500) UNIQUE NOT NULL,
     value TEXT,
@@ -49,7 +47,7 @@ CREATE TABLE IF NOT EXISTS melodee_settings (
 );
 
 -- Log Entries Table
-CREATE TABLE IF NOT EXISTS melodee_log_entries (
+CREATE TABLE IF NOT EXISTS log_entries (
     id BIGSERIAL PRIMARY KEY,
     timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     level VARCHAR(10) NOT NULL CHECK (level IN ('debug', 'info', 'warn', 'error', 'fatal', 'panic')),
@@ -73,18 +71,18 @@ CREATE TABLE IF NOT EXISTS melodee_log_entries (
 );
 
 -- Log Entries Indexes
-CREATE INDEX IF NOT EXISTS idx_log_entries_timestamp ON melodee_log_entries (timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_log_entries_level ON melodee_log_entries (level);
-CREATE INDEX IF NOT EXISTS idx_log_entries_module ON melodee_log_entries (module);
-CREATE INDEX IF NOT EXISTS idx_log_entries_request_id ON melodee_log_entries (request_id);
-CREATE INDEX IF NOT EXISTS idx_log_entries_user_id ON melodee_log_entries (user_id);
-CREATE INDEX IF NOT EXISTS idx_log_entries_library_id ON melodee_log_entries (library_id);
-CREATE INDEX IF NOT EXISTS idx_log_entries_level_timestamp ON melodee_log_entries (level, timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_log_entries_message_search ON melodee_log_entries USING gin(to_tsvector('english', message));
-CREATE INDEX IF NOT EXISTS idx_log_entries_error_search ON melodee_log_entries USING gin(to_tsvector('english', coalesce(error, '')));
+CREATE INDEX IF NOT EXISTS idx_log_entries_timestamp ON log_entries (timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_log_entries_level ON log_entries (level);
+CREATE INDEX IF NOT EXISTS idx_log_entries_module ON log_entries (module);
+CREATE INDEX IF NOT EXISTS idx_log_entries_request_id ON log_entries (request_id);
+CREATE INDEX IF NOT EXISTS idx_log_entries_user_id ON log_entries (user_id);
+CREATE INDEX IF NOT EXISTS idx_log_entries_library_id ON log_entries (library_id);
+CREATE INDEX IF NOT EXISTS idx_log_entries_level_timestamp ON log_entries (level, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_log_entries_message_search ON log_entries USING gin(to_tsvector('english', message));
+CREATE INDEX IF NOT EXISTS idx_log_entries_error_search ON log_entries USING gin(to_tsvector('english', coalesce(error, '')));
 
 -- Artists Table (simplified - GORM will add remaining columns as needed)
-CREATE TABLE IF NOT EXISTS melodee_artists (
+CREATE TABLE IF NOT EXISTS artists (
     id BIGSERIAL PRIMARY KEY,
     api_key UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
     is_locked BOOLEAN DEFAULT FALSE,
@@ -99,37 +97,36 @@ CREATE TABLE IF NOT EXISTS melodee_artists (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_artists_name_normalized ON melodee_artists USING gin(name_normalized gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_artists_directory_code ON melodee_artists (directory_code);
+CREATE INDEX IF NOT EXISTS idx_artists_name_normalized ON artists USING gin(name_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_artists_directory_code ON artists (directory_code);
 
 -- Albums Table (simplified)
-CREATE TABLE IF NOT EXISTS melodee_albums (
+CREATE TABLE IF NOT EXISTS albums (
     id BIGSERIAL PRIMARY KEY,
     api_key UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
-    artist_id BIGINT REFERENCES melodee_artists(id) ON DELETE CASCADE,
-    library_id INTEGER REFERENCES melodee_libraries(id) ON DELETE CASCADE,
+    artist_id BIGINT REFERENCES artists(id) ON DELETE CASCADE,
+    library_id INTEGER REFERENCES libraries(id) ON DELETE CASCADE,
     is_locked BOOLEAN DEFAULT FALSE,
     name VARCHAR(255) NOT NULL,
     name_normalized VARCHAR(255) NOT NULL,
     directory VARCHAR(500),
     album_type VARCHAR(50),
-    album_status VARCHAR(50) DEFAULT 'New',
-    song_count INTEGER DEFAULT 0,
+    track_count INTEGER DEFAULT 0,
     duration BIGINT DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_albums_artist_id ON melodee_albums (artist_id);
-CREATE INDEX IF NOT EXISTS idx_albums_library_id ON melodee_albums (library_id);
-CREATE INDEX IF NOT EXISTS idx_albums_name_normalized ON melodee_albums USING gin(name_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_albums_artist_id ON albums (artist_id);
+CREATE INDEX IF NOT EXISTS idx_albums_library_id ON albums (library_id);
+CREATE INDEX IF NOT EXISTS idx_albums_name_normalized ON albums USING gin(name_normalized gin_trgm_ops);
 
--- Songs Table (simplified)
-CREATE TABLE IF NOT EXISTS melodee_songs (
+-- Tracks Table (simplified)
+CREATE TABLE IF NOT EXISTS tracks (
     id BIGSERIAL PRIMARY KEY,
     api_key UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
-    album_id BIGINT REFERENCES melodee_albums(id) ON DELETE CASCADE,
-    artist_id BIGINT REFERENCES melodee_artists(id) ON DELETE CASCADE,
-    library_id INTEGER REFERENCES melodee_libraries(id) ON DELETE CASCADE,
+    album_id BIGINT REFERENCES albums(id) ON DELETE CASCADE,
+    artist_id BIGINT REFERENCES artists(id) ON DELETE CASCADE,
+    library_id INTEGER REFERENCES libraries(id) ON DELETE CASCADE,
     is_locked BOOLEAN DEFAULT FALSE,
     title VARCHAR(255) NOT NULL,
     title_normalized VARCHAR(255) NOT NULL,
@@ -143,45 +140,45 @@ CREATE TABLE IF NOT EXISTS melodee_songs (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_songs_album_id ON melodee_songs (album_id);
-CREATE INDEX IF NOT EXISTS idx_songs_artist_id ON melodee_songs (artist_id);
-CREATE INDEX IF NOT EXISTS idx_songs_library_id ON melodee_songs (library_id);
-CREATE INDEX IF NOT EXISTS idx_songs_title_normalized ON melodee_songs USING gin(title_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_tracks_album_id ON tracks (album_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_artist_id ON tracks (artist_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_library_id ON tracks (library_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_title_normalized ON tracks USING gin(title_normalized gin_trgm_ops);
 
 -- Playlists Table
-CREATE TABLE IF NOT EXISTS melodee_playlists (
+CREATE TABLE IF NOT EXISTS playlists (
     id SERIAL PRIMARY KEY,
     api_key UUID UNIQUE DEFAULT gen_random_uuid(),
-    user_id BIGINT REFERENCES melodee_users(id) ON DELETE CASCADE,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     comment TEXT,
     public BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     duration BIGINT DEFAULT 0,
-    song_count INTEGER DEFAULT 0,
+    track_count INTEGER DEFAULT 0,
     cover_art_id INTEGER
 );
-CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON melodee_playlists (user_id);
-CREATE INDEX IF NOT EXISTS idx_playlists_api_key ON melodee_playlists (api_key);
-CREATE INDEX IF NOT EXISTS idx_playlists_public_where ON melodee_playlists (public) WHERE public = true;
+CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON playlists (user_id);
+CREATE INDEX IF NOT EXISTS idx_playlists_api_key ON playlists (api_key);
+CREATE INDEX IF NOT EXISTS idx_playlists_public_where ON playlists (public) WHERE public = true;
 
--- Playlist Songs (Junction Table)
-CREATE TABLE IF NOT EXISTS melodee_playlist_songs (
+-- Playlist Tracks (Junction Table)
+CREATE TABLE IF NOT EXISTS playlist_tracks (
     id SERIAL PRIMARY KEY,
-    playlist_id INTEGER REFERENCES melodee_playlists(id) ON DELETE CASCADE,
-    song_id BIGINT REFERENCES melodee_songs(id) ON DELETE CASCADE,
+    playlist_id INTEGER REFERENCES playlists(id) ON DELETE CASCADE,
+    track_id BIGINT REFERENCES tracks(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(playlist_id, song_id)
+    UNIQUE(playlist_id, track_id)
 );
-CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist_id ON melodee_playlist_songs (playlist_id);
-CREATE INDEX IF NOT EXISTS idx_playlist_songs_song_id ON melodee_playlist_songs (song_id);
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist_id ON playlist_tracks (playlist_id);
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_track_id ON playlist_tracks (track_id);
 
 -- Shares Table
-CREATE TABLE IF NOT EXISTS melodee_shares (
+CREATE TABLE IF NOT EXISTS shares (
     id SERIAL PRIMARY KEY,
-    user_id BIGINT REFERENCES melodee_users(id) ON DELETE CASCADE,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
     resource_type VARCHAR(50) NOT NULL,
     resource_id BIGINT NOT NULL,
     description TEXT,
@@ -190,12 +187,12 @@ CREATE TABLE IF NOT EXISTS melodee_shares (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_shares_user_id ON melodee_shares (user_id);
+CREATE INDEX IF NOT EXISTS idx_shares_user_id ON shares (user_id);
 
 -- Capacity Status Table  
-CREATE TABLE IF NOT EXISTS melodee_capacity_statuses (
+CREATE TABLE IF NOT EXISTS capacity_statuses (
     id SERIAL PRIMARY KEY,
-    library_id INTEGER REFERENCES melodee_libraries(id) ON DELETE CASCADE,
+    library_id INTEGER REFERENCES libraries(id) ON DELETE CASCADE,
     total_space BIGINT NOT NULL,
     used_space BIGINT NOT NULL,
     available_space BIGINT NOT NULL,
@@ -204,12 +201,12 @@ CREATE TABLE IF NOT EXISTS melodee_capacity_statuses (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_capacity_statuses_library_id ON melodee_capacity_statuses (library_id);
+CREATE INDEX IF NOT EXISTS idx_capacity_statuses_library_id ON capacity_statuses (library_id);
 
 -- Library Scan History
-CREATE TABLE IF NOT EXISTS melodee_library_scan_histories (
+CREATE TABLE IF NOT EXISTS library_scan_histories (
     id BIGSERIAL PRIMARY KEY,
-    library_id INTEGER REFERENCES melodee_libraries(id) ON DELETE CASCADE,
+    library_id INTEGER REFERENCES libraries(id) ON DELETE CASCADE,
     started_at TIMESTAMP NOT NULL,
     completed_at TIMESTAMP,
     status VARCHAR(50) NOT NULL,
@@ -220,21 +217,31 @@ CREATE TABLE IF NOT EXISTS melodee_library_scan_histories (
     error_message TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_scan_histories_library_id ON melodee_library_scan_histories (library_id);
-CREATE INDEX IF NOT EXISTS idx_scan_histories_started_at ON melodee_library_scan_histories (started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scan_histories_library_id ON library_scan_histories (library_id);
+CREATE INDEX IF NOT EXISTS idx_scan_histories_started_at ON library_scan_histories (started_at DESC);
 
--- Quarantine Records Table (for media processing errors)
-CREATE TABLE IF NOT EXISTS melodee_quarantine_records (
+-- Staging Items Table (for file-based staging workflow)
+CREATE TABLE IF NOT EXISTS staging_items (
     id BIGSERIAL PRIMARY KEY,
-    file_path TEXT NOT NULL,
-    original_path TEXT NOT NULL,
-    reason TEXT NOT NULL,
-    message TEXT,
-    library_id INTEGER REFERENCES melodee_libraries(id) ON DELETE CASCADE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    scan_id TEXT NOT NULL,
+    staging_path TEXT NOT NULL UNIQUE,
+    metadata_file TEXT NOT NULL,
+    artist_name TEXT NOT NULL,
+    album_name TEXT NOT NULL,
+    track_count INTEGER DEFAULT 0,
+    total_size BIGINT DEFAULT 0,
+    processed_at TIMESTAMP NOT NULL,
+    status VARCHAR(50) NOT NULL CHECK (status IN ('pending_review', 'approved', 'rejected')),
+    reviewed_by BIGINT REFERENCES users(id),
+    reviewed_at TIMESTAMP,
+    notes TEXT,
+    checksum TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_quarantine_library_id ON melodee_quarantine_records (library_id);
-CREATE INDEX IF NOT EXISTS idx_quarantine_detected_at ON melodee_quarantine_records (detected_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_staging_status ON staging_items(status);
+CREATE INDEX IF NOT EXISTS idx_staging_scan_id ON staging_items(scan_id);
+CREATE INDEX IF NOT EXISTS idx_staging_artist_album ON staging_items(artist_name, album_name);
 
 -- Grant all privileges on tables and sequences to melodee_user
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO melodee_user;

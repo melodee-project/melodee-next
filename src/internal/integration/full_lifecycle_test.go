@@ -44,7 +44,7 @@ func SetupIntegrationTestSuite() *IntegrationTestSuite {
 	}
 
 	// Auto-migrate models
-	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{}, &models.Playlist{})
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{}, &models.Playlist{})
 	if err != nil {
 		panic("Failed to migrate database: " + err.Error())
 	}
@@ -232,7 +232,7 @@ func TestMusicBrowsingIntegration(t *testing.T) {
 	err = suite.db.Create(album).Error
 	assert.NoError(t, err)
 
-	song := &models.Song{
+	song := &models.Track{
 		Name:           "Integration Test Song",
 		NameNormalized: "integration test song",
 		AlbumID:        album.ID,
@@ -277,7 +277,7 @@ func TestSearchIntegration(t *testing.T) {
 	err = suite.db.Create(album).Error
 	assert.NoError(t, err)
 
-	song := &models.Song{
+	song := &models.Track{
 		Name:           "Search Test Song",
 		NameNormalized: "search test song",
 		AlbumID:        album.ID,
@@ -329,7 +329,7 @@ func TestMediaRetrievalIntegration(t *testing.T) {
 	err = suite.db.Create(album).Error
 	assert.NoError(t, err)
 
-	song := &models.Song{
+	song := &models.Track{
 		Name:           "Media Test Song",
 		NameNormalized: "media test song",
 		AlbumID:        album.ID,
@@ -390,7 +390,7 @@ func TestPlaylistIntegration(t *testing.T) {
 	err = suite.db.Create(album).Error
 	assert.NoError(t, err)
 
-	song := &models.Song{
+	song := &models.Track{
 		Name:           "Playlist Test Song",
 		NameNormalized: "playlist test song",
 		AlbumID:        album.ID,

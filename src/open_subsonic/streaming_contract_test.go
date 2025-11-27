@@ -153,7 +153,7 @@ func TestRangeRequestContract(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Update the song to point to our test file
-	var song models.Song
+	var song models.Track
 	err = db.First(&song, 1).Error
 	if err == nil {
 		song.RelativePath = testFile
@@ -330,7 +330,7 @@ func setupStreamingTestDatabase(t *testing.T) *gorm.DB {
 	assert.NoError(t, err)
 
 	// Auto-migrate the models
-	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{}, &models.Playlist{})
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{}, &models.Playlist{})
 	assert.NoError(t, err)
 
 	return db
@@ -442,7 +442,7 @@ func createStreamingTestData(t *testing.T, db *gorm.DB, tempDir string) {
 	err = os.WriteFile(testFilePath, []byte("fake mp3 content"), 0644)
 	assert.NoError(t, err)
 
-	song := models.Song{
+	song := models.Track{
 		Name:           "Test Song",
 		NameNormalized: "test song",
 		AlbumID:        album.ID,

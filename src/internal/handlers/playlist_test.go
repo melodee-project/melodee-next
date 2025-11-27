@@ -277,7 +277,7 @@ func TestPlaylistHandler_CreatePlaylist(t *testing.T) {
 			"name":     "New Test Playlist",
 			"comment":  "A test playlist description",
 			"public":   true,
-			"song_ids": []int64{1, 2, 3},
+			"track_ids": []int64{1, 2, 3},
 		}
 
 		reqBodyBytes, _ := json.Marshal(reqBody)

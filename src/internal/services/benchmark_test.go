@@ -18,8 +18,8 @@ func setupBenchmarkDB() (*gorm.DB, func(), error) {
 
 	// Auto-migrate all models
 	err = db.AutoMigrate(
-		&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{},
-		&models.Playlist{}, &models.PlaylistSong{}, &models.UserSong{}, &models.UserAlbum{},
+		&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{},
+		&models.Playlist{}, &models.PlaylistTrack{}, &models.UserSong{}, &models.UserAlbum{},
 		&models.UserArtist{}, &models.UserPin{}, &models.Bookmark{}, &models.Player{},
 		&models.PlayQueue{}, &models.SearchHistory{}, &models.Share{}, &models.ShareActivity{},
 		&models.LibraryScanHistory{}, &models.Setting{}, &models.ArtistRelation{}, &models.RadioStation{},

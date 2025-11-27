@@ -5,30 +5,62 @@
 **Priority**: High - Architectural Fix  
 **Context**: Alpha Development - No migration needed, can recreate database
 
+## Coding Agent Template
+> Act as a Senior Go/TypeScript Engineer. 
+
+Your goal is to implement Phase 1: Core Foundation of the Media Workflow Refactor as specified in MEDIA_WORKFLOW_REFACTOR.md.
+
+Context:
+
+Project Status: Alpha. Do not write migration scripts. You are authorized to modify 001_schema.sql directly and drop/recreate the database.
+Primary Reference: Read MEDIA_WORKFLOW_REFACTOR.md carefully, especially the "Implementation Phase 1" section and the "Appendix: Terminology Refactor Checklist".
+Core Tasks:
+
+Schema & Terminology Refactor:
+
+SQL: Rewrite 001_schema.sql to remove the melodee_ prefix from all tables and rename melodee_songs → tracks. Remove the quarantine_records table.
+Codebase: Perform a global refactor replacing "Song" with "Track" in Go models, handlers, services, and Frontend types (preserve "Song" only for OpenSubsonic XML output/API compatibility).
+Models: Update all GORM structs to match the new non-prefixed table names.
+SQLite Scanning Engine:
+
+Implement the scanned_files SQLite schema described in the docs.
+Create a high-performance file walker (using a worker pool) to scan inbound.
+Implement the Two-Stage Album Grouping Algorithm (Normalization/Hash + Year Vote) as defined in the documentation.
+Create a CLI entry point (e.g., cmd/scan-inbound/main.go) to run a scan and generate the SQLite DB.
+Definition of Done:
+
+The project builds successfully (go build [source](http://_vscodecontentref_/5).).
+The database schema is clean (no melodee_ prefixes).
+The CLI tool runs, scans files, and produces a valid SQLite database with correctly grouped albums.
+Existing tests pass (after
+being updated for the "Track" refactor).
+
 ## Implementation Status
 
 ### Phase 1: Core Foundation
-- [ ] Drop existing database and recreate schema
-- [ ] Remove `melodee_` prefix from all 12 tables
-- [ ] Rename `melodee_songs` → `tracks` (terminology change)
-- [ ] Rename `melodee_playlist_songs` → `playlist_tracks`
-- [ ] Remove `quarantine_records` table
-- [ ] **Global refactor: "song" → "track" everywhere**
-  - [ ] Update all GORM models (`Song` → `Track`, `song_id` → `track_id`)
-  - [ ] Update all API endpoints (`/songs` → `/tracks`)
-  - [ ] Update all handlers, services, and business logic
-  - [ ] Update all SQL queries and migrations
-  - [ ] Update frontend components and UI labels
-  - [ ] Update OpenSubsonic adapter (internal: tracks, output: `<song>` XML)
-  - [ ] Update all documentation and comments
-  - [ ] Search codebase for: `song`, `Song`, `songs`, `Songs`, `SONG`
-- [ ] Design SQLite `scanned_files` schema
-- [ ] Implement file walker with parallel metadata extraction
-- [ ] Implement batch SQLite insert logic (1000 rows)
-- [ ] Implement two-stage album grouping algorithm
-- [ ] Create CLI test tool for scanning
-- [ ] Test with scattered file scenarios
-- [ ] **Deliverable**: `./scan-inbound` produces SQLite DB with grouped albums
+- [x] Drop existing database and recreate schema
+- [x] Remove `melodee_` prefix from all 12 tables
+- [x] Rename `melodee_songs` → `tracks` (terminology change)
+- [x] Rename `melodee_playlist_songs` → `playlist_tracks`
+- [x] Remove `quarantine_records` table
+- [x] **Global refactor: "song" → "track" everywhere**
+  - [x] Update all GORM models (`Song` → `Track`, `song_id` → `track_id`)
+  - [x] Update all API endpoints (`/songs` → `/tracks`)
+  - [x] Update all handlers, services, and business logic
+  - [x] Update all SQL queries and migrations
+  - [x] Update frontend components and UI labels
+  - [x] Update OpenSubsonic adapter (internal: tracks, output: `<song>` XML)
+  - [x] Update all documentation and comments
+  - [x] Search codebase for: `song`, `Song`, `songs`, `Songs`, `SONG`
+- [x] Design SQLite `scanned_files` schema
+- [x] Implement file walker with parallel metadata extraction
+- [x] Implement batch SQLite insert logic (1000 rows)
+- [x] Implement two-stage album grouping algorithm
+- [x] Create CLI test tool for scanning
+- [x] Test with scattered file scenarios
+- [x] **Deliverable**: `./scan-inbound` produces SQLite DB with grouped albums
+
+**Status**: ✅ **COMPLETE** - See `docs/PHASE1_IMPLEMENTATION.md` for details
 
 ### Phase 2: Processing Pipeline
 - [ ] Implement process endpoint (query scan DB)

@@ -226,7 +226,7 @@ func (h *BrowsingHandler) GetArtist(c *fiber.Ctx) error {
 			Name:      album.Name,
 			Artist:    album.Artist.Name,
 			ArtistID:  int(album.ArtistID),
-			SongCount: int(album.SongCountCached),
+			TrackCount: int(album.TrackCountCached),
 		}
 
 		if album.ReleaseDate != nil {
@@ -326,7 +326,7 @@ func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 		}
 
 		// Get songs in this album
-		var songs []models.Song
+		var songs []models.Track
 		if err := h.db.Where("album_id = ?", album.ID).Find(&songs).Error; err != nil {
 			return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve songs")
 		}
@@ -387,7 +387,7 @@ func (h *BrowsingHandler) GetAlbum(c *fiber.Ctx) error {
 	}
 
 	// Get songs in this album
-	var songs []models.Song
+	var songs []models.Track
 	if err := h.db.Where("album_id = ?", album.ID).Order("sort_order").Find(&songs).Error; err != nil {
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve songs")
 	}
@@ -401,7 +401,7 @@ func (h *BrowsingHandler) GetAlbum(c *fiber.Ctx) error {
 		Artist:    album.Artist.Name,
 		ArtistID:  int(album.ArtistID),
 		CoverArt:  fmt.Sprintf("al-%d", album.ID), // Placeholder
-		SongCount: len(songs),
+		TrackCount: len(songs),
 		Created:   utils.FormatTime(album.CreatedAt),
 		Duration:  int(album.DurationCached / 1000), // Convert to seconds
 	}
@@ -445,7 +445,7 @@ func (h *BrowsingHandler) GetSong(c *fiber.Ctx) error {
 		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter id")
 	}
 
-	var song models.Song
+	var song models.Track
 	if err := h.db.Preload("Album").Preload("Artist").First(&song, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return utils.SendOpenSubsonicError(c, 70, "Song not found")
@@ -484,7 +484,7 @@ func (h *BrowsingHandler) GetGenres(c *fiber.Ctx) error {
 	genreMap := make(map[string]int)
 
 	// Query songs to extract genres from tags
-	var songs []models.Song
+	var songs []models.Track
 	if err := h.db.Select("tags").Find(&songs).Error; err != nil {
 		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve songs for genre aggregation")
 	}

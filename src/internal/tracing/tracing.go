@@ -122,7 +122,7 @@ func (t *Tracer) Shutdown(ctx context.Context) error {
 }
 
 // StreamTracingAttrs returns common attributes for stream operations
-func StreamTracingAttrs(user_id, song_id, format string) []attribute.KeyValue {
+func StreamTracingAttrs(user_id, track_id, format string) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String(ServiceName),
 		attribute.String("component", "stream"),
@@ -131,8 +131,8 @@ func StreamTracingAttrs(user_id, song_id, format string) []attribute.KeyValue {
 	if user_id != "" {
 		attrs = append(attrs, attribute.String("user_id", user_id))
 	}
-	if song_id != "" {
-		attrs = append(attrs, attribute.String("song_id", song_id))
+	if track_id != "" {
+		attrs = append(attrs, attribute.String("track_id", track_id))
 	}
 	if format != "" {
 		attrs = append(attrs, attribute.String("format", format))
@@ -142,7 +142,7 @@ func StreamTracingAttrs(user_id, song_id, format string) []attribute.KeyValue {
 }
 
 // MetadataWritebackTracingAttrs returns common attributes for metadata writeback operations
-func MetadataWritebackTracingAttrs(user_id string, song_ids []int64) []attribute.KeyValue {
+func MetadataWritebackTracingAttrs(user_id string, track_ids []int64) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String(ServiceName),
 		attribute.String("component", "metadata.writeback"),
@@ -152,12 +152,12 @@ func MetadataWritebackTracingAttrs(user_id string, song_ids []int64) []attribute
 		attrs = append(attrs, attribute.String("user_id", user_id))
 	}
 
-	if len(song_ids) > 0 {
-		ids := make([]string, len(song_ids))
-		for i, id := range song_ids {
+	if len(track_ids) > 0 {
+		ids := make([]string, len(track_ids))
+		for i, id := range track_ids {
 			ids[i] = fmt.Sprintf("%d", id)
 		}
-		attrs = append(attrs, attribute.StringSlice("song_ids", ids))
+		attrs = append(attrs, attribute.StringSlice("track_ids", ids))
 	}
 
 	return attrs

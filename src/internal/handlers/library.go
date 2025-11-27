@@ -49,7 +49,7 @@ type LibraryState struct {
 	ProductionCount int32            `json:"production_count"`
 	QuarantineCount int32            `json:"quarantine_count"`
 	Stats           *models.Library  `json:"stats"`
-	SongCount       int32            `json:"song_count"`
+	TrackCount       int32            `json:"song_count"`
 	AlbumCount      int32            `json:"album_count"`
 	Duration        int64            `json:"duration"` // in milliseconds
 	QuarantineItems []QuarantineItem `json:"quarantine_items,omitempty"`
@@ -114,7 +114,7 @@ func (h *LibraryHandler) GetLibraryStates(c *fiber.Ctx) error {
 			Type:            lib.Type,
 			Path:            lib.Path,
 			IsLocked:        lib.IsLocked,
-			SongCount:       lib.SongCount,
+			TrackCount:       lib.TrackCount,
 			AlbumCount:      lib.AlbumCount,
 			Duration:        lib.Duration,
 			InboundCount:    inboundCount,
@@ -165,7 +165,7 @@ func (h *LibraryHandler) GetLibraryState(c *fiber.Ctx) error {
 		Type:            library.Type,
 		Path:            library.Path,
 		IsLocked:        library.IsLocked,
-		SongCount:       library.SongCount,
+		TrackCount:       library.TrackCount,
 		AlbumCount:      library.AlbumCount,
 		Duration:        library.Duration,
 		InboundCount:    inboundCount,
@@ -374,7 +374,7 @@ func (h *LibraryHandler) GetLibrariesStats(c *fiber.Ctx) error {
 	// Sum up from libraries
 	for _, library := range libraries {
 		totalAlbums += int64(library.AlbumCount)
-		totalTracks += int64(library.SongCount)
+		totalTracks += int64(library.TrackCount)
 		// For total size, we're adding duration as a proxy for now, but in a real implementation
 		// this would come from file system or be pre-calculated
 		totalSizeBytes += library.Duration // duration in milliseconds is not size in bytes, but for now we'll use it

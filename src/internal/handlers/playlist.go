@@ -103,7 +103,7 @@ func (h *PlaylistHandler) CreatePlaylist(c *fiber.Ctx) error {
 		Name     string `json:"name"`
 		Comment  string `json:"comment"`
 		Public   bool   `json:"public"`
-		SongIDs  []int64 `json:"song_ids"`
+		SongIDs  []int64 `json:"track_ids"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
@@ -152,7 +152,7 @@ func (h *PlaylistHandler) UpdatePlaylist(c *fiber.Ctx) error {
 		Name     *string `json:"name,omitempty"`
 		Comment  *string `json:"comment,omitempty"`
 		Public   *bool   `json:"public,omitempty"`
-		SongIDs  *[]int64 `json:"song_ids,omitempty"`
+		SongIDs  *[]int64 `json:"track_ids,omitempty"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {

@@ -245,7 +245,7 @@ func setupPlaylistTestDatabase(t *testing.T) *gorm.DB {
 	assert.NoError(t, err)
 
 	// Auto-migrate the models
-	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Song{}, &models.Playlist{})
+	err = db.AutoMigrate(&models.User{}, &models.Library{}, &models.Artist{}, &models.Album{}, &models.Track{}, &models.Playlist{})
 	assert.NoError(t, err)
 
 	return db
@@ -363,7 +363,7 @@ func createPlaylistTestData(t *testing.T, db *gorm.DB) {
 	err = db.Create(&album).Error
 	assert.NoError(t, err)
 
-	song := models.Song{
+	song := models.Track{
 		Name:           "Test Song",
 		NameNormalized: "test song",
 		AlbumID:        album.ID,

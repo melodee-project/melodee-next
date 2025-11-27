@@ -41,7 +41,7 @@ func (h *MediaHandler) Stream(c *fiber.Ctx) error {
 	}
 
 	// Get the song
-	var song models.Song
+	var song models.Track
 	if err := h.db.Preload("Album").Preload("Artist").First(&song, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return utils.SendOpenSubsonicError(c, 70, "Song not found")
@@ -107,7 +107,7 @@ func (h *MediaHandler) Download(c *fiber.Ctx) error {
 	}
 
 	// Get the song
-	var song models.Song
+	var song models.Track
 	if err := h.db.Preload("Album").Preload("Artist").First(&song, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return utils.SendOpenSubsonicError(c, 70, "Song not found")
@@ -355,7 +355,7 @@ func (h *MediaHandler) transcodeFile(filePath string, maxBitRate int, format str
 }
 
 // handleRangeRequest handles HTTP range requests for partial content
-func (h *MediaHandler) handleRangeRequest(c *fiber.Ctx, filePath string, song models.Song) error {
+func (h *MediaHandler) handleRangeRequest(c *fiber.Ctx, filePath string, song models.Track) error {
 	rangeHeader := c.Get("Range")
 	
 	// Parse the range header (format: "bytes=start-end" or "bytes=start-" for range from start to end)
