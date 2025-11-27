@@ -34,6 +34,7 @@ func (h *DatabaseHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 		Timestamp: time.Now(),
 		Level:     level.String(),
 		Message:   msg,
+		Metadata:  "{}", // Initialize with empty JSON object
 	}
 
 	// Extract fields from the event's context
@@ -41,17 +42,14 @@ func (h *DatabaseHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	// you'd need to extract fields from the event's internal buffer
 	// For now, we'll rely on manually setting fields when logging
 
-	// Store in database asynchronously to avoid blocking
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+	// Store in database synchronously for now (to debug)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-		if err := h.storage.Store(ctx, entry); err != nil {
-			// Log the error but don't fail the original log operation
-			// You might want to use a fallback logger here
-			_ = err
-		}
-	}()
+	if err := h.storage.Store(ctx, entry); err != nil {
+		// Log the error to stderr for debugging
+		println("ERROR storing log to database:", err.Error())
+	}
 }
 
 // ContextualDatabaseLogger wraps a logger with database storage capabilities

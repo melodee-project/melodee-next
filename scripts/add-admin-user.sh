@@ -13,7 +13,7 @@ PASSWORD="$3"
 : "${MELODEE_DB_HOST:=localhost}"
 : "${MELODEE_DB_PORT:=5432}"
 : "${MELODEE_DB_USER:=melodee_user}"
-: "${MELODEE_DB_PASSWORD:?MELODEE_DB_PASSWORD must be set}"
+: "${MELODEE_DB_PASSWORD:=admin123}"
 : "${MELODEE_DB_NAME:=melodee}"
 
 # Generate bcrypt hash using the helper Go program

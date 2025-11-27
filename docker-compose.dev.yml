@@ -1,0 +1,142 @@
+version: '3.8'
+
+# Development compose file - Infrastructure only
+# Run API, Worker, and Frontend directly on host for hot-reloading
+
+services:
+  # Database Service
+  db:
+    image: docker.io/library/postgres:17
+    container_name: melodee-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=melodee
+      - POSTGRES_USER=melodee_user
+      - POSTGRES_PASSWORD=${MELODEE_DB_PASSWORD:-melodee_dev_password}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=512MB
+      -c effective_cache_size=2GB
+      -c maintenance_work_mem=256MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=8MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_worker_processes=2
+      -c max_parallel_workers_per_gather=1
+      -c max_parallel_workers=2
+    networks:
+      - melodee-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U melodee_user -d melodee"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  # Redis Service
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: melodee-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - melodee-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  # Prometheus
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    container_name: melodee-prometheus
+    restart: unless-stopped
+    user: root
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - melodee-network
+
+  # Grafana
+  grafana:
+    image: docker.io/grafana/grafana-enterprise
+    container_name: melodee-grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_storage:/var/lib/grafana
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3001:3000"
+    networks:
+      - melodee-network
+    depends_on:
+      - prometheus
+
+  # Jaeger (for tracing - optional)
+  jaeger:
+    image: docker.io/jaegertracing/all-in-one:latest
+    container_name: melodee-jaeger
+    restart: unless-stopped
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Jaeger collector HTTP
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    networks:
+      - melodee-network
+
+volumes:
+  pgdata:
+  redisdata:
+  prometheus_data:
+  grafana_storage:
+
+networks:
+  melodee-network:
+    driver: bridge

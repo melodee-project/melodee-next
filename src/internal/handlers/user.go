@@ -3,12 +3,13 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gofiber/fiber/v2"
 	"melodee/internal/middleware"
 	"melodee/internal/models"
 	"melodee/internal/pagination"
 	"melodee/internal/services"
 	"melodee/internal/utils"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // UserHandler handles user-related requests
@@ -35,11 +36,19 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 
 	// Get pagination parameters
 	page, pageSize := pagination.GetPaginationParams(c, 1, 10)
+	offset := pagination.CalculateOffset(page, pageSize)
 
-	// In a real implementation, we would fetch users with pagination
-	// For now, we'll return an empty list
-	users := []models.User{}
-	total := int64(0)
+	// Fetch users from database
+	var users []models.User
+	var total int64
+
+	if err := h.repo.GetDB().Model(&models.User{}).Count(&total).Error; err != nil {
+		return utils.SendInternalServerError(c, "Failed to count users")
+	}
+
+	if err := h.repo.GetDB().Limit(pageSize).Offset(offset).Find(&users).Error; err != nil {
+		return utils.SendInternalServerError(c, "Failed to fetch users")
+	}
 
 	// Calculate pagination metadata according to OpenAPI spec
 	paginationMeta := pagination.Calculate(total, page, pageSize)
@@ -131,11 +140,11 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"id":       user.ID,
-		"username": user.Username,
-		"email":    user.Email,
-		"is_admin": user.IsAdmin,
-		"created_at": user.CreatedAt,
+		"id":            user.ID,
+		"username":      user.Username,
+		"email":         user.Email,
+		"is_admin":      user.IsAdmin,
+		"created_at":    user.CreatedAt,
 		"last_login_at": user.LastLoginAt,
 	})
 }
@@ -242,7 +251,7 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"status": "deleted",
+		"status":  "deleted",
 		"message": "User deleted successfully",
 	})
 }

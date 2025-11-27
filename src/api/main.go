@@ -245,18 +245,25 @@ func main() {
 	logging.InitGlobalLogger(logging.InfoLevel, "console", logStorage)
 	log.Println("Global logger initialized with database storage")
 
+	// Test the logging system
+	logging.Info("Melodee API server starting up")
+	logging.Info("Database connection established successfully")
+
 	// Seed default libraries if none exist
 	if err := database.SeedDefaultLibraries(dbManager.GetGormDB()); err != nil {
 		log.Fatal("Failed to seed default libraries:", err)
 	}
+	logging.Info("Default libraries verified/seeded")
 
 	// Seed default settings if none exist
 	if err := database.SeedDefaultSettings(dbManager.GetGormDB()); err != nil {
 		log.Fatal("Failed to seed default settings:", err)
 	}
+	logging.Info("Default settings verified/seeded")
 
 	// Create and start server
 	server := NewAPIServer(cfg, dbManager)
+	logging.Info("API server initialized, starting HTTP listener on " + fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port))
 	if err := server.Start(); err != nil {
 		log.Fatal("Server failed to start:", err)
 	}

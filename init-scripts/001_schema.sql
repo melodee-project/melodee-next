@@ -32,14 +32,19 @@ CREATE TABLE IF NOT EXISTS melodee_libraries (
     type VARCHAR(50) NOT NULL CHECK (type IN ('inbound', 'staging', 'production')),
     is_locked BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    song_count INTEGER DEFAULT 0,
+    album_count INTEGER DEFAULT 0,
+    duration BIGINT DEFAULT 0,
+    base_path VARCHAR(512) NOT NULL
 );
 
 -- Settings Table
 CREATE TABLE IF NOT EXISTS melodee_settings (
     id SERIAL PRIMARY KEY,
-    key VARCHAR(255) UNIQUE NOT NULL,
+    key VARCHAR(500) UNIQUE NOT NULL,
     value TEXT,
+    category INTEGER,
+    comment TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -147,16 +152,20 @@ CREATE INDEX IF NOT EXISTS idx_songs_title_normalized ON melodee_songs USING gin
 -- Playlists Table
 CREATE TABLE IF NOT EXISTS melodee_playlists (
     id SERIAL PRIMARY KEY,
+    api_key UUID UNIQUE DEFAULT gen_random_uuid(),
     user_id BIGINT REFERENCES melodee_users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     comment TEXT,
-    is_public BOOLEAN DEFAULT FALSE,
-    song_count INTEGER DEFAULT 0,
-    duration BIGINT DEFAULT 0,
+    public BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    duration BIGINT DEFAULT 0,
+    song_count INTEGER DEFAULT 0,
+    cover_art_id INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON melodee_playlists (user_id);
+CREATE INDEX IF NOT EXISTS idx_playlists_api_key ON melodee_playlists (api_key);
+CREATE INDEX IF NOT EXISTS idx_playlists_public_where ON melodee_playlists (public) WHERE public = true;
 
 -- Playlist Songs (Junction Table)
 CREATE TABLE IF NOT EXISTS melodee_playlist_songs (
@@ -218,16 +227,12 @@ CREATE INDEX IF NOT EXISTS idx_scan_histories_started_at ON melodee_library_scan
 -- Quarantine Records Table (for media processing errors)
 CREATE TABLE IF NOT EXISTS melodee_quarantine_records (
     id BIGSERIAL PRIMARY KEY,
-    library_id INTEGER REFERENCES melodee_libraries(id) ON DELETE CASCADE,
     file_path TEXT NOT NULL,
+    original_path TEXT NOT NULL,
     reason TEXT NOT NULL,
-    error_details TEXT,
-    file_size BIGINT,
-    detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    resolved_at TIMESTAMP,
-    resolution_action VARCHAR(50),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    message TEXT,
+    library_id INTEGER REFERENCES melodee_libraries(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_quarantine_library_id ON melodee_quarantine_records (library_id);
 CREATE INDEX IF NOT EXISTS idx_quarantine_detected_at ON melodee_quarantine_records (detected_at DESC);

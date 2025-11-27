@@ -8,18 +8,22 @@ import (
 
 // Metadata represents the pagination metadata that matches the OpenAPI specification
 type Metadata struct {
-	TotalCount  int64 `json:"totalCount"`
-	PageSize    int   `json:"pageSize"`
-	CurrentPage int   `json:"currentPage"`
-	TotalPages  int   `json:"totalPages"`
-	HasPrevious bool  `json:"hasPrevious"`
-	HasNext     bool  `json:"hasNext"`
+	TotalCount  int64 `json:"total"`
+	PageSize    int   `json:"page_size"`
+	CurrentPage int   `json:"page"`
+	TotalPages  int   `json:"total_pages"`
+	HasPrevious bool  `json:"has_previous"`
+	HasNext     bool  `json:"has_next"`
 }
 
 // GetPaginationParams extracts pagination parameters from Fiber context with default values
 func GetPaginationParams(c *fiber.Ctx, defaultPage, defaultPageSize int) (page int, pageSize int) {
 	page = c.QueryInt("page", defaultPage)
-	pageSize = c.QueryInt("pageSize", defaultPageSize)
+	// Support both pageSize and page_size for flexibility
+	pageSize = c.QueryInt("page_size", defaultPageSize)
+	if pageSize == defaultPageSize {
+		pageSize = c.QueryInt("pageSize", defaultPageSize)
+	}
 
 	// Validate inputs
 	if page < 1 {
@@ -99,10 +103,10 @@ func CalculateURLParams(c *fiber.Ctx, defaultPage, defaultPageSize int) (page in
 // CalculateWithOffset calculates pagination metadata when using offset/limit style parameters
 func CalculateWithOffset(totalCount int64, offset, limit int) Metadata {
 	pageSize := limit
-	currentPage := (offset/limit) + 1
-	
+	currentPage := (offset / limit) + 1
+
 	totalPages := int(math.Ceil(float64(totalCount) / float64(limit)))
-	
+
 	if totalPages < 0 {
 		totalPages = 0
 	}

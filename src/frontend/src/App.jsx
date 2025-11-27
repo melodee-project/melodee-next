@@ -13,6 +13,18 @@ import SharesManagement from './components/SharesManagement';
 import LibraryManagement from './components/LibraryManagement';
 import QuarantineManagement from './components/QuarantineManagement';
 import PlaylistManagement from './components/PlaylistManagement';
+import { 
+  LayoutDashboard, 
+  AlertTriangle, 
+  FileText, 
+  Users, 
+  Settings, 
+  Share2, 
+  Library, 
+  AlertCircle, 
+  Music,
+  LogOut
+} from 'lucide-react';
 
 // ProtectedRoute component to restrict access to authenticated users
 function ProtectedRoute({ children }) {
@@ -59,25 +71,29 @@ function Layout({ children }) {
       <nav className={`${navbarClass} ${navbarTextClass} shadow-md`}>
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/admin" className={`text-xl font-bold ${navbarTextClass} ${navbarHoverClass} transition-colors`}>Melodee Admin</Link>
+            <Link to="/admin" className={`text-xl font-bold ${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-2`}>
+              <Music className="w-6 h-6" />
+              Melodee Admin
+            </Link>
             <ul className="hidden md:flex space-x-4 lg:space-x-6">
-              <li><Link to="/admin" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Dashboard</Link></li>
-              <li><Link to="/admin/dlq" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>DLQ</Link></li>
-              <li><Link to="/admin/logs" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Logs</Link></li>
-              <li><Link to="/admin/users" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Users</Link></li>
-              <li><Link to="/admin/settings" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Settings</Link></li>
-              <li><Link to="/admin/shares" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Shares</Link></li>
-              <li><Link to="/admin/libraries" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Libraries</Link></li>
-              <li><Link to="/admin/quarantine" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Quarantine</Link></li>
-              <li><Link to="/admin/playlists" className={`${navbarTextClass} ${navbarHoverClass} transition-colors`}>Playlists</Link></li>
+              <li><Link to="/admin" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><LayoutDashboard className="w-4 h-4" />Dashboard</Link></li>
+              <li><Link to="/admin/dlq" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><AlertTriangle className="w-4 h-4" />DLQ</Link></li>
+              <li><Link to="/admin/logs" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><FileText className="w-4 h-4" />Logs</Link></li>
+              <li><Link to="/admin/users" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Users className="w-4 h-4" />Users</Link></li>
+              <li><Link to="/admin/settings" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Settings className="w-4 h-4" />Settings</Link></li>
+              <li><Link to="/admin/shares" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Share2 className="w-4 h-4" />Shares</Link></li>
+              <li><Link to="/admin/libraries" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Library className="w-4 h-4" />Libraries</Link></li>
+              <li><Link to="/admin/quarantine" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><AlertCircle className="w-4 h-4" />Quarantine</Link></li>
+              <li><Link to="/admin/playlists" className={`${navbarTextClass} ${navbarHoverClass} transition-colors flex items-center gap-1.5`}><Music className="w-4 h-4" />Playlists</Link></li>
             </ul>
             <div className="flex items-center space-x-4">
               <ThemeSelector />
-              <span className="text-sm md:text-base">Welcome, <span className="font-semibold">{user?.username || user?.Username || 'User'}</span>!</span>
+              <span className="text-sm md:text-base text-white font-medium">Welcome, <span className="font-bold">{user?.username || user?.Username || 'User'}</span>!</span>
               <button
                 onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-4 py-2 rounded transition-colors font-medium"
+                className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-4 py-2 rounded transition-colors font-medium flex items-center gap-2"
               >
+                <LogOut className="w-4 h-4" />
                 Logout
               </button>
             </div>

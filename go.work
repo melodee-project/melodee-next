@@ -3,4 +3,5 @@ go 1.25.1
 use (
 	./scripts/cmd/bcrypt-hash
 	./src
+	./src/internal
 )
