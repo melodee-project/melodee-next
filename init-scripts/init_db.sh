@@ -6,6 +6,9 @@ set -e
 
 echo "Initializing database schema..."
 
+# Set application DB user password (defaults to admin123 to match config/.env)
+APP_DB_PASSWORD="${MELODEE_DATABASE_PASSWORD:-admin123}"
+
 # Create extensions
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     -- Create required extensions
@@ -17,9 +20,9 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     DO \$\$
     BEGIN
        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'melodee_user') THEN
-          CREATE ROLE melodee_user LOGIN PASSWORD 'melodee_dev_password';
+          CREATE ROLE melodee_user LOGIN PASSWORD '${APP_DB_PASSWORD}';
        ELSE
-          ALTER ROLE melodee_user PASSWORD 'melodee_dev_password';
+          ALTER ROLE melodee_user PASSWORD '${APP_DB_PASSWORD}';
        END IF;
     END
     \$\$;

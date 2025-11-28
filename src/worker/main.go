@@ -119,7 +119,7 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 	mux.HandleFunc(media.TypeDirectoryRecalculate, media.HandleDirectoryRecalculate)
 	mux.HandleFunc(media.TypeMetadataWriteback, media.HandleMetadataWriteback)
 	mux.HandleFunc(media.TypeMetadataEnhance, media.HandleMetadataEnhance)
-	mux.HandleFunc(media.TypeStagingCron, func(ctx context.Context, t *asynq.Task) error {
+	mux.HandleFunc(media.TypeStagingScan, func(ctx context.Context, t *asynq.Task) error {
 		cfg, err := config.LoadConfig()
 		if err != nil {
 			logging.Errorf("staging task: failed to reload config: %v", err)
@@ -142,8 +142,8 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 
 	// Initialize Asynq scheduler for periodic tasks
 	var scheduler *asynq.Scheduler
-	if cfg.StagingCron.Enabled {
-		logging.Infof("Staging scan is enabled with schedule: %s", cfg.StagingCron.Schedule)
+	if cfg.StagingScan.Enabled {
+		logging.Infof("Staging scan is enabled with schedule: %s", cfg.StagingScan.Schedule)
 
 		scheduler = asynq.NewScheduler(
 			asynq.RedisClientOpt{Addr: redisAddr},
@@ -154,21 +154,21 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 
 		// Create the staging scan task
 		payload := map[string]interface{}{
-			"source":  "staging_cron",
-			"dry_run": cfg.StagingCron.DryRun,
+			"source":  "staging_scan",
+			"dry_run": cfg.StagingScan.DryRun,
 		}
 		payloadBytes, err := json.Marshal(payload)
 		if err != nil {
 			logging.Errorf("Failed to marshal staging scan payload: %v", err)
 		} else {
-			stagingTask := asynq.NewTask(media.TypeStagingCron, payloadBytes)
+			stagingTask := asynq.NewTask(media.TypeStagingScan, payloadBytes)
 
 			// Register the periodic task with the scheduler
 			entryID, err := scheduler.Register(
-				cfg.StagingCron.Schedule,
+				cfg.StagingScan.Schedule,
 				stagingTask,
 				asynq.Queue("maintenance"),
-				asynq.TaskID("staging-cron-periodic"),
+				asynq.TaskID("staging-scan-periodic"),
 			)
 			if err != nil {
 				logging.Errorf("Failed to register staging scan task: %v", err)

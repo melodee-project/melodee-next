@@ -12,7 +12,7 @@ services:
     environment:
       - POSTGRES_DB=melodee
       - POSTGRES_USER=melodee_user
-      - POSTGRES_PASSWORD=${MELODEE_DB_PASSWORD:-melodee_dev_password}
+      - POSTGRES_PASSWORD=${MELODEE_DATABASE_PASSWORD:-admin123}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - pgdata:/var/lib/postgresql/data

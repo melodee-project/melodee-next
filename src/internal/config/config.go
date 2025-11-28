@@ -24,7 +24,7 @@ type AppConfig struct {
 	Capacity    CapacityConfig    `mapstructure:"capacity"`
 	Logging     LoggingConfig     `mapstructure:"logging"`
 	Security    SecurityConfig    `mapstructure:"security"`
-	StagingCron StagingCronConfig `mapstructure:"staging_cron"`
+	StagingScan StagingScanConfig `mapstructure:"staging_scan"`
 }
 
 // ServerConfig holds server-specific configuration
@@ -143,8 +143,8 @@ type RateLimitConfig struct {
 	StatusCode int           `mapstructure:"status_code"` // HTTP status code for rate-limited requests
 }
 
-// StagingCronConfig holds configuration for the staging scan job
-type StagingCronConfig struct {
+// StagingScanConfig holds configuration for the staging scan job
+type StagingScanConfig struct {
 	Enabled        bool   `mapstructure:"enabled"`           // If staging scan is enabled
 	DryRun         bool   `mapstructure:"dry_run"`           // If true then dry run only
 	Schedule       string `mapstructure:"schedule"`          // Cron schedule (e.g. "0 */1 * * *")
@@ -250,7 +250,7 @@ func DefaultAppConfig() *AppConfig {
 				StatusCode: 429,
 			},
 		},
-		StagingCron: StagingCronConfig{
+		StagingScan: StagingScanConfig{
 			Enabled:        false,
 			DryRun:         false,
 			Schedule:       "0 */1 * * *", // Every hour
@@ -322,29 +322,29 @@ func MergeDatabaseSettings(config *AppConfig, db *gorm.DB) error {
 	// Apply settings to config
 	for _, s := range settings {
 		switch s.Key {
-		case "staging_cron.enabled":
+		case "staging_scan.enabled":
 			if enabled, err := strconv.ParseBool(s.Value); err == nil {
-				config.StagingCron.Enabled = enabled
-				log.Printf("Loaded setting from DB: staging_cron.enabled = %v", enabled)
+				config.StagingScan.Enabled = enabled
+				log.Printf("Loaded setting from DB: staging_scan.enabled = %v", enabled)
 			}
-		case "staging_cron.dry_run":
+		case "staging_scan.dry_run":
 			if dryRun, err := strconv.ParseBool(s.Value); err == nil {
-				config.StagingCron.DryRun = dryRun
-				log.Printf("Loaded setting from DB: staging_cron.dry_run = %v", dryRun)
+				config.StagingScan.DryRun = dryRun
+				log.Printf("Loaded setting from DB: staging_scan.dry_run = %v", dryRun)
 			}
-		case "staging_cron.schedule":
-			config.StagingCron.Schedule = s.Value
-			log.Printf("Loaded setting from DB: staging_cron.schedule = %s", s.Value)
-		case "staging_cron.workers":
+		case "staging_scan.schedule":
+			config.StagingScan.Schedule = s.Value
+			log.Printf("Loaded setting from DB: staging_scan.schedule = %s", s.Value)
+		case "staging_scan.workers":
 			if workers, err := strconv.Atoi(s.Value); err == nil {
-				config.StagingCron.Workers = workers
+				config.StagingScan.Workers = workers
 			}
-		case "staging_cron.rate_limit":
+		case "staging_scan.rate_limit":
 			if rateLimit, err := strconv.Atoi(s.Value); err == nil {
-				config.StagingCron.RateLimit = rateLimit
+				config.StagingScan.RateLimit = rateLimit
 			}
-		case "staging_cron.scan_db_data_path":
-			config.StagingCron.ScanDBDataPath = s.Value
+		case "staging_scan.scan_db_data_path":
+			config.StagingScan.ScanDBDataPath = s.Value
 		case "processing.scan_workers":
 			if scanWorkers, err := strconv.Atoi(s.Value); err == nil {
 				config.Processing.ScanWorkers = scanWorkers
@@ -441,12 +441,12 @@ func setDefaults() {
 	viper.SetDefault("security.rate_limiting.status_code", 429)
 
 	// Staging scan defaults
-	viper.SetDefault("staging_cron.enabled", false)
-	viper.SetDefault("staging_cron.dry_run", false)
-	viper.SetDefault("staging_cron.schedule", "0 */1 * * *") // Every hour
-	viper.SetDefault("staging_cron.workers", 4)
-	viper.SetDefault("staging_cron.rate_limit", 0) // Unlimited
-	viper.SetDefault("staging_cron.scan_db_data_path", "/tmp/melodee-scans")
+	viper.SetDefault("staging_scan.enabled", false)
+	viper.SetDefault("staging_scan.dry_run", false)
+	viper.SetDefault("staging_scan.schedule", "0 */1 * * *") // Every hour
+	viper.SetDefault("staging_scan.workers", 4)
+	viper.SetDefault("staging_scan.rate_limit", 0) // Unlimited
+	viper.SetDefault("staging_scan.scan_db_data_path", "/tmp/melodee-scans")
 }
 
 // applyEnvironmentOverrides applies configuration overrides from environment variables
@@ -506,23 +506,23 @@ func applyEnvironmentOverrides(config *AppConfig) {
 	}
 
 	// Staging scan overrides
-	if stagingEnabled := getEnvBool("MELODEE_STAGING_CRON_ENABLED", config.StagingCron.Enabled); stagingEnabled {
-		config.StagingCron.Enabled = stagingEnabled
+	if stagingEnabled := getEnvBool("MELODEE_STAGING_SCAN_ENABLED", config.StagingScan.Enabled); stagingEnabled {
+		config.StagingScan.Enabled = stagingEnabled
 	}
-	if stagingDryRun := getEnvBool("MELODEE_STAGING_CRON_DRY_RUN", config.StagingCron.DryRun); stagingDryRun {
-		config.StagingCron.DryRun = stagingDryRun
+	if stagingDryRun := getEnvBool("MELODEE_STAGING_SCAN_DRY_RUN", config.StagingScan.DryRun); stagingDryRun {
+		config.StagingScan.DryRun = stagingDryRun
 	}
-	if stagingSchedule := getEnv("MELODEE_STAGING_CRON_SCHEDULE", ""); stagingSchedule != "" {
-		config.StagingCron.Schedule = stagingSchedule
+	if stagingSchedule := getEnv("MELODEE_STAGING_SCAN_SCHEDULE", ""); stagingSchedule != "" {
+		config.StagingScan.Schedule = stagingSchedule
 	}
-	if stagingWorkers := getEnvInt("MELODEE_STAGING_CRON_WORKERS", config.StagingCron.Workers); stagingWorkers > 0 {
-		config.StagingCron.Workers = stagingWorkers
+	if stagingWorkers := getEnvInt("MELODEE_STAGING_SCAN_WORKERS", config.StagingScan.Workers); stagingWorkers > 0 {
+		config.StagingScan.Workers = stagingWorkers
 	}
-	if stagingRateLimit := getEnvInt("MELODEE_STAGING_CRON_RATE_LIMIT", config.StagingCron.RateLimit); stagingRateLimit >= 0 {
-		config.StagingCron.RateLimit = stagingRateLimit
+	if stagingRateLimit := getEnvInt("MELODEE_STAGING_SCAN_RATE_LIMIT", config.StagingScan.RateLimit); stagingRateLimit >= 0 {
+		config.StagingScan.RateLimit = stagingRateLimit
 	}
-	if stagingScanDBDataPath := getEnv("MELODEE_STAGING_CRON_SCAN_DB_DATA_PATH", ""); stagingScanDBDataPath != "" {
-		config.StagingCron.ScanDBDataPath = stagingScanDBDataPath
+	if stagingScanDBDataPath := getEnv("MELODEE_STAGING_SCAN_DB_DATA_PATH", ""); stagingScanDBDataPath != "" {
+		config.StagingScan.ScanDBDataPath = stagingScanDBDataPath
 	}
 }
 
@@ -658,13 +658,13 @@ func (c *AppConfig) Validate() error {
 	}
 
 	// Validate staging scan configuration
-	if c.StagingCron.Workers <= 0 {
+	if c.StagingScan.Workers <= 0 {
 		return fmt.Errorf("staging scan workers must be greater than 0")
 	}
-	if c.StagingCron.RateLimit < 0 {
+	if c.StagingScan.RateLimit < 0 {
 		return fmt.Errorf("staging scan rate limit must be greater than or equal to 0")
 	}
-	if c.StagingCron.ScanDBDataPath == "" {
+	if c.StagingScan.ScanDBDataPath == "" {
 		return fmt.Errorf("staging scan DB data path cannot be empty")
 	}
 

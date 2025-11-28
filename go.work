@@ -4,4 +4,5 @@ use (
 	./scripts/cmd/bcrypt-hash
 	./src
 	./src/internal
+	./src/worker
 )

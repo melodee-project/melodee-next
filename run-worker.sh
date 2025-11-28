@@ -2,9 +2,9 @@
 cd /home/steven/source/melodee-next/src/worker || exit 1
 
 export MELODEE_DATABASE_HOST=127.0.0.1
-export MELODEE_DATABASE_PASSWORD=melodee_dev_password  
+export MELODEE_DATABASE_PASSWORD=admin123
 export MELODEE_DATABASE_USER=melodee_user
-export MELODEE_DATABASE_NAME=melodee
+export MELODEE_DATABASE_DBNAME=melodee
 export MELODEE_REDIS_ADDRESS=127.0.0.1:6379
 export MELODEE_JWT_SECRET=my-local-dev-secret-key-12345
 export GO111MODULE=on

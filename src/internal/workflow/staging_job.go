@@ -306,10 +306,10 @@ func (s *StagingJobService) resolveLibraryByType(libraryType string) (*models.Li
 // RunStagingJobCycleWithConfig resolves configuration from app config and runs the staging job
 func (s *StagingJobService) RunStagingJobCycleWithConfig(ctx context.Context, appConfig *config.AppConfig) (*StagingJobResult, error) {
 	jobConfig := &StagingJobConfig{
-		Workers:        appConfig.StagingCron.Workers,
-		RateLimit:      appConfig.StagingCron.RateLimit,
-		DryRun:         appConfig.StagingCron.DryRun,
-		ScanDBDataPath: appConfig.StagingCron.ScanDBDataPath,
+		Workers:        appConfig.StagingScan.Workers,
+		RateLimit:      appConfig.StagingScan.RateLimit,
+		DryRun:         appConfig.StagingScan.DryRun,
+		ScanDBDataPath: appConfig.StagingScan.ScanDBDataPath,
 	}
 
 	return s.RunStagingJobCycle(ctx, *jobConfig)

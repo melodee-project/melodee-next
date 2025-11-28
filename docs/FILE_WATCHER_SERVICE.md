@@ -37,13 +37,13 @@ The file watcher service requires a minor update to the existing `libraries` tab
 
 ### 2. Job Triggering
 - Maps file system events to Asynq job types
-- Primary use case: when new files are added to watched staging libraries, triggers the "Staging Scan Job" (`TypeStagingCron`) to process new media
-- Leverages existing job types like `TypeLibraryScan`, `TypeLibraryProcess`, `TypeStagingCron`
-- Creates new job types for file-specific operations:
-  - `file:created`
-  - `file:modified`
-  - `file:removed`
-  - `directory:changed`
+- Primary use case: when new files are added to watched staging libraries, triggers the "Staging Scan Job" (`media.TypeStagingScan`) to process new media
+- Leverages existing job types like `TypeLibraryScan`, `TypeLibraryProcess`, and the staging scan job noted above
+- Optional file-specific job types (Phase 2):
+    - `file:created`
+    - `file:modified`
+    - `file:removed`
+    - `directory:changed`
 
 ### 3. Configuration Management
 - Database-backed configuration using Melodee's settings system
@@ -115,6 +115,16 @@ Comprehensive logging system that integrates with the existing logging infrastru
 
 ## Implementation Details
 
+### Event Model and Recursion
+- Uses `fsnotify` for filesystem events. Canonical event set: `Create`, `Write`, `Remove`, `Rename`, `Chmod`.
+- Event mapping (recommended defaults):
+    - `Create|Write` → file upsert handling (debounced)
+    - `Remove` → file removed
+    - `Rename` → file moved/renamed
+    - `Chmod` → ignored by default (configurable)
+- Recursive watching: `fsnotify` is non-recursive. The service walks existing subdirectories on startup and adds watches; it dynamically adds watches for newly created subdirectories and removes watches when directories are deleted.
+- Debounce scope: debounce per-path within `file_watch.debounce_time` to collapse rapid `Create`/`Write` bursts. Use trailing-edge debounce to ensure final state.
+
 ### Service Startup
 ```go
 // Example startup logic
@@ -183,9 +193,10 @@ func (fw *FileWatcher) updateWatchedLibraries() error {
 // isStagingLibraryPath checks if the given file path belongs to a watched staging library
 func (fw *FileWatcher) isStagingLibraryPath(filePath string) bool {
     var count int64
-    // Check if the file path starts with any watched library path that is of type 'staging'
+    // Safer prefix match: ensure filePath starts with library.path followed by '/' (LIKE path || '/%')
+    // Prevents false positives where path is a prefix of a different directory name.
     err := fw.db.Table("libraries").
-        Where("is_watched = ? AND type = ? AND ?", true, "staging", gorm.Expr("starts_with(?, path)", filePath)).
+        Where("is_watched = ? AND type = 'staging' AND ? LIKE (path || '/%')", true, filePath).
         Count(&count).Error
 
     return err == nil && count > 0
@@ -208,7 +219,7 @@ func (fw *FileWatcher) handleEvent(event FileEvent) error {
     // Check if this is a staging library path (where new files should trigger staging scan)
     if fw.isStagingLibraryPath(event.Path) {
         // For staging libraries, trigger the Staging Scan Job directly
-        // This reuses the existing TypeStagingCron job to process new media
+        // Enqueue the staging scan job
         payload := map[string]interface{}{
             "source":  "file_watcher",
             "path":    event.Path,
@@ -216,10 +227,10 @@ func (fw *FileWatcher) handleEvent(event FileEvent) error {
             "trigger": "new_file_added",
         }
         payloadBytes, _ := json.Marshal(payload)
-        task := asynq.NewTask(TypeStagingCron, payloadBytes)
-        return fw.client.Enqueue(task, asynq.Queue("maintenance"))
+        task := asynq.NewTask(media.TypeStagingScan, payloadBytes)
+        return fw.client.Enqueue(task, asynq.Queue("maintenance")) // queue configurable
     } else {
-        // For other watched libraries, use file-specific job types
+        // For other watched libraries, optionally use file-specific job types (Phase 2)
         var jobType string
         switch event.EventType {
         case "create", "modify":
@@ -241,14 +252,19 @@ func (fw *FileWatcher) handleEvent(event FileEvent) error {
 ## Deployment
 
 ### Docker Integration
-- New service in `docker-compose.yml`
+- New service in `docker-compose.yml` (and compatible with `podman compose` locally)
 - Same networking and volume patterns as other services
+- Mount host media paths read-only into the watcher container; ensure container user has read/exec on directories
 - Proper dependency management (database, Redis)
 
 ### Health and Monitoring
 - Integrated with existing Prometheus metrics
 - Jaeger tracing support
 - Health check endpoints conform to existing patterns
+- Tune Linux inotify limits as needed (host and container):
+    - `fs.inotify.max_user_watches`
+    - `fs.inotify.max_user_instances`
+    - Provide guidance in ops runbook for expected values at scale
 
 ## Security Considerations
 
@@ -256,6 +272,16 @@ func (fw *FileWatcher) handleEvent(event FileEvent) error {
 - **Configuration Validation**: Input validation for directory paths to prevent path traversal
 - **Resource Limits**: Limits on number of watched directories to prevent resource exhaustion
 - **Rate Limiting**: Rate limiting on event processing to prevent system overload
+
+## API Boundaries and Auth
+
+- Watcher service exposes only internal endpoints: `/healthz` and `/metrics`.
+- Admin-facing endpoints live in the main API and either proxy to the watcher or read from DB/metrics directly:
+    - `GET /api/status/watcher` (proxy or aggregate)
+    - `GET /api/status/watcher/health`
+    - `GET /api/logs/watcher*`
+- Inter-service communication: API → Watcher via stable service address (`WATCHER_HTTP_ADDR`) with short timeouts.
+- All admin endpoints require JWT auth with appropriate admin scope/role; SSE log streams use the same auth and timeouts.
 
 ## Admin UI Integration
 
@@ -269,13 +295,21 @@ func (fw *FileWatcher) handleEvent(event FileEvent) error {
 - All endpoints follow existing API patterns
 - Authentication and authorization via existing JWT system
 - Request/response schemas consistent with other admin endpoints
+- API proxies to watcher for health/metrics when needed; otherwise reads DB-backed config and logs directly
 
 ## Error Handling and Resilience
 
-- **Connection Recovery**: Automatic reconnection to database and Redis
-- **Event Buffering**: Buffer events during temporary service outages
-- **Circuit Breakers**: Prevent cascading failures
-- **Graceful Degradation**: Continue operation with reduced functionality if parts fail
+- **Connection Recovery**: Jittered exponential backoff with caps when reconnecting to DB/Redis; emit readiness only after all deps healthy
+- **Event Buffering**: In-memory ring buffer for transient outages with max size configurable; drop-oldest policy with metrics and warnings
+- **Circuit Breakers**: Trip on repeated Redis enqueue or DB read errors; auto-reset on sustained success window
+- **Graceful Degradation**: Continue operating with reduced functionality if parts fail (e.g., log-only when Redis unavailable)
+- **Startup Gap**: Perform a lightweight scan of watched libraries on startup/config change to catch files created before watchers attached
+
+## Ops and Scaling
+
+- **Backpressure**: Use dedicated Asynq queue for watcher-originated tasks (e.g., `maintenance`), set rate limits and retries per library/type
+- **Dedupe Keys**: Optionally set deduplication keys per file path + event window to avoid flooding
+- **Batching**: (Optional) group multiple file events for the same directory into a single enqueue under heavy load
 
 ## Future Enhancements
 
@@ -285,3 +319,41 @@ func (fw *FileWatcher) handleEvent(event FileEvent) error {
 - **Performance Metrics**: Detailed performance and usage metrics per library
 - **Custom Hooks**: Support for custom actions on specific file events per library
 - **Batch Processing**: Batch event processing for high-volume scenarios
+
+## Configuration
+
+### Recommended Defaults
+- `file_watch.enabled`: `false`
+- `file_watch.patterns`: `*.mp3,*.flac,*.m4a,*.ogg,*.wav`
+- `file_watch.ignore_patterns`: `*.part,~$*,.*` (temp/hidden files)
+- `file_watch.debounce_time`: `1s` (tune based on ingest characteristics)
+- `file_watch.scan_workers`: `4`
+- `file_watch.buffer_size`: `1024`
+
+### Runtime Updates
+- Prefer Postgres `LISTEN/NOTIFY` on config tables to reduce polling; fall back to periodic polling if unavailable.
+
+## Metrics
+
+Expose Prometheus metrics:
+- `watcher_events_total{event,type,library}`: Count of fs events observed
+- `watcher_enqueue_total{queue,type}`: Count of tasks enqueued
+- `watcher_errors_total{stage}`: Errors by stage (watch, debounce, enqueue, db)
+- `watcher_watches{state}`: Current number of active watches (added/removed)
+- `watcher_debounce_suppressed_total`: Events dropped by debounce
+
+## Database Schema Changes
+
+Add migration (e.g., `init-scripts/002_file_watcher.sql`):
+
+```sql
+ALTER TABLE libraries
+    ADD COLUMN IF NOT EXISTS is_watched boolean NOT NULL DEFAULT false;
+```
+
+## Testing
+
+- Unit: event mapping, debounce behavior, path prefix matching SQL generation
+- Integration: temp directory tree with fsnotify events; verify enqueue calls and metrics updates
+- Resilience: simulate Redis/DB outages; confirm backoff, buffering, and graceful degradation
+- E2E: mass copy into staging library; ensure staging scan job enqueued and processed

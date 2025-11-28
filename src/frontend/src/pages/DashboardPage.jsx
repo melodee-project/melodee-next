@@ -1,4 +1,5 @@
 import React from 'react';
+import OpenSubsonicInfo from '../components/OpenSubsonicInfo.jsx';
 
 const DashboardPage = () => {
   return (
@@ -19,6 +20,7 @@ const DashboardPage = () => {
           <h2 className="text-xl font-semibold mb-2">Server Status</h2>
           <p>Health: Loading...</p>
         </div>
+        <OpenSubsonicInfo />
       </div>
     </div>
   );

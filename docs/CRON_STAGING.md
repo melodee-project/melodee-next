@@ -35,17 +35,17 @@
   - This should use the system configuration that is editable by the admin in the Admin UI.
   | Key | Value | Description |
   | :------- | :------: | -------: |
-  | staging_cron.enabled | false | if enabled or not |
-  | staging_cron.dry_run | false | if true then dry run only |
-  | staging_cron.schedule | "0 */1 * * *" | cron for every hour |
-  | staging_cron.workers  | 4  | number of worker goroutines |
-  | staging_cron.rate_limit | 0  | 0 = unlimited |
-  | staging_cron.scan_db_data_path | /var/melodee/scan-db | directory where temporary scan DB files are written |
+  | staging_scan.enabled | false | if enabled or not |
+  | staging_scan.dry_run | false | if true then dry run only |
+  | staging_scan.schedule | "0 */1 * * *" | cron for every hour |
+  | staging_scan.workers  | 4  | number of worker goroutines |
+  | staging_scan.rate_limit | 0  | 0 = unlimited |
+  | staging_scan.scan_db_data_path | /var/melodee/scan-db | directory where temporary scan DB files are written |
 
   - The worker reads this section when a cron run starts. If `enabled` is `false`, the cron logic never runs.
   - The worker should use the `inbound` type library path as the source directory to scan.
   - The worker should use the `staging` type library path as the staging root when configuring `processor.ProcessorConfig.StagingRoot`.
-  - Scan database files are written to a configured scan DB data path (e.g. `staging_cron.scan_db_data_path`) or another fixed location that is **not** any library path. This keeps temporary scan DB artifacts separate from both inbound and staging library trees.
+  - Scan database files are written to a configured scan DB data path (e.g. `staging_scan.scan_db_data_path`) or another fixed location that is **not** any library path. This keeps temporary scan DB artifacts separate from both inbound and staging library trees.
   - These keys are stored in the application settings (editable via `/admin/settings`) and read by the worker at the start of a scan run.
 ---
 
@@ -75,7 +75,7 @@ type StagingJobConfig struct {
 // It is the canonical implementation used by cron and any other callers.
 func RunStagingJobCycle(ctx context.Context, cfg StagingJobConfig, db *gorm.DB, logger Logger) error {
   // 0) Resolve current runtime configuration and libraries
-  //    - Read latest staging_cron.* settings (enabled, dry_run, workers, rate_limit, schedule, scan_output_dir)
+  //    - Read latest staging_scan.* settings (enabled, dry_run, workers, rate_limit, schedule, scan_output_dir)
   //    - Resolve inbound and staging libraries from the database configuration (type = "inbound" and type = "staging")
   //    - If either library is missing or multiple of a type exist, log an error and fail this run
 
@@ -126,24 +126,24 @@ func RunStagingJobCycle(ctx context.Context, cfg StagingJobConfig, db *gorm.DB, 
 
 ### 1. Config Wiring
 
-- Extend `config.AppConfig` with a new struct, e.g. `StagingCronConfig`.
+- Extend `config.AppConfig` with a new struct, e.g. `StagingScanConfig`.
 - Add it to `AppConfig` and `LoadConfig()`.
 - Ensure the worker can read:
-  - `cfg.StagingCron.Enabled`
-  - `cfg.StagingCron.Schedule`
-  - `cfg.StagingCron.Workers`, `RateLimit`, `DryRun`, and any scan output directory setting.
+  - `cfg.StagingScan.Enabled`
+  - `cfg.StagingScan.Schedule`
+  - `cfg.StagingScan.Workers`, `RateLimit`, `DryRun`, and any scan output directory setting.
 
-At runtime, the worker should read the latest values for `staging_cron.*` and library configuration at the beginning of each run so that changes made via the Admin UI take effect without a service restart.
+At runtime, the worker should read the latest values for `staging_scan.*` and library configuration at the beginning of each run so that changes made via the Admin UI take effect without a service restart.
 
 ### 2. Scheduling Strategy Options
 
 #### Option A: Simple Interval (Ticker)
 
-- In `worker.NewWorkerServer()` or right after creating the worker, start a goroutine if `cfg.StagingCron.Enabled` is `true`:
+- In `worker.NewWorkerServer()` or right after creating the worker, start a goroutine if `cfg.StagingScan.Enabled` is `true`:
 
 ```go
-if cfg.StagingCron.Enabled {
-    d, err := time.ParseDuration(cfg.StagingCron.Interval)
+if cfg.StagingScan.Enabled {
+  d, err := time.ParseDuration(cfg.StagingScan.Interval)
     if err != nil {
         // log and disable cron, or fall back to default
     } else {
@@ -178,11 +178,11 @@ if cfg.StagingCron.Enabled {
 #### Option B: Cron Expressions (e.g. `robfig/cron`)
 
 - Add a dependency on a cron library (if acceptable for you).
-- Use `cfg.StagingCron.Schedule` (e.g. `"0 */1 * * *"`):
+- Use `cfg.StagingScan.Schedule` (e.g. `"0 */1 * * *"`):
 
 ```go
 c := cron.New()
-_, err := c.AddFunc(cfg.StagingCron.Schedule, func() {
+_, err := c.AddFunc(cfg.StagingScan.Schedule, func() {
   ctx, cancel := context.WithTimeout(context.Background(), someTimeout)
     defer cancel()
   // Guard against overlapping runs

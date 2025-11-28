@@ -228,9 +228,13 @@ func (s *Server) setupInternalRoutes() {
 
 	// Capacity monitoring and health
 	healthMetricsHandler := handlers.NewHealthMetricsHandler(s.dbManager.GetGormDB(), s.cfg, s.capacityProbe, s.asynqInspector)
+	systemInfoHandler := handlers.NewSystemInfoHandler(s.cfg)
 	admin.Get("/capacity", healthMetricsHandler.CapacityStatus)
 	admin.Get("/capacity/:id", healthMetricsHandler.CapacityStatusForLibrary)
 	admin.Post("/capacity/probe-now", healthMetricsHandler.ProbeCapacityNow)
+
+	// System info
+	admin.Get("/system/open-subsonic", systemInfoHandler.OpenSubsonicInfo)
 
 	// Initialize directory services for media processing
 	directorySvc := directory.NewDirectoryCodeGenerator(&directory.DirectoryCodeConfig{

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { libraryService, adminService, healthService } from '../services/apiService';
+import OpenSubsonicInfo from './OpenSubsonicInfo';
 
 function AdminDashboard() {
   const [stats, setStats] = useState({});
@@ -165,6 +166,9 @@ function AdminDashboard() {
           <p className="text-3xl font-bold text-green-600">Operational</p>
         </div>
       </div>
+
+      {/* OpenSubsonic API Info */}
+      <OpenSubsonicInfo />
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Activity</h2>

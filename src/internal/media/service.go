@@ -28,7 +28,7 @@ const (
 	TypeDirectoryRecalculate = "directory:recalculate"
 	TypeMetadataWriteback    = "metadata:writeback"
 	TypeMetadataEnhance      = "metadata:enhance"
-	TypeStagingCron          = "staging:scan_and_process"
+	TypeStagingScan          = "staging:scan" // renamed from TypeStagingCron
 )
 
 // Job payloads and handlers

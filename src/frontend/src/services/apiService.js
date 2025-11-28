@@ -117,6 +117,8 @@ export const adminService = {
   getLogStats: () => apiService.get('/admin/logs/stats'),
   downloadLogs: (params) => apiService.get(`/admin/logs/download?${params}`),
   cleanupLogs: (olderThanDays) => apiService.post(`/admin/logs/cleanup?older_than_days=${olderThanDays}`),
+  // System info
+  getOpenSubsonicInfo: () => apiService.get('/admin/system/open-subsonic'),
 };
 
 // Library-related API endpoints
