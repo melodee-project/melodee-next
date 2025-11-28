@@ -6,18 +6,63 @@ This document outlines the API emulation strategies for popular streaming music 
 
 The goal of these API emulation layers is to provide a unified backend that can serve multiple client ecosystems, allowing users to connect their preferred music streaming applications to Melodee without requiring separate server instances for different client types.
 
-**Note**: Melodee already includes implementations for OpenSubsonic and Subsonic APIs, providing compatibility with a wide range of existing music streaming clients that support these standards.
+### Scope & Non‑Goals
+- Focus on Subsonic/OpenSubsonic full compatibility first.
+- Jellyfin: start with auth and basic item browsing/streaming.
+- Plex: do not implement Plex.tv claim/association or GDM (UDP discovery) in the initial phase; keep experimentation behind feature flags.
 
-## Popular Streaming Music Services
+## Implemented Standards
+
+### 1. Subsonic & OpenSubsonic
+*Includes compatibility for: Navidrome, Airsonic-Advanced, Gonic, and original Subsonic clients.*
+
+Melodee currently implements the OpenSubsonic API specification, which is a superset of the original Subsonic API. This provides immediate compatibility with a vast ecosystem of existing clients (DSub, Symfonium, Ultrasonic, etc.).
+
+- **API Version**: Emulates Subsonic v1.16.1 + OpenSubsonic Extensions
+- **Authentication**:
+  - Required params: `u` (user), `v` (API version), `c` (client name)
+  - Optional params: `p` (password or `enc:`-prefixed hex), or `t` (token) + `s` (salt)
+  - Supported methods:
+    - **Legacy**: Username and password (plaintext or hex-encoded with `enc:` prefix)
+    - **Token-based**: Username and token (MD5 of password + salt)
+- **Primary Use Case**: Personal music streaming with offline caching support
+- **Key Endpoints**:
+  - System: `/rest/ping`, `/rest/getLicense`, `/rest/getOpenSubsonicExtensions`
+  - Browsing: `/rest/getMusicFolders`, `/rest/getIndexes`, `/rest/getArtist`, `/rest/getAlbum`
+  - Streaming: `/rest/stream`, `/rest/download`, `/rest/getCoverArt`
+  - Lists: `/rest/getAlbumList2`, `/rest/getRandomSongs`, `/rest/getNowPlaying`
+  - User: `/rest/getUser`, `/rest/scrobble`, `/rest/star`
+- **Response Format**: XML (default for many clients) and JSON.
+  - Clients can request JSON with `f=json` or `Accept: application/json`.
+- **Status**: **Active** (See `docs/OPENSUBSONIC_IMPLEMENTATION_PLAN.md` for detailed coverage)
+
+References: `docs/opensubsonic-v1.16.1-openapi.yaml`, `docs/subsonic-v1.16.1-openapi.yaml`.
+
+#### Navidrome Nuances (within Subsonic/OpenSubsonic)
+Navidrome aims to fully support Subsonic 1.16.1 and adopts OpenSubsonic extensions, but it introduces a few behavioral differences and extras on existing endpoints. These are not new endpoints, but deviations or additional parameters/fields:
+- **IDs**: Always strings (MD5/UUID). Some clients incorrectly cast IDs to integers; avoid this.
+- **Scan endpoints**: `getScanStatus` includes extra fields `lastScan` and `folderCount`. `startScan` accepts an extra `fullScan` boolean to force a full rescan.
+- **Download**: `/rest/download` accepts IDs for Songs, Albums, Artists and Playlists, and accepts transcoding options similar to `/rest/stream`.
+- **Users**: `getUsers` returns only the authenticated user. `getUser` ignores the `username` param and returns the authenticated user; roles reflect actual server capabilities (e.g., download/jukebox depends on server settings).
+- **Search**: `search2`/`search3` do not support Lucene; only simple autocomplete queries are supported.
+- **Play tracking**: `stream` does not mark as played; only `scrobble` with `submission=true` does.
+- **Browse-by-folder**: Not implemented; directory endpoints simulate a tree (e.g., `/Artist/Album/01 - Song.mp3`).
+- **Video**: Not implemented (music-only focus).
+- **PlayQueue**: In `getPlayQueue`, the `current` field is a string ID (not int as some clients assume).
+
+For an up-to-date list of OpenSubsonic extensions supported by Navidrome, see: https://github.com/navidrome/navidrome/issues/2695. Navidrome’s Subsonic compatibility page: https://www.navidrome.org/docs/developers/subsonic-api/
+
+## Planned Emulations
 
 ### 1. Jellyfin
 - **API Type**: RESTful API
 - **Authentication**: Multiple methods:
-  - API key via `X-MediaBrowser-Token` header
+  - API token via `X-MediaBrowser-Token` or `X-Emby-Token` header
+  - Client identity via `X-Emby-Authorization` (device, version, client)
   - JWT tokens for session management
   - User credentials via `/Users/AuthenticateByName` endpoint
-- **Primary Use Case**: Media server for personal use
-- **Client Support**: Web, Android, iOS, TV platforms
+- **Primary Use Case**: Media server for personal use (Video & Audio)
+- **Client Support**: Web, Android, iOS, TV platforms (Roku, Android TV)
 - **Key Endpoints**:
   - Authentication: `/Users/AuthenticateByName`, `/Sessions/Logout`
   - Media: `/Items`, `/Users/{UserId}/Items`, `/Items/{Id}`
@@ -25,69 +70,42 @@ The goal of these API emulation layers is to provide a unified backend that can 
   - Streaming: `/Audio/{Id}/stream`, `/Videos/{Id}/stream`
 - **Response Format**: JSON
 - **Authorization**: Claims-based with `AuthorizeAttribute` and various permission levels
+ - **Headers Example**:
+   - `X-Emby-Authorization: MediaBrowser Client="Melodee", Device="Linux", DeviceId="<id>", Version="<ver>"`
+   - `X-Emby-Token: <token>`
 
-### 2. Navidrome
-- **API Type**: Subsonic API compatible (API v1.16.1)
-- **Authentication**: Username/password + token-based
-- **Primary Use Case**: Personal music streaming server
-- **Client Support**: Any Subsonic-compatible client
-- **Key Endpoints**:
-  - Authentication: `/auth/login` (Navidrome native) and Subsonic auth methods
-  - Media: `/rest/getMusicFolders`, `/rest/getArtists`, `/rest/getAlbumList`
-  - Streaming: `/rest/stream`, `/rest/download`
-  - Playlists: `/rest/getPlaylists`, `/rest/createPlaylist`
-  - Search: `/rest/search2`, `/rest/search3`
-- **Response Format**: XML/JSON (configurable via `f` parameter)
-- **Authorization**: User sessions with tokens
+### 2. Plex
+*Note: Plex emulation is significantly more complex than REST-based alternatives due to its proprietary nature, strict XML schemas, and discovery protocols (GDM).*
 
-### 3. Subsonic
-- **API Type**: RESTful API with specific XML/JSON responses
-- **Authentication**: Two methods:
-  - Traditional: Username and password (clear text or hex-encoded with "enc:" prefix)
-  - Token-based (API 1.13.0+): Username and token (MD5 hash of password + salt)
-- **Primary Use Case**: Music streaming server (original implementation)
-- **Client Support**: Wide range of dedicated clients
-- **Key Authentication Parameters**:
-  - `u` (required): Username
-  - `p` (required*): Password or `t` (token) + `s` (salt)
-  - `v` (required): Protocol version
-  - `c` (required): Client identifier
-  - `f` (optional): Response format ("xml", "json", "jsonp")
-- **Key Endpoints**:
-  - System: `/rest/ping`, `/rest/getLicense`
-  - Media Browsing: `/rest/getMusicFolders`, `/rest/getArtists`, `/rest/getAlbumList`
-  - Streaming: `/rest/stream`, `/rest/download`, `/rest/getCoverArt`
-  - Playlists: `/rest/getPlaylists`, `/rest/createPlaylist`
-  - Search: `/rest/search2`, `/rest/search3`
-  - User: `/rest/getUser`, `/rest/createUser`
-- **Response Format**: XML (default) or JSON
-- **Error Handling**: Standardized error codes (40=wrong credentials, 50=not authorized, etc.)
+- **API Type**: RESTful API (Internal/Private)
+- **Authentication**:
+  - `X-Plex-Token` header (typically acquired via Plex.tv or local auth)
+- **Primary Use Case**: Comprehensive media server with centralized auth
+- **Client Support**: Extensive native client ecosystem (Smart TVs, Consoles, Mobile)
+- **Key Endpoints (common local server routes)**:
+  - Media library: `/library/sections`, `/library/metadata/{id}`
+  - Sessions: `/status/sessions`
+  - Transcode: `/video/:/transcode/universal/start` (parameters vary)
+- **Discovery/Auth Caveats**:
+  - GDM (UDP discovery) and Plex.tv claim/association are not planned for phase 1.
+  - Some clients require the server to be claimed; treat Plex emulation as experimental behind a feature flag.
+- **Response Format**: XML (primary) / JSON
+- **Challenges**:
+  - **GDM (G'Day Mate)**: Plex's UDP discovery protocol.
+  - **Plex.tv Association**: Clients often expect the server to be "claimed" by a Plex account.
+  - **XML Schema**: The response structure is deeply nested and strict.
 
-### 4. Airsonic-Advanced
-- **API Type**: Subsonic API compatible
-- **Authentication**: Username/password + token-based (same as Subsonic)
-- **Primary Use Case**: Enhanced Subsonic fork
-- **Client Support**: Subsonic-compatible clients
-- **Key Endpoints**: Same as Subsonic API
-- **Response Format**: XML/JSON (configurable)
-- **Additional Features**: More robust media organization and streaming options
+## Other Protocols (Consideration)
 
-### 5. Plex
-- **API Type**: RESTful API
-- **Authentication**: Multiple methods:
-  - JWT tokens (recommended)
-  - Username/password with OAuth flow
-  - API tokens via Authorization header
-- **Primary Use Case**: Comprehensive media server
-- **Client Support**: Extensive native client ecosystem
-- **Key Endpoints**:
-  - Authentication: `/api/v2/auth`, `/auth#signin`
-  - Media: `/library/sections`, `/library/metadata/{id}`
-  - User: `/api/users`, `/api/users/{id}`
-  - System: `/api/info`, `/status/sessions`
-  - Streaming: Various transcode endpoints
-- **Response Format**: XML/JSON (depends on endpoint)
-- **Authorization**: Token-based with user permissions
+### 1. DLNA / UPnP
+While not a "client API" in the traditional sense, DLNA support is critical for hardware compatibility.
+
+- **Primary Use Case**: Streaming to "dumb" receivers, Hi-Fi equipment, Smart TVs, and Sonos (via UPnP).
+- **Components**:
+  - **Content Directory Service (CDS)**: Exposes the library hierarchy (Artists -> Albums -> Tracks).
+  - **Connection Manager**: Negotiates protocols and formats.
+  - **Media Renderer**: (Optional) Allows Melodee to control playback on other devices.
+- **Format**: SOAP-based XML.
 
 ## Technical Implementation Considerations
 
@@ -105,6 +123,31 @@ Each API emulation layer needs to translate between the client's expected API fo
 - Handling authentication differently per API standard
 - Maintaining metadata compatibility across systems
 
+### Discovery
+Client discovery expectations differ by ecosystem:
+- **Subsonic/OpenSubsonic**: No special discovery; clients use a configured base URL.
+- **Jellyfin**: Some clients support network discovery via SSDP/UPnP, but base URL entry is common.
+- **Plex**: GDM (UDP) discovery and Plex.tv association are common; both out of scope for initial phase.
+
+### ID Stability & Mapping
+**Critical Challenge**: Different clients expect different ID formats.
+- **Melodee**: Uses UUIDs or Integer IDs internally.
+- **Subsonic**: Often expects string IDs (can be paths or hashes).
+- **Plex**: Expects Integer IDs.
+- **Jellyfin**: Expects UUIDs.
+
+*Strategy*: Treat IDs as opaque strings in responses and maintain stable, per-emulation mappings. If an emulation requires integers, use a persistent mapping table or deterministic hash (with collision monitoring) to ensure `Song A` always has `ID X` for that emulation.
+
+### Versioning & Paths
+- **Subsonic/OpenSubsonic**: Routes under `/rest/...`.
+- **Jellyfin**: Mirror official paths (`/Users`, `/Items`, etc.) under a dedicated prefix (e.g., `/jellyfin`) to avoid collisions.
+- **Plex**: Mirror common paths under a feature-flagged prefix (e.g., `/plex`).
+
+### Streaming Parameters (Subsonic)
+Support and document key query params for `/rest/stream`:
+- `format`, `maxBitRate`, `timeOffset`, `size`, `estimateContentLength`, `converted`, `transcoding` behavior.
+- Content headers (e.g., `Content-Type`, `Content-Length` when known), byte-range support, and caching directives.
+
 ### Authentication Layer
 Each service has its own authentication mechanism, so the emulation layers will need to:
 - Implement the specific authentication method for each API
@@ -112,12 +155,10 @@ Each service has its own authentication mechanism, so the emulation layers will 
 - Handle token generation and validation according to each API's specifications
 - Maintain separate authentication state for different API types
 
-### Data Model Mapping
-Different services organize their metadata differently. The emulation layers must map:
-- Artist, album, track, and playlist structures
-- Genre, year, and other metadata fields
-- File format and codec information
-- User ratings, play counts, and other dynamic data
+### Error Model Mapping
+- **Subsonic**: Map internal errors to standard error codes (e.g., `10` auth failed, `40` not found). Preserve the `status="ok"|"failed"` envelope.
+- **Jellyfin**: Use appropriate HTTP status codes with JSON problem details where applicable.
+- **Plex**: Return expected XML structures and status codes; include error attributes consistently.
 
 ### Implementation Patterns
 
@@ -162,19 +203,6 @@ func (s *SubsonicHandler) StreamMedia(c *gin.Context) {
 }
 ```
 
-#### 3. Plex API Emulation
-```go
-type PlexHandler struct {
-    core *MelodeeCore
-}
-
-func (p *PlexHandler) GetLibrarySections(c *gin.Context) {
-    // Handle Plex authentication
-    // Map internal library structure to Plex format
-    // Return XML response as expected by Plex clients
-}
-```
-
 ### Middleware Considerations
 Each API will need specific middleware to handle:
 - Authentication validation
@@ -182,9 +210,54 @@ Each API will need specific middleware to handle:
 - Response formatting
 - Error handling with API-specific error codes
 
+### Security & Logging
+- Redact sensitive query parameters (Subsonic `p`, `t`, `s`) in access logs.
+- CORS: Align with client expectations per emulation; consider opt-in domain restrictions.
+- Rate limiting: Optional, configurable per emulation.
+
 ### Configuration
 API emulation layers should be configurable to:
 - Enable/disable specific API emulations
 - Customize authentication methods
 - Adjust response formats
 - Configure compatibility modes
+
+Example `config.yaml` excerpt:
+
+```yaml
+emulations:
+  subsonic:
+    enabled: true
+    default_format: xml   # xml|json
+    compatibility_modes:
+      symfonium: true
+      dsub: true
+  jellyfin:
+    enabled: false
+    prefix: "/jellyfin"
+  plex:
+    enabled: false
+    prefix: "/plex"
+    experimental: true
+```
+
+### Testing Approach
+- OpenSubsonic: Contract tests against `opensubsonic-v1.16.1-openapi.yaml`; client-flow tests for DSub/Symfonium happy paths.
+- Jellyfin: Start with `/Users/AuthenticateByName`, `/Users/{UserId}/Items`, `/Items/{Id}` using fixtures.
+- Use the Manual SQLite Schema test pattern to avoid Postgres/SQLite conflicts.
+
+### Compatibility Modes
+- Provide toggles for known client quirks (e.g., star/rating field expectations, index date handling) per emulation.
+
+### Compatibility Matrix (initial)
+
+| Client       | Emulation           | Browse | Stream | Star/Rate | Notes |
+|--------------|---------------------|--------|--------|-----------|-------|
+| DSub         | OpenSubsonic        | Yes    | Yes    | Yes       | XML default; `f=json` works |
+| Symfonium    | OpenSubsonic        | Yes    | Yes    | Yes       | Prefers JSON; large lists pagination |
+| Ultrasonic   | OpenSubsonic        | Yes    | Yes    | Partial   | Some endpoints optional |
+| Jellyfin Web | Jellyfin (planned)  | WIP    | WIP    | N/A       | Start with auth + items |
+| Plex Mobile  | Plex (experimental) | No     | No     | N/A       | Requires claim/discovery |
+
+### Licensing / Disclaimer
+Melodee is not affiliated with Plex, Jellyfin, Emby, Subsonic, or related projects. Emulations are provided solely for compatibility with existing clients.
