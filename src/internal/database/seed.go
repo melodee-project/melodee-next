@@ -50,14 +50,14 @@ func SeedDefaultSettings(db *gorm.DB) error {
 		{
 			Key:       "staging_cron.enabled",
 			Value:     "false",
-			Comment:   "Enable the staging cron job (true/false)",
+			Comment:   "Enable the staging scan job (true/false)",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
 		{
 			Key:       "staging_cron.dry_run",
 			Value:     "true",
-			Comment:   "Dry run mode for staging cron (true/false)",
+			Comment:   "Dry run mode for staging scan (true/false)",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},

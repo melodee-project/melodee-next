@@ -9,6 +9,7 @@ function LibraryManagement() {
   const [message, setMessage] = useState('');
   const [editingLibrary, setEditingLibrary] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', path: '' });
+  const [showWorkflowHelp, setShowWorkflowHelp] = useState(false);
 
   useEffect(() => {
     fetchLibraryStats();
@@ -83,7 +84,16 @@ function LibraryManagement() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Library Management</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Library Management</h1>
+        <button
+          onClick={() => setShowWorkflowHelp(!showWorkflowHelp)}
+          className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 border border-blue-300 dark:border-blue-700"
+        >
+          <span>📋</span>
+          <span>{showWorkflowHelp ? 'Hide' : 'Show'} Workflow Help</span>
+        </button>
+      </div>
 
       {/* Edit Library Modal */}
       {editingLibrary && (
@@ -162,33 +172,44 @@ function LibraryManagement() {
 
       {activeTab === 'overview' && (
         <>
-          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded shadow border border-blue-200 dark:border-blue-800">
-            <h2 className="text-xl font-semibold mb-3 text-blue-900 dark:text-blue-100">📋 New Workflow Available</h2>
-            <p className="text-blue-800 dark:text-blue-200 mb-3">
-              The media processing workflow has been updated! Please use the new tools:
-            </p>
-            <ol className="list-decimal list-inside space-y-2 text-blue-800 dark:text-blue-200 mb-4">
-              <li><strong>Scan inbound files:</strong> Run <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">./scan-inbound -path /inbound -output /scans</code></li>
-              <li><strong>Process to staging:</strong> Run <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">./process-scan -scan scan.db -staging /staging</code></li>
-              <li><strong>Review & approve:</strong> Navigate to <a href="/staging" className="underline font-semibold hover:text-blue-600 dark:hover:text-blue-400">Staging page</a></li>
-              <li><strong>Promote to production:</strong> Click "Promote" button on approved albums</li>
-            </ol>
-            <div className="flex gap-3">
-              <a 
-                href="/staging" 
-                className="inline-block bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-800 font-medium"
-              >
-                Go to Staging →
-              </a>
-              <a 
-                href="/docs/QUICKSTART.md" 
-                target="_blank"
-                className="inline-block bg-gray-600 dark:bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-800 font-medium"
-              >
-                View Documentation
-              </a>
+          {showWorkflowHelp && (
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded shadow border border-blue-200 dark:border-blue-800">
+              <div className="flex justify-between items-start mb-3">
+                <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100">📋 Media Processing Workflow</h2>
+                <button
+                  onClick={() => setShowWorkflowHelp(false)}
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                  aria-label="Close workflow help"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-blue-800 dark:text-blue-200 mb-3">
+                Follow these steps to add new media to your library:
+              </p>
+              <ol className="list-decimal list-inside space-y-2 text-blue-800 dark:text-blue-200 mb-4">
+                <li><strong>Scan inbound files:</strong> Run <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">./scan-inbound -path /inbound -output /scans</code></li>
+                <li><strong>Process to staging:</strong> Run <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">./process-scan -scan scan.db -staging /staging</code></li>
+                <li><strong>Review & approve:</strong> Navigate to <a href="/staging" className="underline font-semibold hover:text-blue-600 dark:hover:text-blue-400">Staging page</a></li>
+                <li><strong>Promote to production:</strong> Click "Promote" button on approved albums</li>
+              </ol>
+              <div className="flex gap-3">
+                <a 
+                  href="/staging" 
+                  className="inline-block bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-800 font-medium"
+                >
+                  Go to Staging →
+                </a>
+                <a 
+                  href="/docs/QUICKSTART.md" 
+                  target="_blank"
+                  className="inline-block bg-gray-600 dark:bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-800 font-medium"
+                >
+                  View Documentation
+                </a>
+              </div>
             </div>
-          </div>
+          )}
 
           {message && (
             <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded border border-yellow-200 dark:border-yellow-800">

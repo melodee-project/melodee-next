@@ -1,4 +1,4 @@
-# Staging Cron Job Design (Draft)
+# Staging Scan Job Design (Draft)
 
 > This is a proposal document for how to implement a cron-driven staging workflow inside the Melodee worker. You can edit / trim this as you like; nothing here is code yet.
 
@@ -187,7 +187,7 @@ _, err := c.AddFunc(cfg.StagingCron.Schedule, func() {
     defer cancel()
   // Guard against overlapping runs
   if !stagingJobRunning.CompareAndSwap(false, true) {
-    logger.Warn("staging cron: previous run still in progress, skipping this tick")
+    logger.Warn("staging scan: previous run still in progress, skipping this tick")
     return
   }
   defer stagingJobRunning.Store(false)

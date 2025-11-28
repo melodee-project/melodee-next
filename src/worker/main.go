@@ -143,7 +143,7 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 	// Initialize Asynq scheduler for periodic tasks
 	var scheduler *asynq.Scheduler
 	if cfg.StagingCron.Enabled {
-		logging.Infof("Staging cron is enabled with schedule: %s", cfg.StagingCron.Schedule)
+		logging.Infof("Staging scan is enabled with schedule: %s", cfg.StagingCron.Schedule)
 
 		scheduler = asynq.NewScheduler(
 			asynq.RedisClientOpt{Addr: redisAddr},
@@ -152,14 +152,14 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 			},
 		)
 
-		// Create the staging cron task
+		// Create the staging scan task
 		payload := map[string]interface{}{
 			"source":  "staging_cron",
 			"dry_run": cfg.StagingCron.DryRun,
 		}
 		payloadBytes, err := json.Marshal(payload)
 		if err != nil {
-			logging.Errorf("Failed to marshal staging cron payload: %v", err)
+			logging.Errorf("Failed to marshal staging scan payload: %v", err)
 		} else {
 			stagingTask := asynq.NewTask(media.TypeStagingCron, payloadBytes)
 
@@ -171,13 +171,13 @@ func NewWorkerServer() (*WorkerServer, *asynq.ServeMux, error) {
 				asynq.TaskID("staging-cron-periodic"),
 			)
 			if err != nil {
-				logging.Errorf("Failed to register staging cron task: %v", err)
+				logging.Errorf("Failed to register staging scan task: %v", err)
 			} else {
-				logging.Infof("Staging cron registered successfully with entry ID: %s", entryID)
+				logging.Infof("Staging scan registered successfully with entry ID: %s", entryID)
 			}
 		}
 	} else {
-		logging.Info("Staging cron is disabled")
+		logging.Info("Staging scan is disabled")
 	}
 
 	return &WorkerServer{

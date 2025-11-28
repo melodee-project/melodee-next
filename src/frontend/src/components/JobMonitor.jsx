@@ -168,7 +168,7 @@ function JobMonitor() {
             <strong>No job queues found.</strong> Job queues will appear once jobs are enqueued. 
             The worker is connected, but no jobs have been submitted yet.
             <br /><br />
-            <strong>Note:</strong> If staging cron is enabled, it runs on a schedule (e.g., "0 */1 * * *" for hourly).
+            <strong>Note:</strong> If staging scan is enabled, it runs on a schedule (e.g., "0 */1 * * *" for hourly).
             Tasks will appear in "Scheduled Jobs" when the scheduler enqueues them for their next run time.
           </div>
         )}

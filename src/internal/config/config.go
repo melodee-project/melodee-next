@@ -143,9 +143,9 @@ type RateLimitConfig struct {
 	StatusCode int           `mapstructure:"status_code"` // HTTP status code for rate-limited requests
 }
 
-// StagingCronConfig holds configuration for the staging cron job
+// StagingCronConfig holds configuration for the staging scan job
 type StagingCronConfig struct {
-	Enabled        bool   `mapstructure:"enabled"`           // If staging cron is enabled
+	Enabled        bool   `mapstructure:"enabled"`           // If staging scan is enabled
 	DryRun         bool   `mapstructure:"dry_run"`           // If true then dry run only
 	Schedule       string `mapstructure:"schedule"`          // Cron schedule (e.g. "0 */1 * * *")
 	Workers        int    `mapstructure:"workers"`           // Number of worker goroutines
@@ -440,7 +440,7 @@ func setDefaults() {
 	viper.SetDefault("security.rate_limiting.message", "Rate limit exceeded")
 	viper.SetDefault("security.rate_limiting.status_code", 429)
 
-	// Staging cron defaults
+	// Staging scan defaults
 	viper.SetDefault("staging_cron.enabled", false)
 	viper.SetDefault("staging_cron.dry_run", false)
 	viper.SetDefault("staging_cron.schedule", "0 */1 * * *") // Every hour
@@ -505,7 +505,7 @@ func applyEnvironmentOverrides(config *AppConfig) {
 		config.Logging.Level = logLevel
 	}
 
-	// Staging cron overrides
+	// Staging scan overrides
 	if stagingEnabled := getEnvBool("MELODEE_STAGING_CRON_ENABLED", config.StagingCron.Enabled); stagingEnabled {
 		config.StagingCron.Enabled = stagingEnabled
 	}
@@ -657,15 +657,15 @@ func (c *AppConfig) Validate() error {
 		return fmt.Errorf("capacity alert threshold must be between 0 and 100, got: %f", c.Capacity.AlertThreshold)
 	}
 
-	// Validate staging cron configuration
+	// Validate staging scan configuration
 	if c.StagingCron.Workers <= 0 {
-		return fmt.Errorf("staging cron workers must be greater than 0")
+		return fmt.Errorf("staging scan workers must be greater than 0")
 	}
 	if c.StagingCron.RateLimit < 0 {
-		return fmt.Errorf("staging cron rate limit must be greater than or equal to 0")
+		return fmt.Errorf("staging scan rate limit must be greater than or equal to 0")
 	}
 	if c.StagingCron.ScanDBDataPath == "" {
-		return fmt.Errorf("staging cron scan DB data path cannot be empty")
+		return fmt.Errorf("staging scan DB data path cannot be empty")
 	}
 
 	return nil

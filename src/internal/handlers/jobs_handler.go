@@ -145,13 +145,47 @@ func (h *JobsHandler) GetPendingJobs(c *fiber.Ctx) error {
 func (h *JobsHandler) GetScheduledJobs(c *fiber.Ctx) error {
 	page, pageSize := pagination.GetPaginationParams(c, 1, 50)
 
+	var allJobs []JobInfo
+
+	// 1. Get periodic/cron jobs from scheduler
+	schedulerEntries, err := h.inspector.SchedulerEntries()
+	if err != nil {
+		log.Printf("WARN: Failed to get scheduler entries: %v", err)
+	} else {
+		for _, entry := range schedulerEntries {
+			if entry.Task == nil {
+				continue
+			}
+
+			// Convert scheduler entry to JobInfo
+			var payload map[string]interface{}
+			if err := json.Unmarshal(entry.Task.Payload(), &payload); err != nil {
+				log.Printf("WARN: Failed to unmarshal scheduler entry payload: %v", err)
+				payload = map[string]interface{}{"raw": string(entry.Task.Payload())}
+			}
+
+			jobInfo := JobInfo{
+				ID:            entry.ID,
+				Queue:         "maintenance", // Scheduler entries typically go to maintenance queue
+				Type:          entry.Task.Type(),
+				Payload:       payload,
+				State:         "scheduled",
+				MaxRetry:      0,
+				Retried:       0,
+				Timeout:       0,
+				NextProcessAt: entry.Next.Format(time.RFC3339),
+			}
+			allJobs = append(allJobs, jobInfo)
+		}
+	}
+
+	// 2. Get one-time scheduled tasks from queues
 	queues, err := h.inspector.Queues()
 	if err != nil {
 		log.Printf("ERROR: Failed to get queues: %v", err)
 		return utils.SendInternalServerError(c, "Failed to retrieve queues")
 	}
 
-	var allJobs []JobInfo
 	for _, queue := range queues {
 		tasks, err := h.inspector.ListScheduledTasks(queue, asynq.PageSize(100))
 		if err != nil {
@@ -194,6 +228,16 @@ func (h *JobsHandler) GetQueueStats(c *fiber.Ctx) error {
 	}
 
 	var stats []QueueStats
+
+	// Add scheduler entries count to the scheduled count
+	schedulerEntriesCount := 0
+	schedulerEntries, err := h.inspector.SchedulerEntries()
+	if err != nil {
+		log.Printf("WARN: Failed to get scheduler entries: %v", err)
+	} else {
+		schedulerEntriesCount = len(schedulerEntries)
+	}
+
 	for _, queue := range queues {
 		queueInfo, err := h.inspector.GetQueueInfo(queue)
 		if err != nil {
@@ -201,19 +245,44 @@ func (h *JobsHandler) GetQueueStats(c *fiber.Ctx) error {
 			continue
 		}
 
+		// Add scheduler entries count to the scheduled count for maintenance queue
+		scheduledCount := queueInfo.Scheduled
+		if queue == "maintenance" {
+			scheduledCount += schedulerEntriesCount
+		}
+
 		stat := QueueStats{
 			Queue:       queue,
 			Active:      queueInfo.Active,
 			Pending:     queueInfo.Pending,
-			Scheduled:   queueInfo.Scheduled,
+			Scheduled:   scheduledCount,
 			Retry:       queueInfo.Retry,
 			Archived:    queueInfo.Archived,
 			Completed:   queueInfo.Completed,
 			Aggregating: queueInfo.Aggregating,
-			Size:        queueInfo.Size,
+			Size:        queueInfo.Size + schedulerEntriesCount, // Include in total size
 			Paused:      queueInfo.Paused,
 		}
 		stats = append(stats, stat)
+	}
+
+	// If we have scheduler entries but no maintenance queue exists yet, add it manually
+	if schedulerEntriesCount > 0 {
+		hasMaintenanceQueue := false
+		for _, s := range stats {
+			if s.Queue == "maintenance" {
+				hasMaintenanceQueue = true
+				break
+			}
+		}
+
+		if !hasMaintenanceQueue {
+			stats = append(stats, QueueStats{
+				Queue:     "maintenance",
+				Scheduled: schedulerEntriesCount,
+				Size:      schedulerEntriesCount,
+			})
+		}
 	}
 
 	return c.JSON(fiber.Map{
