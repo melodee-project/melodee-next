@@ -154,22 +154,22 @@ Configuration is loaded by `melodee/internal/config` (see `docs/CONFIG_ENTRY_POI
 
 Common environment variables (exact names may evolve; see `internal/config` for the source of truth):
 
-- `MELODEE_DB_HOST`, `MELODEE_DB_PORT`, `MELODEE_DB_USER`, `MELODEE_DB_PASSWORD`, `MELODEE_DB_NAME`, `MELODEE_DB_SSLMODE`
-- `MELODEE_REDIS_ADDR`, `MELODEE_REDIS_PORT`
+- `MELODEE_DATABASE_HOST`, `MELODEE_DATABASE_PORT`, `MELODEE_DATABASE_USER`, `MELODEE_DATABASE_PASSWORD`, `MELODEE_DATABASE_DBNAME`, `MELODEE_DATABASE_SSLMODE`
+- `MELODEE_REDIS_ADDRESS`, `MELODEE_REDIS_PORT`
 - `MELODEE_SERVER_HOST`, `MELODEE_SERVER_PORT`
 - `MELODEE_JWT_SECRET`
 
 A typical local `.env` might look like:
 
 ```bash
-MELODEE_DB_HOST=127.0.0.1
-MELODEE_DB_PORT=5432
-MELODEE_DB_USER=melodee
-MELODEE_DB_PASSWORD=melodee
-MELODEE_DB_NAME=melodee_dev
-MELODEE_DB_SSLMODE=disable
+MELODEE_DATABASE_HOST=127.0.0.1
+MELODEE_DATABASE_PORT=5432
+MELODEE_DATABASE_USER=melodee
+MELODEE_DATABASE_PASSWORD=melodee
+MELODEE_DATABASE_DBNAME=melodee_dev
+MELODEE_DATABASE_SSLMODE=disable
 
-MELODEE_REDIS_ADDR=127.0.0.1
+MELODEE_REDIS_ADDRESS=127.0.0.1
 MELODEE_REDIS_PORT=6379
 
 MELODEE_SERVER_HOST=127.0.0.1
@@ -214,11 +214,11 @@ For homelab and fresh installs, there is a helper script in `scripts/add-admin-u
 
 The script uses the same DB-related environment variables as the backend, with sensible defaults:
 
-- `MELODEE_DB_HOST` (default `localhost`)
-- `MELODEE_DB_PORT` (default `5432`)
-- `MELODEE_DB_USER` (default `melodee_user`)
-- `MELODEE_DB_NAME` (default `melodee`)
-- `MELODEE_DB_PASSWORD` (**required**)
+- `MELODEE_DATABASE_HOST` (default `localhost`)
+- `MELODEE_DATABASE_PORT` (default `5432`)
+- `MELODEE_DATABASE_USER` (default `melodee_user`)
+- `MELODEE_DATABASE_DBNAME` (default `melodee`)
+- `MELODEE_DATABASE_PASSWORD` (**required**)
 
 **Usage**
 
@@ -227,11 +227,11 @@ From the repo root:
 ```bash
 chmod +x scripts/add-admin-user.sh   # first time only
 
-export MELODEE_DB_PASSWORD='your-db-password'
+export MELODEE_DATABASE_PASSWORD='your-db-password'
 # optionally override host/user/db/port if they differ from defaults
-# export MELODEE_DB_HOST=127.0.0.1
-# export MELODEE_DB_USER=melodee
-# export MELODEE_DB_NAME=melodee_dev
+# export MELODEE_DATABASE_HOST=127.0.0.1
+# export MELODEE_DATABASE_USER=melodee
+# export MELODEE_DATABASE_DBNAME=melodee_dev
 
 ./scripts/add-admin-user.sh <username> <email> <password>
 ```
@@ -283,12 +283,12 @@ Health check endpoints are generally exposed at `GET /healthz` (see `internal/he
 
 ## Frontend (Web UI)
 
-The frontend lives in `src/api/frontend/` and is a Vite + React + TypeScript project.
+The frontend lives in `src/frontend/` and is a Vite + React + TypeScript project.
 
 ### Install dependencies
 
 ```bash
-cd src/api/frontend
+cd src/frontend
 npm install
 # or: pnpm install / yarn install
 ```
@@ -326,7 +326,7 @@ The OpenSubsonic contract tests live in `src/open_subsonic/` (see `contract_test
 
 ### Frontend tests
 
-If/when configured, run from `src/api/frontend`:
+If/when configured, run from `src/frontend`:
 
 ```bash
 npm test
@@ -409,7 +409,7 @@ Common contribution areas:
 - **Media pipeline** – `src/internal/{media,directory}` and worker tasks.
 - **Database & capacity** – `src/internal/database`, partitioning, `docs/CAPACITY_PROBES.md`.
 - **OpenSubsonic compatibility** – `src/open_subsonic` and `docs/fixtures/opensubsonic`.
-- **Frontend UI** – `src/api/frontend`.
+- **Frontend UI** – `src/frontend`.
 - **Operations/observability** – `src/internal/{health,metrics,logging,tracing}`.
 
 ### 3. Running a full dev stack
