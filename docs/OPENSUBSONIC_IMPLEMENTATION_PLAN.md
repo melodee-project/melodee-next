@@ -13,8 +13,8 @@ These endpoints are fundamental for server connectivity, user authentication, an
 - [x] `createUser` - Create a new user.
 - [x] `updateUser` - Update a user.
 - [x] `deleteUser` - Delete a user.
-- [ ] `changePassword` - Changes the password of an existing user.
-- [ ] `tokenInfo` - Returns information about an API key.
+- [x] `changePassword` - Changes the password of an existing user.
+- [x] `tokenInfo` - Returns information about an API key.
 
 ## Phase 1: Core Discovery & Lists
 These endpoints are critical for clients to browse the library effectively beyond simple directory structures. They allow for "Newest", "Random", and "Genre" based browsing.
@@ -63,13 +63,13 @@ These endpoints handle user state persistence, bookmarks (resume points), and pl
 - [x] `createPlaylist` - Creates (or updates) a playlist.
 - [x] `updatePlaylist` - Updates a playlist.
 - [x] `deletePlaylist` - Deletes a playlist.
-- [ ] `createBookmark` - Creates or updates a bookmark (resume point).
-- [ ] `deleteBookmark` - Deletes a bookmark.
-- [ ] `getBookmarks` - Returns all bookmarks for this user.
-- [ ] `getPlayQueue` - Returns the state of the play queue for this user.
-- [ ] `savePlayQueue` - Saves the state of the play queue for this user.
-- [ ] `getPlayQueueByIndex` - Returns the state of the play queue for this user (by index).
-- [ ] `savePlayQueueByIndex` - Saves the state of the play queue for this user (by index).
+- [x] `createBookmark` - Creates or updates a bookmark (resume point).
+- [x] `deleteBookmark` - Deletes a bookmark.
+- [x] `getBookmarks` - Returns all bookmarks for this user.
+- [x] `getPlayQueue` - Returns the state of the play queue for this user.
+- [x] `savePlayQueue` - Saves the state of the play queue for this user.
+- [x] `getPlayQueueByIndex` - Returns the state of the play queue for this user (by index).
+- [x] `savePlayQueueByIndex` - Saves the state of the play queue for this user (by index).
 
 ## Phase 4: Podcasts & Internet Radio
 Features for managing external media sources.

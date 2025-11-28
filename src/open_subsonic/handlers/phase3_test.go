@@ -45,7 +45,22 @@ func setupPhase3TestDB(t *testing.T) *gorm.DB {
 		created_at DATETIME,
 		updated_at DATETIME,
 		album_count_cached INTEGER DEFAULT 0,
-		track_count_cached INTEGER DEFAULT 0
+		track_count_cached INTEGER DEFAULT 0,
+		is_locked BOOLEAN DEFAULT 0,
+		directory_code TEXT,
+		sort_name TEXT,
+		alternate_names TEXT,
+		duration_cached INTEGER DEFAULT 0,
+		last_scanned_at DATETIME,
+		tags TEXT,
+		music_brainz_id TEXT,
+		spotify_id TEXT,
+		last_fm_id TEXT,
+		discogs_id TEXT,
+		i_tunes_id TEXT,
+		amg_id TEXT,
+		wikidata_id TEXT,
+		sort_order INTEGER DEFAULT 0
 	)`)
 
 	// Albums
@@ -63,7 +78,29 @@ func setupPhase3TestDB(t *testing.T) *gorm.DB {
 		cover_art_path TEXT,
 		api_key TEXT,
 		release_date DATETIME,
-		genres TEXT
+		genres TEXT,
+		is_locked BOOLEAN DEFAULT 0,
+		alternate_names TEXT,
+		original_release_date DATETIME,
+		album_type TEXT,
+		directory TEXT,
+		sort_name TEXT,
+		sort_order INTEGER DEFAULT 0,
+		image_count INTEGER DEFAULT 0,
+		comment TEXT,
+		description TEXT,
+		moods TEXT,
+		notes TEXT,
+		deezer_id TEXT,
+		music_brainz_id TEXT,
+		spotify_id TEXT,
+		last_fm_id TEXT,
+		discogs_id TEXT,
+		i_tunes_id TEXT,
+		amg_id TEXT,
+		wikidata_id TEXT,
+		is_compilation BOOLEAN DEFAULT 0,
+		tags TEXT
 	)`)
 
 	// Tracks
@@ -86,7 +123,14 @@ func setupPhase3TestDB(t *testing.T) *gorm.DB {
 		api_key TEXT,
 		sort_order INTEGER DEFAULT 0,
 		relative_path TEXT,
-		directory TEXT
+		directory TEXT,
+		sort_name TEXT,
+		bit_depth INTEGER,
+		sample_rate INTEGER,
+		channels INTEGER,
+		tags TEXT,
+		file_name TEXT,
+		crc_hash TEXT
 	)`)
 
 	// Bookmarks
@@ -136,7 +180,7 @@ func TestBookmarkHandler_CreateAndGet(t *testing.T) {
 
 	// Setup handler
 	handler := NewBookmarkHandler(db)
-	
+
 	// Mock auth middleware
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("user", &user)
@@ -161,11 +205,11 @@ func TestBookmarkHandler_CreateAndGet(t *testing.T) {
 
 	var response map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&response)
-	
+
 	subResp := response["subsonic-response"].(map[string]interface{})
 	bookmarks := subResp["bookmarks"].(map[string]interface{})
 	bookmarkList := bookmarks["bookmark"].([]interface{})
-	
+
 	assert.Len(t, bookmarkList, 1)
 	bookmark := bookmarkList[0].(map[string]interface{})
 	assert.Equal(t, float64(15000), bookmark["position"])
@@ -180,10 +224,10 @@ func TestBookmarkHandler_CreateAndGet(t *testing.T) {
 	// Verify deletion
 	req = httptest.NewRequest("GET", "/getBookmarks?f=json", nil)
 	resp, err = app.Test(req)
-	
+
 	json.NewDecoder(resp.Body).Decode(&response)
 	subResp = response["subsonic-response"].(map[string]interface{})
-	
+
 	// Check if bookmarks key exists and is empty or null
 	if b, ok := subResp["bookmarks"]; ok {
 		if bMap, ok := b.(map[string]interface{}); ok {
@@ -215,7 +259,7 @@ func TestPlayQueueHandler_SaveAndGet(t *testing.T) {
 
 	// Setup handler
 	handler := NewPlayQueueHandler(db)
-	
+
 	// Mock auth middleware
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("user", &user)
@@ -240,11 +284,11 @@ func TestPlayQueueHandler_SaveAndGet(t *testing.T) {
 
 	var response map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&response)
-	
+
 	subResp := response["subsonic-response"].(map[string]interface{})
 	playQueue := subResp["playQueue"].(map[string]interface{})
 	entries := playQueue["entry"].([]interface{})
-	
+
 	assert.Len(t, entries, 2)
 	assert.Equal(t, float64(1), playQueue["current"])
 	assert.Equal(t, float64(5000), playQueue["position"])

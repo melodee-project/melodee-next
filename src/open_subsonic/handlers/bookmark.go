@@ -33,16 +33,16 @@ func (h *BookmarkHandler) GetBookmarks(c *fiber.Ctx) error {
 
 	var bookmarks []models.Bookmark
 	// Preload Track, Album, Artist to build the Entry
-	if err := h.db.Preload("Track").Preload("Track.Album").Preload("Track.Artist").Where("user_id = ?", user.ID).Find(&bookmarks).Error; err != nil {
+	if err := h.db.Where("user_id = ?", user.ID).Find(&bookmarks).Error; err != nil {
 		return utils.SendOpenSubsonicError(c, 70, "Could not retrieve bookmarks")
 	}
 
 	response := utils.SuccessResponse()
 	response.Bookmarks = &utils.Bookmarks{
-		Bookmarks: make([]utils.Bookmark, len(bookmarks)),
+		Bookmarks: make([]utils.Bookmark, 0, len(bookmarks)),
 	}
 
-	for i, b := range bookmarks {
+	for _, b := range bookmarks {
 		// Fetch track details to populate Entry
 		var track models.Track
 		if err := h.db.Preload("Album").Preload("Artist").First(&track, b.TrackID).Error; err != nil {
@@ -56,19 +56,19 @@ func (h *BookmarkHandler) GetBookmarks(c *fiber.Ctx) error {
 			Title:       track.Name,
 			Album:       track.Album.Name,
 			Artist:      track.Artist.Name,
-			Track:       int(track.SortOrder), // Assuming SortOrder is track number
-			Year:        0,                    // Need to get year from album release date if available
-			Genre:       "",                   // Need to get genre
+			Track:       int(track.SortOrder),             // Assuming SortOrder is track number
+			Year:        0,                                // Need to get year from album release date if available
+			Genre:       "",                               // Need to get genre
 			CoverArt:    strconv.Itoa(int(track.AlbumID)), // Use album ID for cover art
-			Size:        0,                    // File size not in Track model?
-			ContentType: "audio/mpeg",         // Defaulting, should be from track
-			Suffix:      "mp3",                // Defaulting
+			Size:        0,                                // File size not in Track model?
+			ContentType: "audio/mpeg",                     // Defaulting, should be from track
+			Suffix:      "mp3",                            // Defaulting
 			Duration:    int(track.Duration / 1000),
 			BitRate:     int(track.BitRate),
 			Path:        track.RelativePath,
 			Created:     utils.FormatTime(track.CreatedAt),
 		}
-		
+
 		if track.Album.ReleaseDate != nil {
 			entry.Year = track.Album.ReleaseDate.Year()
 		}
@@ -76,14 +76,14 @@ func (h *BookmarkHandler) GetBookmarks(c *fiber.Ctx) error {
 			entry.Genre = track.Album.Genres[0]
 		}
 
-		response.Bookmarks.Bookmarks[i] = utils.Bookmark{
+		response.Bookmarks.Bookmarks = append(response.Bookmarks.Bookmarks, utils.Bookmark{
 			Position: int64(b.Position),
 			Username: user.Username,
 			Comment:  b.Comment,
 			Created:  utils.FormatTime(b.CreatedAt),
 			Changed:  utils.FormatTime(b.UpdatedAt),
 			Entry:    entry,
-		}
+		})
 	}
 
 	return utils.SendResponse(c, response)

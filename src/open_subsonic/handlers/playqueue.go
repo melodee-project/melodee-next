@@ -36,7 +36,7 @@ func (h *PlayQueueHandler) GetPlayQueue(c *fiber.Ctx) error {
 	}
 
 	response := utils.SuccessResponse()
-	
+
 	entries := make([]utils.Child, 0, len(playQueueItems))
 	var currentID int
 	var position int64
@@ -76,7 +76,7 @@ func (h *PlayQueueHandler) GetPlayQueue(c *fiber.Ctx) error {
 			ContentType: "audio/mpeg", // Default
 			Suffix:      "mp3",        // Default
 		}
-		
+
 		if track.Album.ReleaseDate != nil {
 			entry.Year = track.Album.ReleaseDate.Year()
 		}
@@ -114,7 +114,7 @@ func (h *PlayQueueHandler) SavePlayQueue(c *fiber.Ctx) error {
 	// Since Fiber doesn't easily handle multiple query params with same name 'id', we need to parse manually or use QueryParser
 	// But QueryParser might not handle array of same key well depending on config.
 	// Let's try to get all values for 'id'
-	
+
 	// Fiber's QueryParser can bind to slice
 	type QueryParams struct {
 		IDs      []int   `query:"id"`
@@ -153,7 +153,7 @@ func (h *PlayQueueHandler) SavePlayQueue(c *fiber.Ctx) error {
 			// Let's fetch track to get API key? Or just generate a random one if not strictly needed for internal logic?
 			// The model definition says TrackAPIKey is uuid.UUID and not null.
 			// We should probably fetch the track.
-			
+
 			var track models.Track
 			if err := tx.Select("api_key").First(&track, trackID).Error; err != nil {
 				continue // Skip invalid tracks
