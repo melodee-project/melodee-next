@@ -83,6 +83,8 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	playlistHandler := handlers.NewPlaylistHandler(s.db)
 	userHandler := handlers.NewUserHandler(s.db)
 	systemHandler := handlers.NewSystemHandler(s.db)
+	bookmarkHandler := handlers.NewBookmarkHandler(s.db)
+	playQueueHandler := handlers.NewPlayQueueHandler(s.db)
 
 	// Define the API routes under /rest/ prefix
 	rest := s.app.Group("/rest")
@@ -93,10 +95,15 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	rest.Get("/getArtists", authMiddleware.Authenticate, browsingHandler.GetArtists)
 	rest.Get("/getArtist", authMiddleware.Authenticate, browsingHandler.GetArtist)
 	rest.Get("/getAlbumInfo", authMiddleware.Authenticate, browsingHandler.GetAlbumInfo)
+	rest.Get("/getAlbumInfo2", authMiddleware.Authenticate, browsingHandler.GetAlbumInfo2)
+	rest.Get("/getArtistInfo", authMiddleware.Authenticate, browsingHandler.GetArtistInfo)
+	rest.Get("/getArtistInfo2", authMiddleware.Authenticate, browsingHandler.GetArtistInfo2)
 	rest.Get("/getMusicDirectory", authMiddleware.Authenticate, browsingHandler.GetMusicDirectory)
 	rest.Get("/getAlbum", authMiddleware.Authenticate, browsingHandler.GetAlbum)
 	rest.Get("/getSong", authMiddleware.Authenticate, browsingHandler.GetSong)
 	rest.Get("/getGenres", authMiddleware.Authenticate, browsingHandler.GetGenres)
+	rest.Get("/getLyrics", authMiddleware.Authenticate, browsingHandler.GetLyrics)
+	rest.Get("/getLyricsBySongId", authMiddleware.Authenticate, browsingHandler.GetLyricsBySongId)
 
 	// Lists endpoints (Phase 1)
 	rest.Get("/getAlbumList", authMiddleware.Authenticate, browsingHandler.GetAlbumList)
@@ -107,6 +114,14 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	rest.Get("/getTopSongs", authMiddleware.Authenticate, browsingHandler.GetTopSongs)
 	rest.Get("/getSimilarSongs", authMiddleware.Authenticate, browsingHandler.GetSimilarSongs)
 	rest.Get("/getSimilarSongs2", authMiddleware.Authenticate, browsingHandler.GetSimilarSongs2)
+	rest.Get("/getStarred", authMiddleware.Authenticate, userHandler.GetStarred)
+	rest.Get("/getStarred2", authMiddleware.Authenticate, userHandler.GetStarred2)
+
+	// User Interaction endpoints (Phase 2)
+	rest.Post("/star", authMiddleware.Authenticate, userHandler.Star)
+	rest.Post("/unstar", authMiddleware.Authenticate, userHandler.Unstar)
+	rest.Post("/setRating", authMiddleware.Authenticate, userHandler.SetRating)
+	rest.Post("/scrobble", authMiddleware.Authenticate, userHandler.Scrobble)
 
 	// Media retrieval endpoints
 	rest.Get("/stream", authMiddleware.Authenticate, mediaHandler.Stream)
@@ -132,6 +147,19 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	rest.Get("/createUser", authMiddleware.Authenticate, userHandler.CreateUser)
 	rest.Get("/updateUser", authMiddleware.Authenticate, userHandler.UpdateUser)
 	rest.Get("/deleteUser", authMiddleware.Authenticate, userHandler.DeleteUser)
+	rest.Get("/changePassword", authMiddleware.Authenticate, userHandler.ChangePassword)
+	rest.Get("/tokenInfo", authMiddleware.Authenticate, userHandler.TokenInfo)
+
+	// Bookmarks
+	rest.Get("/createBookmark", authMiddleware.Authenticate, bookmarkHandler.CreateBookmark)
+	rest.Get("/deleteBookmark", authMiddleware.Authenticate, bookmarkHandler.DeleteBookmark)
+	rest.Get("/getBookmarks", authMiddleware.Authenticate, bookmarkHandler.GetBookmarks)
+
+	// PlayQueue
+	rest.Get("/getPlayQueue", authMiddleware.Authenticate, playQueueHandler.GetPlayQueue)
+	rest.Get("/savePlayQueue", authMiddleware.Authenticate, playQueueHandler.SavePlayQueue)
+	rest.Get("/getPlayQueueByIndex", authMiddleware.Authenticate, playQueueHandler.GetPlayQueueByIndex)
+	rest.Get("/savePlayQueueByIndex", authMiddleware.Authenticate, playQueueHandler.SavePlayQueueByIndex)
 
 	// System endpoints
 	rest.Get("/ping", systemHandler.Ping)

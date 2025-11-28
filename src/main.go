@@ -395,6 +395,8 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	playlistHandler := open_subsonic_handlers.NewPlaylistHandler(s.repo.GetDB())
 	userHandler := open_subsonic_handlers.NewUserHandler(s.repo.GetDB())
 	systemHandler := open_subsonic_handlers.NewSystemHandler(s.repo)
+	bookmarkHandler := open_subsonic_handlers.NewBookmarkHandler(s.repo.GetDB())
+	playQueueHandler := open_subsonic_handlers.NewPlayQueueHandler(s.repo.GetDB())
 
 	// Browsing endpoints
 	rest.Get("/getMusicFolders", openSubsonicAuth.Authenticate, browsingHandler.GetMusicFolders)
@@ -402,10 +404,15 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	rest.Get("/getArtists", openSubsonicAuth.Authenticate, browsingHandler.GetArtists)
 	rest.Get("/getArtist", openSubsonicAuth.Authenticate, browsingHandler.GetArtist)
 	rest.Get("/getAlbumInfo", openSubsonicAuth.Authenticate, browsingHandler.GetAlbumInfo)
+	rest.Get("/getAlbumInfo2", openSubsonicAuth.Authenticate, browsingHandler.GetAlbumInfo2)
+	rest.Get("/getArtistInfo", openSubsonicAuth.Authenticate, browsingHandler.GetArtistInfo)
+	rest.Get("/getArtistInfo2", openSubsonicAuth.Authenticate, browsingHandler.GetArtistInfo2)
 	rest.Get("/getMusicDirectory", openSubsonicAuth.Authenticate, browsingHandler.GetMusicDirectory)
 	rest.Get("/getAlbum", openSubsonicAuth.Authenticate, browsingHandler.GetAlbum)
 	rest.Get("/getSong", openSubsonicAuth.Authenticate, browsingHandler.GetSong)
 	rest.Get("/getGenres", openSubsonicAuth.Authenticate, browsingHandler.GetGenres)
+	rest.Get("/getLyrics", openSubsonicAuth.Authenticate, browsingHandler.GetLyrics)
+	rest.Get("/getLyricsBySongId", openSubsonicAuth.Authenticate, browsingHandler.GetLyricsBySongId)
 
 	// Lists endpoints (Phase 1)
 	rest.Get("/getAlbumList", openSubsonicAuth.Authenticate, browsingHandler.GetAlbumList)
@@ -416,6 +423,14 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	rest.Get("/getTopSongs", openSubsonicAuth.Authenticate, browsingHandler.GetTopSongs)
 	rest.Get("/getSimilarSongs", openSubsonicAuth.Authenticate, browsingHandler.GetSimilarSongs)
 	rest.Get("/getSimilarSongs2", openSubsonicAuth.Authenticate, browsingHandler.GetSimilarSongs2)
+	rest.Get("/getStarred", openSubsonicAuth.Authenticate, userHandler.GetStarred)
+	rest.Get("/getStarred2", openSubsonicAuth.Authenticate, userHandler.GetStarred2)
+
+	// User Interaction endpoints (Phase 2)
+	rest.Post("/star", openSubsonicAuth.Authenticate, userHandler.Star)
+	rest.Post("/unstar", openSubsonicAuth.Authenticate, userHandler.Unstar)
+	rest.Post("/setRating", openSubsonicAuth.Authenticate, userHandler.SetRating)
+	rest.Post("/scrobble", openSubsonicAuth.Authenticate, userHandler.Scrobble)
 
 	// Media retrieval endpoints
 	rest.Get("/stream", openSubsonicAuth.Authenticate, mediaHandler.Stream)
@@ -441,10 +456,24 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	rest.Get("/createUser", openSubsonicAuth.Authenticate, userHandler.CreateUser)
 	rest.Get("/updateUser", openSubsonicAuth.Authenticate, userHandler.UpdateUser)
 	rest.Get("/deleteUser", openSubsonicAuth.Authenticate, userHandler.DeleteUser)
+	rest.Get("/changePassword", openSubsonicAuth.Authenticate, userHandler.ChangePassword)
+	rest.Get("/tokenInfo", openSubsonicAuth.Authenticate, userHandler.TokenInfo)
+
+	// Bookmarks
+	rest.Get("/createBookmark", openSubsonicAuth.Authenticate, bookmarkHandler.CreateBookmark)
+	rest.Get("/deleteBookmark", openSubsonicAuth.Authenticate, bookmarkHandler.DeleteBookmark)
+	rest.Get("/getBookmarks", openSubsonicAuth.Authenticate, bookmarkHandler.GetBookmarks)
+
+	// PlayQueue
+	rest.Get("/getPlayQueue", openSubsonicAuth.Authenticate, playQueueHandler.GetPlayQueue)
+	rest.Get("/savePlayQueue", openSubsonicAuth.Authenticate, playQueueHandler.SavePlayQueue)
+	rest.Get("/getPlayQueueByIndex", openSubsonicAuth.Authenticate, playQueueHandler.GetPlayQueueByIndex)
+	rest.Get("/savePlayQueueByIndex", openSubsonicAuth.Authenticate, playQueueHandler.SavePlayQueueByIndex)
 
 	// System endpoints
 	rest.Get("/ping", systemHandler.Ping)
 	rest.Get("/getLicense", systemHandler.GetLicense)
+	rest.Get("/getOpenSubsonicExtensions", systemHandler.GetOpenSubsonicExtensions)
 }
 
 // Start starts the server

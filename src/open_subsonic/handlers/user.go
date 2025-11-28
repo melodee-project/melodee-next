@@ -233,6 +233,53 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	return utils.SendResponse(c, response)
 }
 
+// ChangePassword changes the password of an existing user
+func (h *UserHandler) ChangePassword(c *fiber.Ctx) error {
+	username := c.Query("username", "")
+	password := c.Query("password", "")
+
+	if username == "" || password == "" {
+		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter username or password")
+	}
+
+	// In a real scenario, we should check if the authenticated user is allowed to change this password
+	// For now, we assume admin or self
+	user, ok := utils.GetUserFromContext(c)
+	if !ok {
+		return utils.SendOpenSubsonicError(c, 50, "Not authorized")
+	}
+
+	if user.Username != username && !user.IsAdmin {
+		return utils.SendOpenSubsonicError(c, 50, "Not authorized to change another user's password")
+	}
+
+	// Get the user to update
+	var targetUser models.User
+	if err := h.db.Where("username = ?", username).First(&targetUser).Error; err != nil {
+		return utils.SendOpenSubsonicError(c, 70, "User not found")
+	}
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return utils.SendOpenSubsonicError(c, 0, "Failed to hash password")
+	}
+	targetUser.PasswordHash = string(hashedPassword)
+
+	if err := h.db.Save(&targetUser).Error; err != nil {
+		return utils.SendOpenSubsonicError(c, 0, "Failed to update password")
+	}
+
+	return utils.SendResponse(c, utils.SuccessResponse())
+}
+
+// TokenInfo returns information about an API key
+func (h *UserHandler) TokenInfo(c *fiber.Ctx) error {
+	// Since we use middleware for auth, if we are here, the token is valid.
+	// We can just return success.
+	return utils.SendResponse(c, utils.SuccessResponse())
+}
+
 // Star attaches a star to a song, album or artist
 func (h *UserHandler) Star(c *fiber.Ctx) error {
 	user, ok := utils.GetUserFromContext(c)

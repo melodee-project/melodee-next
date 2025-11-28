@@ -65,6 +65,12 @@ type OpenSubsonicResponse struct {
 
 	// Metadata
 	Lyrics *Lyrics `xml:"lyrics,omitempty" json:"lyrics,omitempty"`
+
+	// Bookmarks
+	Bookmarks *Bookmarks `xml:"bookmarks,omitempty" json:"bookmarks,omitempty"`
+
+	// PlayQueue
+	PlayQueue *PlayQueue `xml:"playQueue,omitempty" json:"playQueue,omitempty"`
 }
 
 type Starred struct {
@@ -587,4 +593,29 @@ type User struct {
 type Users struct {
 	XMLName xml.Name `xml:"users" json:"-"`
 	Users   []User   `xml:"user" json:"user"`
+}
+
+type Bookmarks struct {
+	XMLName   xml.Name   `xml:"bookmarks" json:"-"`
+	Bookmarks []Bookmark `xml:"bookmark" json:"bookmark"`
+}
+
+type Bookmark struct {
+	XMLName  xml.Name `xml:"bookmark" json:"-"`
+	Position int64    `xml:"position,attr" json:"position"`
+	Username string   `xml:"username,attr" json:"username"`
+	Comment  string   `xml:"comment,attr,omitempty" json:"comment,omitempty"`
+	Created  string   `xml:"created,attr" json:"created"`
+	Changed  string   `xml:"changed,attr" json:"changed"`
+	Entry    Child    `xml:"entry" json:"entry"`
+}
+
+type PlayQueue struct {
+	XMLName   xml.Name `xml:"playQueue" json:"-"`
+	Current   int      `xml:"current,attr,omitempty" json:"current,omitempty"`
+	Position  int64    `xml:"position,attr,omitempty" json:"position,omitempty"`
+	Username  string   `xml:"username,attr" json:"username"`
+	Changed   string   `xml:"changed,attr" json:"changed"`
+	ChangedBy string   `xml:"changedBy,attr" json:"changedBy"`
+	Entries   []Child  `xml:"entry,omitempty" json:"entry,omitempty"`
 }
