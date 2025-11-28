@@ -8,19 +8,19 @@ export default defineConfig({
     host: '0.0.0.0', // Listen on all interfaces (IPv4 and IPv6)
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'https://localhost:8080',
         changeOrigin: true,
-        secure: false,
+        secure: false, // Set to false to allow self-signed certificates
       },
       '/healthz': {
-        target: 'http://localhost:8080',
+        target: 'https://localhost:8080',
         changeOrigin: true,
-        secure: false,
+        secure: false, // Set to false to allow self-signed certificates
       },
       '/metrics': {
-        target: 'http://localhost:8080',
+        target: 'https://localhost:8080',
         changeOrigin: true,
-        secure: false,
+        secure: false, // Set to false to allow self-signed certificates
       },
     },
   },

@@ -116,6 +116,7 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	// System endpoints
 	rest.Get("/ping.view", systemHandler.Ping)
 	rest.Get("/getLicense.view", systemHandler.GetLicense)
+	rest.Get("/getOpenSubsonicExtensions.view", systemHandler.GetOpenSubsonicExtensions)
 }
 
 // Start starts the OpenSubsonic server

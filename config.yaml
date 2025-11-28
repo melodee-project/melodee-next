@@ -1,6 +1,31 @@
 server:
   host: "0.0.0.0"
   port: 8080
+  # TLS/HTTPS configuration (optional)
+  tls:
+    enabled: true
+    cert_file: "/home/steven/source/melodee-next/certs/localhost+3.pem"
+    key_file: "/home/steven/source/melodee-next/certs/localhost+3-key.pem"
+  # CORS configuration for OpenSubsonic clients
+  # For local development with hosted clients (like Feishin), you need one of:
+  # 1. Use a local client installation
+  # 2. Use a reverse proxy with public domain (recommended for production)
+  # 3. Temporarily disable Chrome web security (dev only)
+  cors:
+    allow_origins:
+      - "*"  # Allow all origins - restrict in production to specific domains
+    allow_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allow_headers:
+      - "Origin"
+      - "Content-Type"
+      - "Accept"
+      - "Authorization"
+    allow_credentials: false
 
 database:
   host: "localhost"

@@ -48,6 +48,26 @@ func (h *SystemHandler) GetLicense(c *fiber.Ctx) error {
 	return utils.SendResponse(c, response)
 }
 
+// GetOpenSubsonicExtensions returns information about supported OpenSubsonic extensions
+func (h *SystemHandler) GetOpenSubsonicExtensions(c *fiber.Ctx) error {
+	response := utils.SuccessResponse()
+	
+	// Define supported extensions
+	// Based on implemented handlers:
+	// - search3 (SearchHandler.Search3)
+	extensions := []utils.Extension{
+		{Name: "search3", Versions: []int{1}, VersionsXML: "1"},
+		// We can add more as we verify compliance
+	}
+	
+	response.OpenSubsonicExtensions = &utils.OpenSubsonicExtensions{
+		Extensions: extensions,
+	}
+	
+	return utils.SendResponse(c, response)
+}
+
+
 // License represents license information
 type License struct {
 	XMLName xml.Name `xml:"license"`

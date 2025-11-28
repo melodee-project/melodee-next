@@ -145,6 +145,14 @@ func (s *Server) setupMiddleware() {
 	rateLimiter := middleware.RateLimiterForPublicAPI()
 	s.app.Use(rateLimiter)
 
+	// Add support for Private Network Access BEFORE CORS (allows public sites to access local servers)
+	// This must run before CORS middleware to properly handle the preflight
+	s.app.Use(func(c *fiber.Ctx) error {
+		// Set the private network header on all requests from public origins
+		c.Set("Access-Control-Allow-Private-Network", "true")
+		return c.Next()
+	})
+
 	// CORS middleware with configuration
 	corsConfig := cors.Config{
 		AllowOrigins:     strings.Join(s.cfg.Server.CORS.AllowOrigins, ","),
@@ -423,10 +431,14 @@ func (s *Server) setupOpenSubsonicRoutes() {
 // Start starts the server
 func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Server.Host, s.cfg.Server.Port)
-	log.Printf("Starting Melodee server on %s", addr)
 
-	// Migrations are handled via init-scripts/001_schema.sql
+	// Check if TLS is enabled and certificates exist
+	if s.cfg.Server.TLS.Enabled && s.cfg.Server.TLS.CertFile != "" && s.cfg.Server.TLS.KeyFile != "" {
+		log.Printf("Starting Melodee server with TLS on https://%s", addr)
+		return s.app.ListenTLS(addr, s.cfg.Server.TLS.CertFile, s.cfg.Server.TLS.KeyFile)
+	}
 
+	log.Printf("Starting Melodee server on http://%s", addr)
 	return s.app.Listen(addr)
 }
 

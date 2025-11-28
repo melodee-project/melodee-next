@@ -34,7 +34,15 @@ type ServerConfig struct {
 	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout time.Duration `mapstructure:"write_timeout"`
 	IdleTimeout  time.Duration `mapstructure:"idle_timeout"`
+	TLS          TLSConfig     `mapstructure:"tls"`
 	CORS         CORSConfig    `mapstructure:"cors"`
+}
+
+// TLSConfig holds TLS/HTTPS configuration
+type TLSConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`
+	CertFile string `mapstructure:"cert_file"`
+	KeyFile  string `mapstructure:"key_file"`
 }
 
 // DatabaseConfig holds database configuration
@@ -367,6 +375,9 @@ func setDefaults() {
 	viper.SetDefault("server.read_timeout", "15s")
 	viper.SetDefault("server.write_timeout", "15s")
 	viper.SetDefault("server.idle_timeout", "60s")
+	viper.SetDefault("server.tls.enabled", false)
+	viper.SetDefault("server.tls.cert_file", "")
+	viper.SetDefault("server.tls.key_file", "")
 
 	// Database defaults
 	viper.SetDefault("database.host", "localhost")

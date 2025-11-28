@@ -1,78 +1,40 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { adminService } from '../services/apiService';
-
-function computeOpenSubsonicBase() {
-  const envBase = import.meta.env.VITE_API_BASE_URL;
-  try {
-    if (envBase) {
-      // Absolute URL provided
-      if (/^https?:\/\//i.test(envBase)) {
-        const u = new URL(envBase);
-        return `${u.origin}/rest`;
-      }
-      // Relative path (e.g., "/api") → assume same origin
-      if (envBase.startsWith('/')) {
-        return `${window.location.origin}/rest`;
-      }
-    }
-  } catch (_) {
-    // ignore and fallback
-  }
-  // Fallback to same origin
-  return `${window.location.origin}/rest`;
-}
 
 const OpenSubsonicInfo = () => {
   const [status, setStatus] = useState('checking');
   const [detail, setDetail] = useState('');
-  const [base, setBase] = useState(computeOpenSubsonicBase());
-  const pingUrl = `${base}/ping.view`;
+  const [base, setBase] = useState('');
+  const [source, setSource] = useState('loading...');
 
   useEffect(() => {
     let cancelled = false;
-    const controller = new AbortController();
-    (async () => {
-      try {
-        // Try to get canonical base from backend
-        try {
-          const resp = await adminService.getOpenSubsonicInfo();
-          let baseToUse = base;
-          if (resp?.data?.base) {
-            baseToUse = resp.data.base;
-            if (!cancelled) setBase(resp.data.base);
-          }
-          const res = await fetch(`${baseToUse}/ping.view`, { method: 'GET', signal: controller.signal });
-          if (cancelled) return;
-          if (res.ok) {
-            setStatus('online');
-            setDetail('Ping successful');
-          } else {
-            setStatus('error');
-            setDetail(`HTTP ${res.status}`);
-          }
-        } catch (_) {
-          // Fallback: use computed base if backend call fails
-          const res = await fetch(`${base}/ping.view`, { method: 'GET', signal: controller.signal });
-          if (cancelled) return;
-          if (res.ok) {
-            setStatus('online');
-            setDetail('Ping successful');
-          } else {
-            setStatus('error');
-            setDetail(`HTTP ${res.status}`);
-          }
-        }
-      } catch (err) {
+    
+    adminService.getOpenSubsonicInfo()
+      .then(resp => {
         if (cancelled) return;
+        const url = resp?.data?.base_for_client || window.location.origin;
+        setBase(url);
+        setSource(resp?.data?.source || 'fallback to local origin');
+        
+        // Test the endpoint
+        return fetch(`${url}/rest/ping.view`);
+      })
+      .then(res => {
+        if (cancelled) return;
+        setStatus(res?.ok ? 'online' : 'error');
+        setDetail(res?.ok ? 'Ping successful' : `HTTP ${res?.status}`);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setBase(window.location.origin);
+        setSource('error fetching from server');
         setStatus('error');
         setDetail(err?.message || 'Network error');
-      }
-    })();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [pingUrl]);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
 
   const copyToClipboard = async () => {
     try {
@@ -92,7 +54,7 @@ const OpenSubsonicInfo = () => {
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 mb-6">
       <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">OpenSubsonic API Endpoint</h2>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-        Use this endpoint in your OpenSubsonic-compatible client.
+        Enter this URL in your OpenSubsonic client (the client will add <code>/rest</code> automatically).
       </p>
       <div className="flex items-start gap-3 mb-3">
         <code className="px-3 py-2 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 break-all flex-1">
@@ -111,9 +73,17 @@ const OpenSubsonicInfo = () => {
         <span className="text-gray-500 dark:text-gray-400">{detail}</span>
       </div>
       <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-        Computed from {import.meta.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'window.location.origin'}
-        {' '}→ <code>/rest</code>
+        {source}
       </div>
+      {base && base.startsWith('http://') && (
+        <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm">
+          <strong className="text-yellow-800 dark:text-yellow-200">⚠️ HTTP Warning:</strong>
+          <span className="text-yellow-700 dark:text-yellow-300 ml-1">
+            HTTPS clients (like hosted Feishin) cannot connect to HTTP servers due to browser security.
+            Use a desktop client or set up HTTPS.
+          </span>
+        </div>
+      )}
     </div>
   );
 };
