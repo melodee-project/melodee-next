@@ -85,6 +85,13 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	systemHandler := handlers.NewSystemHandler(s.db)
 	bookmarkHandler := handlers.NewBookmarkHandler(s.db)
 	playQueueHandler := handlers.NewPlayQueueHandler(s.db)
+	podcastHandler := handlers.NewPodcastHandler(s.db)
+	internetRadioHandler := handlers.NewInternetRadioHandler(s.db)
+	sharesHandler := handlers.NewSharesHandler(s.db)
+	videoHandler := handlers.NewVideoHandler(s.db)
+	chatHandler := handlers.NewChatHandler(s.db)
+	scanHandler := handlers.NewScanHandler(s.db)
+	jukeboxHandler := handlers.NewJukeboxHandler(s.db)
 
 	// Define the API routes under /rest/ prefix
 	rest := s.app.Group("/rest")
@@ -160,6 +167,45 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	rest.Get("/savePlayQueue", authMiddleware.Authenticate, playQueueHandler.SavePlayQueue)
 	rest.Get("/getPlayQueueByIndex", authMiddleware.Authenticate, playQueueHandler.GetPlayQueueByIndex)
 	rest.Get("/savePlayQueueByIndex", authMiddleware.Authenticate, playQueueHandler.SavePlayQueueByIndex)
+
+	// Podcast endpoints
+	rest.Get("/getPodcasts", authMiddleware.Authenticate, podcastHandler.GetPodcasts)
+	rest.Get("/getNewestPodcasts", authMiddleware.Authenticate, podcastHandler.GetNewestPodcasts)
+	rest.Get("/refreshPodcasts", authMiddleware.Authenticate, podcastHandler.RefreshPodcasts)
+	rest.Get("/createPodcastChannel", authMiddleware.Authenticate, podcastHandler.CreatePodcastChannel)
+	rest.Get("/deletePodcastChannel", authMiddleware.Authenticate, podcastHandler.DeletePodcastChannel)
+	rest.Get("/getPodcastEpisode", authMiddleware.Authenticate, podcastHandler.GetPodcastEpisode)
+	rest.Get("/downloadPodcastEpisode", authMiddleware.Authenticate, podcastHandler.DownloadPodcastEpisode)
+	rest.Get("/deletePodcastEpisode", authMiddleware.Authenticate, podcastHandler.DeletePodcastEpisode)
+
+	// Internet Radio endpoints
+	rest.Get("/getInternetRadioStations", authMiddleware.Authenticate, internetRadioHandler.GetInternetRadioStations)
+	rest.Get("/createInternetRadioStation", authMiddleware.Authenticate, internetRadioHandler.CreateInternetRadioStation)
+	rest.Get("/updateInternetRadioStation", authMiddleware.Authenticate, internetRadioHandler.UpdateInternetRadioStation)
+	rest.Get("/deleteInternetRadioStation", authMiddleware.Authenticate, internetRadioHandler.DeleteInternetRadioStation)
+
+	// Sharing endpoints
+	rest.Get("/getShares", authMiddleware.Authenticate, sharesHandler.GetShares)
+	rest.Get("/createShare", authMiddleware.Authenticate, sharesHandler.CreateShare)
+	rest.Get("/updateShare", authMiddleware.Authenticate, sharesHandler.UpdateShare)
+	rest.Get("/deleteShare", authMiddleware.Authenticate, sharesHandler.DeleteShare)
+
+	// Video endpoints
+	rest.Get("/getVideos", authMiddleware.Authenticate, videoHandler.GetVideos)
+	rest.Get("/getVideoInfo", authMiddleware.Authenticate, videoHandler.GetVideoInfo)
+	rest.Get("/getCaptions", authMiddleware.Authenticate, videoHandler.GetCaptions)
+	rest.Get("/hls", authMiddleware.Authenticate, videoHandler.HLS)
+
+	// Chat endpoints
+	rest.Get("/getChatMessages", authMiddleware.Authenticate, chatHandler.GetChatMessages)
+	rest.Get("/addChatMessage", authMiddleware.Authenticate, chatHandler.AddChatMessage)
+
+	// Scan endpoints
+	rest.Get("/getScanStatus", authMiddleware.Authenticate, scanHandler.GetScanStatus)
+	rest.Get("/startScan", authMiddleware.Authenticate, scanHandler.StartScan)
+
+	// Jukebox endpoints
+	rest.Get("/jukeboxControl", authMiddleware.Authenticate, jukeboxHandler.JukeboxControl)
 
 	// System endpoints
 	rest.Get("/ping", systemHandler.Ping)

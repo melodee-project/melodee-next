@@ -362,6 +362,9 @@ type Share struct {
 	AllowDownload       bool       `gorm:"default:false" json:"allow_download"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
+
+	// Relationships
+	User *User `gorm:"foreignKey:UserID" json:"user"`
 }
 
 // ShareActivity represents share usage tracking
@@ -489,4 +492,62 @@ type StagingItem struct {
 
 func (StagingItem) TableName() string {
 	return "staging_items"
+}
+
+// PodcastChannel represents a podcast feed
+type PodcastChannel struct {
+	ID           int32            `gorm:"primaryKey;autoIncrement" json:"id"`
+	APIKey       uuid.UUID        `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	URL          string           `gorm:"not null;unique" json:"url"`
+	Title        string           `gorm:"size:255" json:"title"`
+	Description  string           `json:"description"`
+	ImageURL     string           `json:"image_url"`
+	Status       string           `gorm:"size:50;default:'new'" json:"status"` // new, downloading, completed, error
+	ErrorMessage string           `json:"error_message"`
+	CreatedAt    time.Time        `json:"created_at"`
+	UpdatedAt    time.Time        `json:"updated_at"`
+	Episodes     []PodcastEpisode `gorm:"foreignKey:ChannelID" json:"episodes"`
+}
+
+func (PodcastChannel) TableName() string {
+	return "podcast_channels"
+}
+
+// BeforeCreate sets the API key before creating a podcast channel
+func (p *PodcastChannel) BeforeCreate(tx *gorm.DB) error {
+	if p.APIKey == uuid.Nil {
+		p.APIKey = uuid.New()
+	}
+	return nil
+}
+
+// PodcastEpisode represents an episode of a podcast
+type PodcastEpisode struct {
+	ID           int64           `gorm:"primaryKey;autoIncrement" json:"id"`
+	APIKey       uuid.UUID       `gorm:"type:uuid;uniqueIndex;default:gen_random_uuid()" json:"api_key"`
+	ChannelID    int32           `gorm:"not null;index" json:"channel_id"`
+	Title        string          `gorm:"size:255;not null" json:"title"`
+	Description  string          `json:"description"`
+	PublishDate  time.Time       `json:"publish_date"`
+	Duration     int             `json:"duration"`                            // in seconds
+	Status       string          `gorm:"size:50;default:'new'" json:"status"` // new, downloading, completed, error, skipped
+	ErrorMessage string          `json:"error_message"`
+	FileName     string          `json:"file_name"`
+	FileSize     int64           `json:"file_size"`
+	ContentType  string          `json:"content_type"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	Channel      *PodcastChannel `gorm:"foreignKey:ChannelID" json:"channel"`
+}
+
+func (PodcastEpisode) TableName() string {
+	return "podcast_episodes"
+}
+
+// BeforeCreate sets the API key before creating a podcast episode
+func (p *PodcastEpisode) BeforeCreate(tx *gorm.DB) error {
+	if p.APIKey == uuid.Nil {
+		p.APIKey = uuid.New()
+	}
+	return nil
 }

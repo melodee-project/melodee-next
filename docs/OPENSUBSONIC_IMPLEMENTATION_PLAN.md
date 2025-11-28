@@ -74,18 +74,18 @@ These endpoints handle user state persistence, bookmarks (resume points), and pl
 ## Phase 4: Podcasts & Internet Radio
 Features for managing external media sources.
 
-- [ ] `getPodcasts` - Returns all Podcast channels.
-- [ ] `getNewestPodcasts` - Returns the most recently published Podcast episodes.
-- [ ] `refreshPodcasts` - Requests the server to check for new Podcast episodes.
-- [ ] `createPodcastChannel` - Adds a new Podcast channel.
-- [ ] `deletePodcastChannel` - Deletes a Podcast channel.
-- [ ] `getPodcastEpisode` - Returns details for a podcast episode.
-- [ ] `downloadPodcastEpisode` - Request the server to start downloading a given Podcast episode.
-- [ ] `deletePodcastEpisode` - Deletes a Podcast episode.
-- [ ] `getInternetRadioStations` - Returns all internet radio stations.
-- [ ] `createInternetRadioStation` - Adds a new internet radio station.
-- [ ] `updateInternetRadioStation` - Updates an existing internet radio station.
-- [ ] `deleteInternetRadioStation` - Deletes an existing internet radio station.
+- [x] `getPodcasts` - Returns all Podcast channels.
+- [x] `getNewestPodcasts` - Returns the most recently published Podcast episodes.
+- [x] `refreshPodcasts` - Requests the server to check for new Podcast episodes.
+- [x] `createPodcastChannel` - Adds a new Podcast channel.
+- [x] `deletePodcastChannel` - Deletes a Podcast channel.
+- [x] `getPodcastEpisode` - Returns details for a podcast episode.
+- [x] `downloadPodcastEpisode` - Request the server to start downloading a given Podcast episode.
+- [x] `deletePodcastEpisode` - Deletes a Podcast episode.
+- [x] `getInternetRadioStations` - Returns all internet radio stations.
+- [x] `createInternetRadioStation` - Adds a new internet radio station.
+- [x] `updateInternetRadioStation` - Updates an existing internet radio station.
+- [x] `deleteInternetRadioStation` - Deletes an existing internet radio station.
 
 ## Phase 5: Media Retrieval & Advanced
 Sharing, Video, Chat, System control, and specialized streaming.
@@ -94,19 +94,19 @@ Sharing, Video, Chat, System control, and specialized streaming.
 - [x] `download` - Downloads a media file.
 - [x] `getCoverArt` - Returns a cover art image.
 - [x] `getAvatar` - Returns the avatar for a user.
-- [ ] `hls.m3u8` - HLS Streaming endpoint (if not covered by stream.view).
-- [ ] `getShares` - Returns information about shared media.
-- [ ] `createShare` - Creates a public URL for sharing.
-- [ ] `updateShare` - Updates a share.
-- [ ] `deleteShare` - Deletes a share.
-- [ ] `getVideoInfo` - Returns details for a video.
-- [ ] `getVideos` - Returns all video files.
-- [ ] `getCaptions` - Returns captions for a video.
-- [ ] `getChatMessages` - Returns chat messages.
-- [ ] `addChatMessage` - Adds a message to the chat log.
-- [ ] `getScanStatus` - Returns the current status for media library scanning.
-- [ ] `startScan` - Initiates a rescan of the media libraries.
-- [ ] `jukeboxControl` - Controls the jukebox (server-side playback).
+- [x] `hls.m3u8` - HLS Streaming endpoint (if not covered by stream.view).
+- [x] `getShares` - Returns information about shared media.
+- [x] `createShare` - Creates a public URL for sharing.
+- [x] `updateShare` - Updates a share.
+- [x] `deleteShare` - Deletes a share.
+- [x] `getVideoInfo` - Returns details for a video.
+- [x] `getVideos` - Returns all video files.
+- [x] `getCaptions` - Returns captions for a video.
+- [x] `getChatMessages` - Returns chat messages.
+- [x] `addChatMessage` - Adds a message to the chat log.
+- [x] `getScanStatus` - Returns the current status for media library scanning.
+- [x] `startScan` - Initiates a rescan of the media libraries.
+- [x] `jukeboxControl` - Controls the jukebox (server-side playback).
 
 ## Definition of Done
 

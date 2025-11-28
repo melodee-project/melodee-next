@@ -71,6 +71,31 @@ type OpenSubsonicResponse struct {
 
 	// PlayQueue
 	PlayQueue *PlayQueue `xml:"playQueue,omitempty" json:"playQueue,omitempty"`
+
+	// Podcasts
+	Podcasts       *Podcasts       `xml:"podcasts,omitempty" json:"podcasts,omitempty"`
+	NewestPodcasts *NewestPodcasts `xml:"newestPodcasts,omitempty" json:"newestPodcasts,omitempty"`
+	PodcastEpisode *PodcastEpisode `xml:"podcastEpisode,omitempty" json:"podcastEpisode,omitempty"`
+
+	// Internet Radio
+	InternetRadioStations *InternetRadioStations `xml:"internetRadioStations,omitempty" json:"internetRadioStations,omitempty"`
+
+	// Shares
+	Shares *Shares `xml:"shares,omitempty" json:"shares,omitempty"`
+
+	// Video
+	Videos    *Videos    `xml:"videos,omitempty" json:"videos,omitempty"`
+	VideoInfo *VideoInfo `xml:"videoInfo,omitempty" json:"videoInfo,omitempty"`
+
+	// Chat
+	ChatMessages *ChatMessages `xml:"chatMessages,omitempty" json:"chatMessages,omitempty"`
+
+	// Scan Status
+	ScanStatus *ScanStatus `xml:"scanStatus,omitempty" json:"scanStatus,omitempty"`
+
+	// Jukebox
+	JukeboxStatus   *JukeboxStatus   `xml:"jukeboxStatus,omitempty" json:"jukeboxStatus,omitempty"`
+	JukeboxPlaylist *JukeboxPlaylist `xml:"jukeboxPlaylist,omitempty" json:"jukeboxPlaylist,omitempty"`
 }
 
 type Starred struct {
@@ -618,4 +643,142 @@ type PlayQueue struct {
 	Changed   string   `xml:"changed,attr" json:"changed"`
 	ChangedBy string   `xml:"changedBy,attr" json:"changedBy"`
 	Entries   []Child  `xml:"entry,omitempty" json:"entry,omitempty"`
+}
+
+type Podcasts struct {
+	XMLName  xml.Name         `xml:"podcasts" json:"-"`
+	Channels []PodcastChannel `xml:"channel" json:"channel"`
+}
+
+type NewestPodcasts struct {
+	XMLName  xml.Name         `xml:"newestPodcasts" json:"-"`
+	Episodes []PodcastEpisode `xml:"episode" json:"episode"`
+}
+
+type PodcastChannel struct {
+	ID               string           `xml:"id,attr" json:"id"`
+	Url              string           `xml:"url,attr" json:"url"`
+	Title            string           `xml:"title,attr,omitempty" json:"title,omitempty"`
+	Description      string           `xml:"description,attr,omitempty" json:"description,omitempty"`
+	CoverArt         string           `xml:"coverArt,attr,omitempty" json:"coverArt,omitempty"`
+	OriginalImageUrl string           `xml:"originalImageUrl,attr,omitempty" json:"originalImageUrl,omitempty"`
+	Status           string           `xml:"status,attr" json:"status"`
+	ErrorMessage     string           `xml:"errorMessage,attr,omitempty" json:"errorMessage,omitempty"`
+	Episodes         []PodcastEpisode `xml:"episode,omitempty" json:"episode,omitempty"`
+}
+
+type PodcastEpisode struct {
+	ID          string `xml:"id,attr" json:"id"`
+	StreamId    string `xml:"streamId,attr,omitempty" json:"streamId,omitempty"`
+	ChannelId   string `xml:"channelId,attr" json:"channelId"`
+	Title       string `xml:"title,attr" json:"title"`
+	Description string `xml:"description,attr,omitempty" json:"description,omitempty"`
+	PublishDate string `xml:"publishDate,attr,omitempty" json:"publishDate,omitempty"`
+	Status      string `xml:"status,attr" json:"status"`
+	Parent      string `xml:"parent,attr,omitempty" json:"parent,omitempty"` // ID of the podcast channel
+	IsDir       bool   `xml:"isDir,attr" json:"isDir"`
+	Year        int    `xml:"year,attr,omitempty" json:"year,omitempty"`
+	Genre       string `xml:"genre,attr,omitempty" json:"genre,omitempty"`
+	CoverArt    string `xml:"coverArt,attr,omitempty" json:"coverArt,omitempty"`
+	Size        int64  `xml:"size,attr,omitempty" json:"size,omitempty"`
+	ContentType string `xml:"contentType,attr,omitempty" json:"contentType,omitempty"`
+	Suffix      string `xml:"suffix,attr,omitempty" json:"suffix,omitempty"`
+	Duration    int    `xml:"duration,attr,omitempty" json:"duration,omitempty"`
+	BitRate     int    `xml:"bitRate,attr,omitempty" json:"bitRate,omitempty"`
+	Path        string `xml:"path,attr,omitempty" json:"path,omitempty"`
+}
+
+type InternetRadioStations struct {
+	XMLName  xml.Name               `xml:"internetRadioStations" json:"-"`
+	Stations []InternetRadioStation `xml:"internetRadioStation" json:"internetRadioStation"`
+}
+
+type InternetRadioStation struct {
+	ID          string `xml:"id,attr" json:"id"`
+	Name        string `xml:"name,attr" json:"name"`
+	StreamUrl   string `xml:"streamUrl,attr" json:"streamUrl"`
+	HomePageUrl string `xml:"homePageUrl,attr,omitempty" json:"homePageUrl,omitempty"`
+}
+
+type Shares struct {
+	XMLName xml.Name `xml:"shares" json:"-"`
+	Shares  []Share  `xml:"share" json:"share"`
+}
+
+type Share struct {
+	ID          string  `xml:"id,attr" json:"id"`
+	Url         string  `xml:"url,attr" json:"url"`
+	Description string  `xml:"description,attr,omitempty" json:"description,omitempty"`
+	Username    string  `xml:"username,attr" json:"username"`
+	Created     string  `xml:"created,attr" json:"created"`
+	Expires     string  `xml:"expires,attr,omitempty" json:"expires,omitempty"`
+	LastVisited string  `xml:"lastVisited,attr,omitempty" json:"lastVisited,omitempty"`
+	VisitCount  int     `xml:"visitCount,attr" json:"visitCount"`
+	Entries     []Child `xml:"entry,omitempty" json:"entry,omitempty"`
+}
+
+type Videos struct {
+	XMLName xml.Name `xml:"videos" json:"-"`
+	Videos  []Child  `xml:"video" json:"video"`
+}
+
+type VideoInfo struct {
+	XMLName     xml.Name          `xml:"videoInfo" json:"-"`
+	ID          string            `xml:"id,attr" json:"id"`
+	Captions    []Caption         `xml:"captions,omitempty" json:"captions,omitempty"`
+	AudioTracks []AudioTrack      `xml:"audioTrack,omitempty" json:"audioTrack,omitempty"`
+	Conversion  []VideoConversion `xml:"conversion,omitempty" json:"conversion,omitempty"`
+}
+
+type Caption struct {
+	ID     string `xml:"id,attr" json:"id"`
+	Name   string `xml:"name,attr" json:"name"`
+	Format string `xml:"format,attr" json:"format"`
+}
+
+type AudioTrack struct {
+	ID           string `xml:"id,attr" json:"id"`
+	Name         string `xml:"name,attr" json:"name"`
+	LanguageCode string `xml:"languageCode,attr" json:"languageCode"`
+}
+
+type VideoConversion struct {
+	ID           string `xml:"id,attr" json:"id"`
+	TargetFormat string `xml:"targetFormat,attr" json:"targetFormat"`
+	BitRate      int    `xml:"bitRate,attr,omitempty" json:"bitRate,omitempty"`
+	AudioTrackId string `xml:"audioTrackId,attr,omitempty" json:"audioTrackId,omitempty"`
+}
+
+type ChatMessages struct {
+	XMLName  xml.Name      `xml:"chatMessages" json:"-"`
+	Messages []ChatMessage `xml:"chatMessage" json:"chatMessage"`
+}
+
+type ChatMessage struct {
+	Username string `xml:"username,attr" json:"username"`
+	Time     int64  `xml:"time,attr" json:"time"`
+	Message  string `xml:"message,attr" json:"message"`
+}
+
+type ScanStatus struct {
+	XMLName  xml.Name `xml:"scanStatus" json:"-"`
+	Scanning bool     `xml:"scanning,attr" json:"scanning"`
+	Count    int64    `xml:"count,attr" json:"count"`
+}
+
+type JukeboxStatus struct {
+	XMLName      xml.Name `xml:"jukeboxStatus" json:"-"`
+	CurrentIndex int      `xml:"currentIndex,attr" json:"currentIndex"`
+	Playing      bool     `xml:"playing,attr" json:"playing"`
+	Gain         float32  `xml:"gain,attr" json:"gain"`
+	Position     int      `xml:"position,attr,omitempty" json:"position,omitempty"`
+}
+
+type JukeboxPlaylist struct {
+	XMLName      xml.Name `xml:"jukeboxPlaylist" json:"-"`
+	CurrentIndex int      `xml:"currentIndex,attr" json:"currentIndex"`
+	Playing      bool     `xml:"playing,attr" json:"playing"`
+	Gain         float32  `xml:"gain,attr" json:"gain"`
+	Position     int      `xml:"position,attr,omitempty" json:"position,omitempty"`
+	Entries      []Child  `xml:"entry" json:"entry"`
 }

@@ -397,6 +397,13 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	systemHandler := open_subsonic_handlers.NewSystemHandler(s.repo)
 	bookmarkHandler := open_subsonic_handlers.NewBookmarkHandler(s.repo.GetDB())
 	playQueueHandler := open_subsonic_handlers.NewPlayQueueHandler(s.repo.GetDB())
+	podcastHandler := open_subsonic_handlers.NewPodcastHandler(s.repo.GetDB())
+	internetRadioHandler := open_subsonic_handlers.NewInternetRadioHandler(s.repo.GetDB())
+	sharesHandler := open_subsonic_handlers.NewSharesHandler(s.repo.GetDB())
+	videoHandler := open_subsonic_handlers.NewVideoHandler(s.repo.GetDB())
+	chatHandler := open_subsonic_handlers.NewChatHandler(s.repo.GetDB())
+	scanHandler := open_subsonic_handlers.NewScanHandler(s.repo.GetDB())
+	jukeboxHandler := open_subsonic_handlers.NewJukeboxHandler(s.repo.GetDB())
 
 	// Browsing endpoints
 	rest.Get("/getMusicFolders", openSubsonicAuth.Authenticate, browsingHandler.GetMusicFolders)
@@ -469,6 +476,45 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	rest.Get("/savePlayQueue", openSubsonicAuth.Authenticate, playQueueHandler.SavePlayQueue)
 	rest.Get("/getPlayQueueByIndex", openSubsonicAuth.Authenticate, playQueueHandler.GetPlayQueueByIndex)
 	rest.Get("/savePlayQueueByIndex", openSubsonicAuth.Authenticate, playQueueHandler.SavePlayQueueByIndex)
+
+	// Podcast endpoints
+	rest.Get("/getPodcasts", openSubsonicAuth.Authenticate, podcastHandler.GetPodcasts)
+	rest.Get("/getNewestPodcasts", openSubsonicAuth.Authenticate, podcastHandler.GetNewestPodcasts)
+	rest.Get("/refreshPodcasts", openSubsonicAuth.Authenticate, podcastHandler.RefreshPodcasts)
+	rest.Get("/createPodcastChannel", openSubsonicAuth.Authenticate, podcastHandler.CreatePodcastChannel)
+	rest.Get("/deletePodcastChannel", openSubsonicAuth.Authenticate, podcastHandler.DeletePodcastChannel)
+	rest.Get("/getPodcastEpisode", openSubsonicAuth.Authenticate, podcastHandler.GetPodcastEpisode)
+	rest.Get("/downloadPodcastEpisode", openSubsonicAuth.Authenticate, podcastHandler.DownloadPodcastEpisode)
+	rest.Get("/deletePodcastEpisode", openSubsonicAuth.Authenticate, podcastHandler.DeletePodcastEpisode)
+
+	// Internet Radio endpoints
+	rest.Get("/getInternetRadioStations", openSubsonicAuth.Authenticate, internetRadioHandler.GetInternetRadioStations)
+	rest.Get("/createInternetRadioStation", openSubsonicAuth.Authenticate, internetRadioHandler.CreateInternetRadioStation)
+	rest.Get("/updateInternetRadioStation", openSubsonicAuth.Authenticate, internetRadioHandler.UpdateInternetRadioStation)
+	rest.Get("/deleteInternetRadioStation", openSubsonicAuth.Authenticate, internetRadioHandler.DeleteInternetRadioStation)
+
+	// Sharing endpoints
+	rest.Get("/getShares", openSubsonicAuth.Authenticate, sharesHandler.GetShares)
+	rest.Get("/createShare", openSubsonicAuth.Authenticate, sharesHandler.CreateShare)
+	rest.Get("/updateShare", openSubsonicAuth.Authenticate, sharesHandler.UpdateShare)
+	rest.Get("/deleteShare", openSubsonicAuth.Authenticate, sharesHandler.DeleteShare)
+
+	// Video endpoints
+	rest.Get("/getVideos", openSubsonicAuth.Authenticate, videoHandler.GetVideos)
+	rest.Get("/getVideoInfo", openSubsonicAuth.Authenticate, videoHandler.GetVideoInfo)
+	rest.Get("/getCaptions", openSubsonicAuth.Authenticate, videoHandler.GetCaptions)
+	rest.Get("/hls", openSubsonicAuth.Authenticate, videoHandler.HLS)
+
+	// Chat endpoints
+	rest.Get("/getChatMessages", openSubsonicAuth.Authenticate, chatHandler.GetChatMessages)
+	rest.Get("/addChatMessage", openSubsonicAuth.Authenticate, chatHandler.AddChatMessage)
+
+	// Scan endpoints
+	rest.Get("/getScanStatus", openSubsonicAuth.Authenticate, scanHandler.GetScanStatus)
+	rest.Get("/startScan", openSubsonicAuth.Authenticate, scanHandler.StartScan)
+
+	// Jukebox endpoints
+	rest.Get("/jukeboxControl", openSubsonicAuth.Authenticate, jukeboxHandler.JukeboxControl)
 
 	// System endpoints
 	rest.Get("/ping", systemHandler.Ping)
