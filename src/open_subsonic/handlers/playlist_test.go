@@ -5,23 +5,89 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"melodee/internal/models"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"melodee/internal/models"
-	"melodee/internal/services"
 )
 
-func TestPlaylistHandler_GetPlaylists(t *testing.T) {
-	// Create a minimal setup for testing
-	db := getTestDB()
-	repo := services.NewRepository(db)
-	playlistHandler := NewPlaylistHandler(repo)
+func getPlaylistTestDB() *gorm.DB {
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		return &gorm.DB{}
+	}
 
-	// Create Fiber app for testing
+	// Manually create tables for SQLite
+	db.Exec(`CREATE TABLE users (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT,
+		email TEXT,
+		password_hash TEXT,
+		is_admin BOOLEAN,
+		failed_login_attempts INTEGER DEFAULT 0,
+		locked_until DATETIME,
+		password_reset_token TEXT,
+		password_reset_expiry DATETIME,
+		created_at DATETIME,
+		last_login_at DATETIME,
+		api_key TEXT
+	)`)
+
+	db.Exec(`CREATE TABLE playlists (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		api_key TEXT,
+		user_id INTEGER,
+		name TEXT,
+		comment TEXT,
+		public BOOLEAN DEFAULT 0,
+		created_at DATETIME,
+		changed_at DATETIME,
+		duration INTEGER DEFAULT 0,
+		track_count INTEGER DEFAULT 0,
+		cover_art_id INTEGER
+	)`)
+
+	db.Exec(`CREATE TABLE playlist_tracks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		playlist_id INTEGER,
+		track_id INTEGER,
+		position INTEGER,
+		created_at DATETIME
+	)`)
+
+	db.Exec(`CREATE TABLE tracks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT,
+		album_id INTEGER,
+		artist_id INTEGER,
+		duration INTEGER,
+		bit_rate INTEGER,
+		sort_order INTEGER,
+		created_at DATETIME,
+		tags TEXT,
+		file_name TEXT,
+		relative_path TEXT,
+		name_normalized TEXT,
+		sort_name TEXT,
+		bit_depth INTEGER,
+		sample_rate INTEGER,
+		channels INTEGER,
+		directory TEXT,
+		crc_hash TEXT,
+		api_key TEXT
+	)`)
+
+	return db
+}
+
+func TestPlaylistHandler_GetPlaylists(t *testing.T) {
+	db := getPlaylistTestDB()
+	playlistHandler := NewPlaylistHandler(db)
+
 	app := fiber.New()
 	app.Get("/rest/getPlaylists", func(c *fiber.Ctx) error {
-		// Simulate authenticated user context
 		testUser := &models.User{
 			ID:       1,
 			Username: "testuser",
@@ -32,26 +98,24 @@ func TestPlaylistHandler_GetPlaylists(t *testing.T) {
 		return playlistHandler.GetPlaylists(c)
 	})
 
-	// Test basic request
+	// Seed data
+	user := models.User{Username: "testuser"}
+	db.Create(&user)
+	playlist := models.Playlist{Name: "Test Playlist", UserID: int64(user.ID)}
+	db.Create(&playlist)
+
 	req := httptest.NewRequest("GET", "/rest/getPlaylists", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
-
-	// Should return 200 OK or similar (not authentication error)
-	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestPlaylistHandler_GetPlaylist(t *testing.T) {
-	// Create a minimal setup for testing
-	db := getTestDB()
-	repo := services.NewRepository(db)
-	playlistHandler := NewPlaylistHandler(repo)
+	db := getPlaylistTestDB()
+	playlistHandler := NewPlaylistHandler(db)
 
-	// Create Fiber app for testing
 	app := fiber.New()
 	app.Get("/rest/getPlaylist", func(c *fiber.Ctx) error {
-		// Simulate authenticated user context
 		testUser := &models.User{
 			ID:       1,
 			Username: "testuser",
@@ -62,26 +126,24 @@ func TestPlaylistHandler_GetPlaylist(t *testing.T) {
 		return playlistHandler.GetPlaylist(c)
 	})
 
-	// Test basic request with playlist id
+	// Seed data
+	user := models.User{Username: "testuser"}
+	db.Create(&user)
+	playlist := models.Playlist{Name: "Test Playlist", UserID: int64(user.ID)}
+	db.Create(&playlist)
+
 	req := httptest.NewRequest("GET", "/rest/getPlaylist?id=1", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
-
-	// Should return 200 OK or 404 (not found) or similar (not authentication error)
-	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestPlaylistHandler_CreatePlaylist(t *testing.T) {
-	// Create a minimal setup for testing
-	db := getTestDB()
-	repo := services.NewRepository(db)
-	playlistHandler := NewPlaylistHandler(repo)
+	db := getPlaylistTestDB()
+	playlistHandler := NewPlaylistHandler(db)
 
-	// Create Fiber app for testing
 	app := fiber.New()
 	app.Get("/rest/createPlaylist", func(c *fiber.Ctx) error {
-		// Simulate authenticated user context
 		testUser := &models.User{
 			ID:       1,
 			Username: "testuser",
@@ -92,26 +154,22 @@ func TestPlaylistHandler_CreatePlaylist(t *testing.T) {
 		return playlistHandler.CreatePlaylist(c)
 	})
 
-	// Test basic request
-	req := httptest.NewRequest("GET", "/rest/createPlaylist", nil)
+	// Seed user for ownership check
+	user := models.User{Username: "testuser"}
+	db.Create(&user)
+
+	req := httptest.NewRequest("GET", "/rest/createPlaylist?name=NewPlaylist", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
-
-	// Should return appropriate status (not authentication error)
-	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestPlaylistHandler_UpdatePlaylist(t *testing.T) {
-	// Create a minimal setup for testing
-	db := getTestDB()
-	repo := services.NewRepository(db)
-	playlistHandler := NewPlaylistHandler(repo)
+	db := getPlaylistTestDB()
+	playlistHandler := NewPlaylistHandler(db)
 
-	// Create Fiber app for testing
 	app := fiber.New()
 	app.Get("/rest/updatePlaylist", func(c *fiber.Ctx) error {
-		// Simulate authenticated user context
 		testUser := &models.User{
 			ID:       1,
 			Username: "testuser",
@@ -122,26 +180,24 @@ func TestPlaylistHandler_UpdatePlaylist(t *testing.T) {
 		return playlistHandler.UpdatePlaylist(c)
 	})
 
-	// Test basic request
-	req := httptest.NewRequest("GET", "/rest/updatePlaylist", nil)
+	// Seed data
+	user := models.User{Username: "testuser"}
+	db.Create(&user)
+	playlist := models.Playlist{Name: "Test Playlist", UserID: int64(user.ID)}
+	db.Create(&playlist)
+
+	req := httptest.NewRequest("GET", "/rest/updatePlaylist?playlistId=1&name=UpdatedName", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
-
-	// Should return appropriate status (not authentication error)
-	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestPlaylistHandler_DeletePlaylist(t *testing.T) {
-	// Create a minimal setup for testing
-	db := getTestDB()
-	repo := services.NewRepository(db)
-	playlistHandler := NewPlaylistHandler(repo)
+	db := getPlaylistTestDB()
+	playlistHandler := NewPlaylistHandler(db)
 
-	// Create Fiber app for testing
 	app := fiber.New()
 	app.Get("/rest/deletePlaylist", func(c *fiber.Ctx) error {
-		// Simulate authenticated user context
 		testUser := &models.User{
 			ID:       1,
 			Username: "testuser",
@@ -152,18 +208,14 @@ func TestPlaylistHandler_DeletePlaylist(t *testing.T) {
 		return playlistHandler.DeletePlaylist(c)
 	})
 
-	// Test basic request with playlist id
+	// Seed data
+	user := models.User{Username: "testuser"}
+	db.Create(&user)
+	playlist := models.Playlist{Name: "Test Playlist", UserID: int64(user.ID)}
+	db.Create(&playlist)
+
 	req := httptest.NewRequest("GET", "/rest/deletePlaylist?id=1", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
-
-	// Should return appropriate status (not authentication error)
-	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
-	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
-}
-
-func getTestDB() *gorm.DB {
-	// This would create a test database
-	// For now, return nil since we're just testing the auth/endpoint structure
-	return nil
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }

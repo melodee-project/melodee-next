@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -51,6 +52,15 @@ func NewOpenSubsonicServer(cfg *config.AppConfig, dbManager *database.DatabaseMa
 
 	server.app.Use(internal_middleware.RateLimiterForPublicAPI())
 
+	// Middleware to handle optional .view suffix for OpenSubsonic compatibility
+	server.app.Use(func(c *fiber.Ctx) error {
+		path := c.Path()
+		if strings.HasSuffix(path, ".view") {
+			c.Path(strings.TrimSuffix(path, ".view"))
+		}
+		return c.Next()
+	})
+
 	// Setup routes
 	server.setupRoutes()
 
@@ -78,45 +88,55 @@ func (s *OpenSubsonicServer) setupRoutes() {
 	rest := s.app.Group("/rest")
 
 	// Browsing endpoints
-	rest.Get("/getMusicFolders.view", authMiddleware.Authenticate, browsingHandler.GetMusicFolders)
-	rest.Get("/getIndexes.view", authMiddleware.Authenticate, browsingHandler.GetIndexes)
-	rest.Get("/getArtists.view", authMiddleware.Authenticate, browsingHandler.GetArtists)
-	rest.Get("/getArtist.view", authMiddleware.Authenticate, browsingHandler.GetArtist)
-	rest.Get("/getAlbumInfo.view", authMiddleware.Authenticate, browsingHandler.GetAlbumInfo)
-	rest.Get("/getMusicDirectory.view", authMiddleware.Authenticate, browsingHandler.GetMusicDirectory)
-	rest.Get("/getAlbum.view", authMiddleware.Authenticate, browsingHandler.GetAlbum)
-	rest.Get("/getSong.view", authMiddleware.Authenticate, browsingHandler.GetSong)
-	rest.Get("/getGenres.view", authMiddleware.Authenticate, browsingHandler.GetGenres)
+	rest.Get("/getMusicFolders", authMiddleware.Authenticate, browsingHandler.GetMusicFolders)
+	rest.Get("/getIndexes", authMiddleware.Authenticate, browsingHandler.GetIndexes)
+	rest.Get("/getArtists", authMiddleware.Authenticate, browsingHandler.GetArtists)
+	rest.Get("/getArtist", authMiddleware.Authenticate, browsingHandler.GetArtist)
+	rest.Get("/getAlbumInfo", authMiddleware.Authenticate, browsingHandler.GetAlbumInfo)
+	rest.Get("/getMusicDirectory", authMiddleware.Authenticate, browsingHandler.GetMusicDirectory)
+	rest.Get("/getAlbum", authMiddleware.Authenticate, browsingHandler.GetAlbum)
+	rest.Get("/getSong", authMiddleware.Authenticate, browsingHandler.GetSong)
+	rest.Get("/getGenres", authMiddleware.Authenticate, browsingHandler.GetGenres)
+
+	// Lists endpoints (Phase 1)
+	rest.Get("/getAlbumList", authMiddleware.Authenticate, browsingHandler.GetAlbumList)
+	rest.Get("/getAlbumList2", authMiddleware.Authenticate, browsingHandler.GetAlbumList2)
+	rest.Get("/getRandomSongs", authMiddleware.Authenticate, browsingHandler.GetRandomSongs)
+	rest.Get("/getSongsByGenre", authMiddleware.Authenticate, browsingHandler.GetSongsByGenre)
+	rest.Get("/getNowPlaying", authMiddleware.Authenticate, browsingHandler.GetNowPlaying)
+	rest.Get("/getTopSongs", authMiddleware.Authenticate, browsingHandler.GetTopSongs)
+	rest.Get("/getSimilarSongs", authMiddleware.Authenticate, browsingHandler.GetSimilarSongs)
+	rest.Get("/getSimilarSongs2", authMiddleware.Authenticate, browsingHandler.GetSimilarSongs2)
 
 	// Media retrieval endpoints
-	rest.Get("/stream.view", authMiddleware.Authenticate, mediaHandler.Stream)
-	rest.Get("/download.view", authMiddleware.Authenticate, mediaHandler.Download)
-	rest.Get("/getCoverArt.view", authMiddleware.Authenticate, mediaHandler.GetCoverArt)
-	rest.Get("/getAvatar.view", authMiddleware.Authenticate, mediaHandler.GetAvatar)
+	rest.Get("/stream", authMiddleware.Authenticate, mediaHandler.Stream)
+	rest.Get("/download", authMiddleware.Authenticate, mediaHandler.Download)
+	rest.Get("/getCoverArt", authMiddleware.Authenticate, mediaHandler.GetCoverArt)
+	rest.Get("/getAvatar", authMiddleware.Authenticate, mediaHandler.GetAvatar)
 
 	// Searching endpoints
-	rest.Get("/search.view", authMiddleware.Authenticate, searchHandler.Search)
-	rest.Get("/search2.view", authMiddleware.Authenticate, searchHandler.Search2)
-	rest.Get("/search3.view", authMiddleware.Authenticate, searchHandler.Search3)
+	rest.Get("/search", authMiddleware.Authenticate, searchHandler.Search)
+	rest.Get("/search2", authMiddleware.Authenticate, searchHandler.Search2)
+	rest.Get("/search3", authMiddleware.Authenticate, searchHandler.Search3)
 
 	// Playlist endpoints
-	rest.Get("/getPlaylists.view", authMiddleware.Authenticate, playlistHandler.GetPlaylists)
-	rest.Get("/getPlaylist.view", authMiddleware.Authenticate, playlistHandler.GetPlaylist)
-	rest.Get("/createPlaylist.view", authMiddleware.Authenticate, playlistHandler.CreatePlaylist)
-	rest.Get("/updatePlaylist.view", authMiddleware.Authenticate, playlistHandler.UpdatePlaylist)
-	rest.Get("/deletePlaylist.view", authMiddleware.Authenticate, playlistHandler.DeletePlaylist)
+	rest.Get("/getPlaylists", authMiddleware.Authenticate, playlistHandler.GetPlaylists)
+	rest.Get("/getPlaylist", authMiddleware.Authenticate, playlistHandler.GetPlaylist)
+	rest.Get("/createPlaylist", authMiddleware.Authenticate, playlistHandler.CreatePlaylist)
+	rest.Get("/updatePlaylist", authMiddleware.Authenticate, playlistHandler.UpdatePlaylist)
+	rest.Get("/deletePlaylist", authMiddleware.Authenticate, playlistHandler.DeletePlaylist)
 
 	// User management endpoints
-	rest.Get("/getUser.view", authMiddleware.Authenticate, userHandler.GetUser)
-	rest.Get("/getUsers.view", authMiddleware.Authenticate, userHandler.GetUsers)
-	rest.Get("/createUser.view", authMiddleware.Authenticate, userHandler.CreateUser)
-	rest.Get("/updateUser.view", authMiddleware.Authenticate, userHandler.UpdateUser)
-	rest.Get("/deleteUser.view", authMiddleware.Authenticate, userHandler.DeleteUser)
+	rest.Get("/getUser", authMiddleware.Authenticate, userHandler.GetUser)
+	rest.Get("/getUsers", authMiddleware.Authenticate, userHandler.GetUsers)
+	rest.Get("/createUser", authMiddleware.Authenticate, userHandler.CreateUser)
+	rest.Get("/updateUser", authMiddleware.Authenticate, userHandler.UpdateUser)
+	rest.Get("/deleteUser", authMiddleware.Authenticate, userHandler.DeleteUser)
 
 	// System endpoints
-	rest.Get("/ping.view", systemHandler.Ping)
-	rest.Get("/getLicense.view", systemHandler.GetLicense)
-	rest.Get("/getOpenSubsonicExtensions.view", systemHandler.GetOpenSubsonicExtensions)
+	rest.Get("/ping", systemHandler.Ping)
+	rest.Get("/getLicense", systemHandler.GetLicense)
+	rest.Get("/getOpenSubsonicExtensions", systemHandler.GetOpenSubsonicExtensions)
 }
 
 // Start starts the OpenSubsonic server

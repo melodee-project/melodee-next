@@ -25,7 +25,7 @@ func NewSystemHandler(db interface{}) *SystemHandler {
 func (h *SystemHandler) Ping(c *fiber.Ctx) error {
 	// In OpenSubsonic, ping should return an empty response with status="ok"
 	response := utils.SuccessResponse()
-	
+
 	return utils.SendResponse(c, response)
 }
 
@@ -35,13 +35,13 @@ func (h *SystemHandler) GetLicense(c *fiber.Ctx) error {
 	response := utils.SuccessResponse()
 	license := utils.License{
 		XMLName: xml.Name{Local: "license"},
-		ID:      "melodee-license-001", // Placeholder ID
-		Email:   "license@melodee.example.com", // Placeholder email
-		License: "AGPL-3.0", // Actual license
-		Version: "1.0.0", // Application version
-		Created: utils.FormatTime(time.Now()), // Current time
+		ID:      "melodee-license-001",                           // Placeholder ID
+		Email:   "license@melodee.example.com",                   // Placeholder email
+		License: "AGPL-3.0",                                      // Actual license
+		Version: "1.0.0",                                         // Application version
+		Created: utils.FormatTime(time.Now()),                    // Current time
 		Expiry:  utils.FormatTime(time.Now().AddDate(100, 0, 0)), // For perpetual licenses, set to far future
-		Valid:   true, // Whether the license is valid
+		Valid:   true,                                            // Whether the license is valid
 	}
 
 	response.License = &license
@@ -51,7 +51,7 @@ func (h *SystemHandler) GetLicense(c *fiber.Ctx) error {
 // GetOpenSubsonicExtensions returns information about supported OpenSubsonic extensions
 func (h *SystemHandler) GetOpenSubsonicExtensions(c *fiber.Ctx) error {
 	response := utils.SuccessResponse()
-	
+
 	// Define supported extensions
 	// Based on implemented handlers:
 	// - search3 (SearchHandler.Search3)
@@ -59,14 +59,13 @@ func (h *SystemHandler) GetOpenSubsonicExtensions(c *fiber.Ctx) error {
 		{Name: "search3", Versions: []int{1}, VersionsXML: "1"},
 		// We can add more as we verify compliance
 	}
-	
+
 	response.OpenSubsonicExtensions = &utils.OpenSubsonicExtensions{
 		Extensions: extensions,
 	}
-	
+
 	return utils.SendResponse(c, response)
 }
-
 
 // License represents license information
 type License struct {

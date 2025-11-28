@@ -52,8 +52,8 @@ func (h *SearchHandler) Search(c *fiber.Ctx) error {
 	// Create response
 	response := utils.SuccessResponse()
 	searchResult2 := utils.SearchResult2{
-		Offset: offset,
-		Size:   len(artists) + len(albums) + len(songs), // This is the number of results returned in this batch
+		Offset:  offset,
+		Size:    len(artists) + len(albums) + len(songs), // This is the number of results returned in this batch
 		Artists: artists,
 		Albums:  albums,
 		Songs:   songs,
@@ -184,7 +184,7 @@ func (h *SearchHandler) searchArtists(query string, offset, size int) ([]utils.I
 	normalizedQuery := normalizeSearchQuery(query)
 
 	// Use more efficient query that only selects required fields
-	queryStmt := h.db.Select("id, name, album_count_cached, created_at, last_scanned_at").Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%").Order("name_normalized ASC")
+	queryStmt := h.db.Select("id, name, album_count_cached, created_at, last_scanned_at").Where("name_normalized LIKE ?", "%"+normalizedQuery+"%").Order("name_normalized ASC")
 
 	// Apply pagination
 	err := queryStmt.Offset(offset).Limit(size).Find(&artists).Error
@@ -234,9 +234,9 @@ func (h *SearchHandler) searchAlbums(query string, offset, size int) ([]utils.Se
 
 	// Use more efficient query that only selects required fields and joins
 	queryStmt := h.db.Table("albums").
-		Select("albums.id, albums.name, albums.artist_id, albums.release_date, albums.created_at, albums.duration, albums.track_count, artists.name as artist_name").
+		Select("albums.id, albums.name, albums.artist_id, albums.release_date, albums.created_at, albums.duration_cached, albums.track_count_cached, artists.name as artist_name").
 		Joins("LEFT JOIN artists ON albums.artist_id = artists.id").
-		Where("albums.name_normalized ILIKE ?", "%"+normalizedQuery+"%").
+		Where("albums.name_normalized LIKE ?", "%"+normalizedQuery+"%").
 		Order("albums.name_normalized ASC")
 
 	// Apply pagination
@@ -298,7 +298,7 @@ func (h *SearchHandler) searchSongs(query string, offset, size int) ([]utils.Chi
 		Select("songs.id, songs.name, songs.album_id, songs.artist_id, songs.duration, songs.bit_rate, songs.sort_order, songs.created_at, songs.relative_path, songs.file_name, albums.name as album_name, artists.name as artist_name").
 		Joins("LEFT JOIN albums ON songs.album_id = albums.id").
 		Joins("LEFT JOIN artists ON songs.artist_id = artists.id").
-		Where("songs.name_normalized ILIKE ?", "%"+normalizedQuery+"%").
+		Where("songs.name_normalized LIKE ?", "%"+normalizedQuery+"%").
 		Order("songs.name_normalized ASC")
 
 	// Apply pagination
@@ -315,15 +315,15 @@ func (h *SearchHandler) searchSongs(query string, offset, size int) ([]utils.Chi
 			Parent:      int(song.AlbumID),
 			IsDir:       false,
 			Title:       song.Name,
-			Album:       song.AlbumName, // Use the joined album name
-			Artist:      song.ArtistName, // Use the joined artist name
+			Album:       song.AlbumName,                       // Use the joined album name
+			Artist:      song.ArtistName,                      // Use the joined artist name
 			CoverArt:    getCoverArtID("album", song.AlbumID), // Placeholder
 			Created:     utils.FormatTime(song.CreatedAt),
 			Duration:    int(song.Duration / 1000), // Convert to seconds
 			BitRate:     int(song.BitRate),
 			Track:       int(song.SortOrder),
 			Genre:       "", // Would come from tags
-			Size:        0, // Would come from file system
+			Size:        0,  // Would come from file system
 			ContentType: getContentType(song.FileName),
 			Suffix:      getSuffix(song.FileName),
 			Path:        song.RelativePath,
@@ -339,8 +339,8 @@ func (h *SearchHandler) searchSongs(query string, offset, size int) ([]utils.Chi
 func (h *SearchHandler) countSearchArtists(query string) (int, error) {
 	var count int64
 	normalizedQuery := normalizeSearchQuery(query)
-	
-	err := h.db.Model(&models.Artist{}).Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%").Count(&count).Error
+
+	err := h.db.Model(&models.Artist{}).Where("name_normalized LIKE ?", "%"+normalizedQuery+"%").Count(&count).Error
 	return int(count), err
 }
 
@@ -348,8 +348,8 @@ func (h *SearchHandler) countSearchArtists(query string) (int, error) {
 func (h *SearchHandler) countSearchAlbums(query string) (int, error) {
 	var count int64
 	normalizedQuery := normalizeSearchQuery(query)
-	
-	err := h.db.Model(&models.Album{}).Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%").Count(&count).Error
+
+	err := h.db.Model(&models.Album{}).Where("name_normalized LIKE ?", "%"+normalizedQuery+"%").Count(&count).Error
 	return int(count), err
 }
 
@@ -357,8 +357,8 @@ func (h *SearchHandler) countSearchAlbums(query string) (int, error) {
 func (h *SearchHandler) countSearchSongs(query string) (int, error) {
 	var count int64
 	normalizedQuery := normalizeSearchQuery(query)
-	
-	err := h.db.Model(&models.Track{}).Where("name_normalized ILIKE ?", "%"+normalizedQuery+"%").Count(&count).Error
+
+	err := h.db.Model(&models.Track{}).Where("name_normalized LIKE ?", "%"+normalizedQuery+"%").Count(&count).Error
 	return int(count), err
 }
 
@@ -388,7 +388,7 @@ func normalizeSearchQuery(query string) string {
 	// Normalize whitespace
 	query = strings.Join(strings.Fields(query), " ")
 
-	return query
+	return strings.ToLower(query)
 }
 
 // getContentType returns content type based on file extension
@@ -399,37 +399,37 @@ func normalizeSearchQuery(query string) string {
 
 // SearchResult2 represents search results for search and search2 endpoints
 type SearchResult2 struct {
-	XMLName   xml.Name         `xml:"searchResult2"`
-	Offset    int              `xml:"offset,attr"`
-	Size      int              `xml:"size,attr"`
-	TotalHits int              `xml:"totalHits,attr,omitempty"`
+	XMLName   xml.Name            `xml:"searchResult2"`
+	Offset    int                 `xml:"offset,attr"`
+	Size      int                 `xml:"size,attr"`
+	TotalHits int                 `xml:"totalHits,attr,omitempty"`
 	Artists   []utils.IndexArtist `xml:"artist,omitempty"`
 	Albums    []utils.SearchAlbum `xml:"album,omitempty"`
-	Songs     []utils.Child    `xml:"song,omitempty"`
+	Songs     []utils.Child       `xml:"song,omitempty"`
 }
 
 // SearchResult3 represents search results for search3 endpoint
 type SearchResult3 struct {
-	XMLName   xml.Name         `xml:"searchResult3"`
-	Offset    int              `xml:"offset,attr"`
-	Size      int              `xml:"size,attr"`
-	TotalHits int              `xml:"totalHits,attr,omitempty"`
+	XMLName   xml.Name            `xml:"searchResult3"`
+	Offset    int                 `xml:"offset,attr"`
+	Size      int                 `xml:"size,attr"`
+	TotalHits int                 `xml:"totalHits,attr,omitempty"`
 	Artists   []utils.IndexArtist `xml:"artist,omitempty"`
 	Albums    []utils.SearchAlbum `xml:"album,omitempty"`
-	Songs     []utils.Child    `xml:"song,omitempty"`
+	Songs     []utils.Child       `xml:"song,omitempty"`
 }
 
 // SearchAlbum represents an album in search results
 type SearchAlbum struct {
-	ID        int    `xml:"id,attr"`
-	Name      string `xml:"title,attr"` // In search results, album name is called 'title'
-	Artist    string `xml:"artist,attr"`
-	ArtistID  int    `xml:"artistId,attr"`
-	CoverArt  string `xml:"coverArt,attr,omitempty"`
+	ID         int    `xml:"id,attr"`
+	Name       string `xml:"title,attr"` // In search results, album name is called 'title'
+	Artist     string `xml:"artist,attr"`
+	ArtistID   int    `xml:"artistId,attr"`
+	CoverArt   string `xml:"coverArt,attr,omitempty"`
 	TrackCount int    `xml:"songCount,attr"`
-	Duration  int    `xml:"duration,attr,omitempty"`
-	PlayCount int    `xml:"playCount,attr,omitempty"`
-	Created   string `xml:"created,attr,omitempty"`
-	Year      int    `xml:"year,attr,omitempty"`
-	Genre     string `xml:"genre,attr,omitempty"`
+	Duration   int    `xml:"duration,attr,omitempty"`
+	PlayCount  int    `xml:"playCount,attr,omitempty"`
+	Created    string `xml:"created,attr,omitempty"`
+	Year       int    `xml:"year,attr,omitempty"`
+	Genre      string `xml:"genre,attr,omitempty"`
 }

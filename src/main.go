@@ -356,6 +356,15 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	// Create OpenSubsonic API group with /rest prefix (standard for OpenSubsonic)
 	rest := s.app.Group("/rest")
 
+	// Middleware to handle optional .view suffix for OpenSubsonic compatibility
+	rest.Use(func(c *fiber.Ctx) error {
+		path := c.Path()
+		if strings.HasSuffix(path, ".view") {
+			c.Path(strings.TrimSuffix(path, ".view"))
+		}
+		return c.Next()
+	})
+
 	// OpenSubsonic authentication middleware
 	openSubsonicAuth := open_subsonic_middleware.NewOpenSubsonicAuthMiddleware(s.dbManager.GetGormDB(), s.cfg.JWT.Secret)
 
@@ -388,44 +397,54 @@ func (s *Server) setupOpenSubsonicRoutes() {
 	systemHandler := open_subsonic_handlers.NewSystemHandler(s.repo)
 
 	// Browsing endpoints
-	rest.Get("/getMusicFolders.view", openSubsonicAuth.Authenticate, browsingHandler.GetMusicFolders)
-	rest.Get("/getIndexes.view", openSubsonicAuth.Authenticate, browsingHandler.GetIndexes)
-	rest.Get("/getArtists.view", openSubsonicAuth.Authenticate, browsingHandler.GetArtists)
-	rest.Get("/getArtist.view", openSubsonicAuth.Authenticate, browsingHandler.GetArtist)
-	rest.Get("/getAlbumInfo.view", openSubsonicAuth.Authenticate, browsingHandler.GetAlbumInfo)
-	rest.Get("/getMusicDirectory.view", openSubsonicAuth.Authenticate, browsingHandler.GetMusicDirectory)
-	rest.Get("/getAlbum.view", openSubsonicAuth.Authenticate, browsingHandler.GetAlbum)
-	rest.Get("/getSong.view", openSubsonicAuth.Authenticate, browsingHandler.GetSong)
-	rest.Get("/getGenres.view", openSubsonicAuth.Authenticate, browsingHandler.GetGenres)
+	rest.Get("/getMusicFolders", openSubsonicAuth.Authenticate, browsingHandler.GetMusicFolders)
+	rest.Get("/getIndexes", openSubsonicAuth.Authenticate, browsingHandler.GetIndexes)
+	rest.Get("/getArtists", openSubsonicAuth.Authenticate, browsingHandler.GetArtists)
+	rest.Get("/getArtist", openSubsonicAuth.Authenticate, browsingHandler.GetArtist)
+	rest.Get("/getAlbumInfo", openSubsonicAuth.Authenticate, browsingHandler.GetAlbumInfo)
+	rest.Get("/getMusicDirectory", openSubsonicAuth.Authenticate, browsingHandler.GetMusicDirectory)
+	rest.Get("/getAlbum", openSubsonicAuth.Authenticate, browsingHandler.GetAlbum)
+	rest.Get("/getSong", openSubsonicAuth.Authenticate, browsingHandler.GetSong)
+	rest.Get("/getGenres", openSubsonicAuth.Authenticate, browsingHandler.GetGenres)
+
+	// Lists endpoints (Phase 1)
+	rest.Get("/getAlbumList", openSubsonicAuth.Authenticate, browsingHandler.GetAlbumList)
+	rest.Get("/getAlbumList2", openSubsonicAuth.Authenticate, browsingHandler.GetAlbumList2)
+	rest.Get("/getRandomSongs", openSubsonicAuth.Authenticate, browsingHandler.GetRandomSongs)
+	rest.Get("/getSongsByGenre", openSubsonicAuth.Authenticate, browsingHandler.GetSongsByGenre)
+	rest.Get("/getNowPlaying", openSubsonicAuth.Authenticate, browsingHandler.GetNowPlaying)
+	rest.Get("/getTopSongs", openSubsonicAuth.Authenticate, browsingHandler.GetTopSongs)
+	rest.Get("/getSimilarSongs", openSubsonicAuth.Authenticate, browsingHandler.GetSimilarSongs)
+	rest.Get("/getSimilarSongs2", openSubsonicAuth.Authenticate, browsingHandler.GetSimilarSongs2)
 
 	// Media retrieval endpoints
-	rest.Get("/stream.view", openSubsonicAuth.Authenticate, mediaHandler.Stream)
-	rest.Get("/download.view", openSubsonicAuth.Authenticate, mediaHandler.Download)
-	rest.Get("/getCoverArt.view", openSubsonicAuth.Authenticate, mediaHandler.GetCoverArt)
-	rest.Get("/getAvatar.view", openSubsonicAuth.Authenticate, mediaHandler.GetAvatar)
+	rest.Get("/stream", openSubsonicAuth.Authenticate, mediaHandler.Stream)
+	rest.Get("/download", openSubsonicAuth.Authenticate, mediaHandler.Download)
+	rest.Get("/getCoverArt", openSubsonicAuth.Authenticate, mediaHandler.GetCoverArt)
+	rest.Get("/getAvatar", openSubsonicAuth.Authenticate, mediaHandler.GetAvatar)
 
 	// Searching endpoints
-	rest.Get("/search.view", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search)
-	rest.Get("/search2.view", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search2)
-	rest.Get("/search3.view", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search3)
+	rest.Get("/search", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search)
+	rest.Get("/search2", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search2)
+	rest.Get("/search3", openSubsonicAuth.Authenticate, middleware.NewExpensiveEndpointRateLimiter(), searchHandler.Search3)
 
 	// Playlist endpoints
-	rest.Get("/getPlaylists.view", openSubsonicAuth.Authenticate, playlistHandler.GetPlaylists)
-	rest.Get("/getPlaylist.view", openSubsonicAuth.Authenticate, playlistHandler.GetPlaylist)
-	rest.Get("/createPlaylist.view", openSubsonicAuth.Authenticate, playlistHandler.CreatePlaylist)
-	rest.Get("/updatePlaylist.view", openSubsonicAuth.Authenticate, playlistHandler.UpdatePlaylist)
-	rest.Get("/deletePlaylist.view", openSubsonicAuth.Authenticate, playlistHandler.DeletePlaylist)
+	rest.Get("/getPlaylists", openSubsonicAuth.Authenticate, playlistHandler.GetPlaylists)
+	rest.Get("/getPlaylist", openSubsonicAuth.Authenticate, playlistHandler.GetPlaylist)
+	rest.Get("/createPlaylist", openSubsonicAuth.Authenticate, playlistHandler.CreatePlaylist)
+	rest.Get("/updatePlaylist", openSubsonicAuth.Authenticate, playlistHandler.UpdatePlaylist)
+	rest.Get("/deletePlaylist", openSubsonicAuth.Authenticate, playlistHandler.DeletePlaylist)
 
 	// User management endpoints
-	rest.Get("/getUser.view", openSubsonicAuth.Authenticate, userHandler.GetUser)
-	rest.Get("/getUsers.view", openSubsonicAuth.Authenticate, userHandler.GetUsers)
-	rest.Get("/createUser.view", openSubsonicAuth.Authenticate, userHandler.CreateUser)
-	rest.Get("/updateUser.view", openSubsonicAuth.Authenticate, userHandler.UpdateUser)
-	rest.Get("/deleteUser.view", openSubsonicAuth.Authenticate, userHandler.DeleteUser)
+	rest.Get("/getUser", openSubsonicAuth.Authenticate, userHandler.GetUser)
+	rest.Get("/getUsers", openSubsonicAuth.Authenticate, userHandler.GetUsers)
+	rest.Get("/createUser", openSubsonicAuth.Authenticate, userHandler.CreateUser)
+	rest.Get("/updateUser", openSubsonicAuth.Authenticate, userHandler.UpdateUser)
+	rest.Get("/deleteUser", openSubsonicAuth.Authenticate, userHandler.DeleteUser)
 
 	// System endpoints
-	rest.Get("/ping.view", systemHandler.Ping)
-	rest.Get("/getLicense.view", systemHandler.GetLicense)
+	rest.Get("/ping", systemHandler.Ping)
+	rest.Get("/getLicense", systemHandler.GetLicense)
 }
 
 // Start starts the server

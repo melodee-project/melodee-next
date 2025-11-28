@@ -274,6 +274,180 @@ func (h *BrowsingHandler) GetAlbumInfo(c *fiber.Ctx) error {
 	return utils.SendResponse(c, response)
 }
 
+// GetAlbumInfo2 returns album information (Version 2)
+func (h *BrowsingHandler) GetAlbumInfo2(c *fiber.Ctx) error {
+	id := c.QueryInt("id", -1)
+	if id <= 0 {
+		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter id")
+	}
+
+	// Get the album
+	var album models.Album
+	if err := h.db.Preload("Artist").First(&album, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.SendOpenSubsonicError(c, 70, "Album not found")
+		}
+		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve album")
+	}
+
+	// Build response
+	response := utils.SuccessResponse()
+	albumInfo := utils.AlbumInfo{
+		ID: int(album.ID),
+		// Add more fields as needed based on specifications
+		// Notes, MusicBrainzID, LastFmUrl, etc.
+	}
+
+	response.AlbumInfo = &albumInfo
+
+	return utils.SendResponse(c, response)
+}
+
+// GetArtistInfo returns artist information
+func (h *BrowsingHandler) GetArtistInfo(c *fiber.Ctx) error {
+	return h.getArtistInfoCommon(c, 1)
+}
+
+// GetArtistInfo2 returns artist information (Version 2)
+func (h *BrowsingHandler) GetArtistInfo2(c *fiber.Ctx) error {
+	return h.getArtistInfoCommon(c, 2)
+}
+
+func (h *BrowsingHandler) getArtistInfoCommon(c *fiber.Ctx, version int) error {
+	id := c.QueryInt("id", -1)
+	if id <= 0 {
+		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter id")
+	}
+
+	// Get the artist
+	var artist models.Artist
+	if err := h.db.First(&artist, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.SendOpenSubsonicError(c, 70, "Artist not found")
+		}
+		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve artist")
+	}
+
+	// Build response
+	// Ideally we would fetch biography, image URL, etc. from external services or DB
+	// For now, return basic info with placeholders
+
+	// In a real implementation, we would have a separate table for artist metadata
+	// or fetch it from Last.fm/MusicBrainz
+
+	biography := fmt.Sprintf("Biography for %s. (Metadata integration pending)", artist.Name)
+
+	response := utils.SuccessResponse()
+
+	if version == 2 {
+		artistInfo := utils.ArtistInfo2{
+			Biography:      biography,
+			MusicBrainzID:  "",               // Placeholder
+			LastFmURL:      "",               // Placeholder
+			SmallImageURL:  "",               // Placeholder
+			MediumImageURL: "",               // Placeholder
+			LargeImageURL:  "",               // Placeholder
+			SimilarArtists: []utils.Artist{}, // Empty for now
+		}
+		response.ArtistInfo2 = &artistInfo
+	} else {
+		artistInfo := utils.ArtistInfo{
+			Biography:      biography,
+			MusicBrainzID:  "",               // Placeholder
+			LastFmURL:      "",               // Placeholder
+			SmallImageURL:  "",               // Placeholder
+			MediumImageURL: "",               // Placeholder
+			LargeImageURL:  "",               // Placeholder
+			SimilarArtists: []utils.Artist{}, // Empty for now
+		}
+		response.ArtistInfo = &artistInfo
+	}
+
+	return utils.SendResponse(c, response)
+} // GetLyrics returns lyrics for a song
+func (h *BrowsingHandler) GetLyrics(c *fiber.Ctx) error {
+	artist := c.Query("artist")
+	title := c.Query("title")
+
+	if artist == "" || title == "" {
+		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter artist or title")
+	}
+
+	// Search for song by artist and title
+	var song models.Track
+	// This is a fuzzy search, might need improvement
+	if err := h.db.Preload("Artist").Joins("JOIN artists ON artists.id = tracks.artist_id").
+		Where("artists.name = ? AND tracks.name = ?", artist, title).
+		First(&song).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.SendOpenSubsonicError(c, 70, "Song not found")
+		}
+		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve song")
+	}
+
+	return h.returnLyrics(c, song)
+}
+
+// GetLyricsBySongId returns lyrics for a song by ID
+func (h *BrowsingHandler) GetLyricsBySongId(c *fiber.Ctx) error {
+	id := c.QueryInt("id", -1)
+	if id <= 0 {
+		return utils.SendOpenSubsonicError(c, 10, "Missing required parameter id")
+	}
+
+	var song models.Track
+	if err := h.db.Preload("Artist").First(&song, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.SendOpenSubsonicError(c, 70, "Song not found")
+		}
+		return utils.SendOpenSubsonicError(c, 0, "Failed to retrieve song")
+	}
+
+	return h.returnLyrics(c, song)
+}
+
+func (h *BrowsingHandler) returnLyrics(c *fiber.Ctx, song models.Track) error {
+	// Extract lyrics from tags if available
+	// Or fetch from external service
+
+	// For now, check tags
+	lyrics := extractLyricsFromTags(song.Tags)
+
+	response := utils.SuccessResponse()
+	response.Lyrics = &utils.Lyrics{
+		Artist:  song.Artist.Name,
+		Title:   song.Name,
+		Content: lyrics,
+	}
+
+	return utils.SendResponse(c, response)
+}
+
+// extractLyricsFromTags extracts lyrics from song tags
+func extractLyricsFromTags(tags []byte) string {
+	if tags == nil || len(tags) == 0 {
+		return ""
+	}
+
+	var tagData map[string]interface{}
+	if err := json.Unmarshal(tags, &tagData); err != nil {
+		return ""
+	}
+
+	// Check common lyrics fields
+	possibleKeys := []string{"lyrics", "Lyrics", "USLT", "SYLT", "unsynchronised_lyrics"}
+
+	for _, key := range possibleKeys {
+		if val, ok := tagData[key]; ok {
+			if str, ok := val.(string); ok {
+				return str
+			}
+		}
+	}
+
+	return ""
+}
+
 // GetMusicDirectory returns files in a music directory
 func (h *BrowsingHandler) GetMusicDirectory(c *fiber.Ctx) error {
 	id := c.QueryInt("id", -1)
